@@ -2,6 +2,8 @@
 
 **LyraFlow** es una herramienta de dictado inteligente de "Inyección Directa" que transforma tu voz en texto refinado y profesional al instante. Elimina la fricción de escribir, dictando tus ideas para que aparezcan perfectamente puntuadas y estructuradas en cualquier aplicación de Windows.
 
+![LyraFlow Preview](Image/preview.png)
+
 ## 🚀 Características Principales
 
 - **Inyección Silenciosa Directa**: El texto aparece donde está tu cursor de forma instantánea.

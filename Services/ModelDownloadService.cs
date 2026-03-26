@@ -12,13 +12,15 @@ namespace LyraFlow.Services
         public static string GetModelUrl(string modelName)
         {
             // URLs de HuggingFace para modelos Whisper Ggml
-            return modelName.ToLower() switch
+            string normalized = modelName.ToLower().Trim();
+            return normalized switch
             {
                 "tiny" => "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.bin",
                 "base" => "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin",
                 "small" => "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.bin",
                 "medium" => "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-medium.bin",
-                _ => throw new ArgumentException("Modelo no soportado")
+                var m when m.Contains("large") => "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo.bin",
+                _ => throw new ArgumentException($"Modelo '{modelName}' no soportado")
             };
         }
 

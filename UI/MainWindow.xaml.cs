@@ -45,17 +45,17 @@ public partial class MainWindow : Window
         GeminiModelCombo.SelectedIndex = 0;
         App.CurrentGeminiModel = "gemini-3-flash-preview";
 
-        // Inicializar Modelos Locales
-        string lastLocalModel = config.SelectedLocalModel ?? "Base";
-        foreach (ComboBoxItem item in LocalModelCombo.Items)
+        // Inicializar Modelos Whisper
+        string lastWhisperModel = config.SelectedLocalModel ?? "Base";
+        foreach (ComboBoxItem item in WhisperModelCombo.Items)
         {
-            if (item.Content.ToString() == lastLocalModel)
+            if (item.Content.ToString()!.Equals(lastWhisperModel, StringComparison.OrdinalIgnoreCase))
             {
-                LocalModelCombo.SelectedItem = item;
+                WhisperModelCombo.SelectedItem = item;
                 break;
             }
         }
-        if (LocalModelCombo.SelectedItem == null) LocalModelCombo.SelectedIndex = 1; // Base
+        if (WhisperModelCombo.SelectedItem == null) WhisperModelCombo.SelectedIndex = 1; // Base
         
         UpdateModelStatus();
 
@@ -136,7 +136,7 @@ public partial class MainWindow : Window
 
         // Invertir colores para el cuerpo y pie de la ventana
         TranscriptionModeLabel_Title.Foreground = brushDesc;
-        LocalModeRadio.Foreground = brushText;
+        WhisperModeRadio.Foreground = brushText;
         GroqRadio.Foreground = brushText;
         GlobalHotkeyLabel.Foreground = brushText;
         HotkeyPickerButton.Foreground = brushText;
@@ -167,7 +167,7 @@ public partial class MainWindow : Window
         }
     }
 
-    private void LocalModelCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    private void WhisperModelCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (!IsLoaded) return;
         UpdateModelStatus();
@@ -175,7 +175,7 @@ public partial class MainWindow : Window
 
     private void UpdateModelStatus()
     {
-        if (LocalModelCombo.SelectedItem is ComboBoxItem item)
+        if (WhisperModelCombo.SelectedItem is ComboBoxItem item)
         {
             string modelName = item.Content.ToString()!;
             bool downloaded = ModelDownloadService.IsModelDownloaded(modelName);
@@ -189,7 +189,7 @@ public partial class MainWindow : Window
 
     private async void DownloadModelButton_Click(object sender, RoutedEventArgs e)
     {
-        if (LocalModelCombo.SelectedItem is ComboBoxItem item)
+        if (WhisperModelCombo.SelectedItem is ComboBoxItem item)
         {
             string modelName = item.Content.ToString()!;
             DownloadModelButton.IsEnabled = false;
@@ -228,9 +228,9 @@ public partial class MainWindow : Window
         config.SkipRefinement = IsSkipRefinementEnabled;
         config.UseGroq = GroqRadio.IsChecked == true;
         config.SelectedGeminiModel = App.CurrentGeminiModel;
-        if (LocalModelCombo.SelectedItem is ComboBoxItem localItem)
+        if (WhisperModelCombo.SelectedItem is ComboBoxItem whisperItem)
         {
-            config.SelectedLocalModel = localItem.Content.ToString();
+            config.SelectedLocalModel = whisperItem.Content.ToString();
         }
         ConfigManager.Save(config);
     }

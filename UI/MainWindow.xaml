@@ -264,19 +264,20 @@
                 <!-- Transcription Mode Section -->
                 <TextBlock x:Name="TranscriptionModeLabel_Title" Text="MODO DE TRANSCRIPCIÓN" FontSize="11" FontWeight="Bold" Foreground="#a1a1aa" Margin="0,6,0,8"/>
                 <StackPanel Margin="23,0,0,14">
-                    <RadioButton x:Name="LocalModeRadio" Content="Local (Whisper.net)" Foreground="#a1a1aa" FontSize="13" IsChecked="True" GroupName="TransMode" Checked="TranscriptionMode_Checked" Margin="0,0,0,8"/>
+                    <RadioButton x:Name="WhisperModeRadio" Content="Whisper" Foreground="#a1a1aa" FontSize="13" IsChecked="True" GroupName="TransMode" Checked="TranscriptionMode_Checked" Margin="0,0,0,8"/>
                     
-                    <StackPanel x:Name="LocalModelControls" Margin="20,0,0,0">
+                    <StackPanel x:Name="WhisperModelControls" Margin="20,0,0,0">
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <ComboBox x:Name="LocalModelCombo" Grid.Column="0" Height="28" FontSize="12" SelectionChanged="LocalModelCombo_SelectionChanged" Margin="0,0,6,0">
+                            <ComboBox x:Name="WhisperModelCombo" Grid.Column="0" Height="28" FontSize="12" SelectionChanged="WhisperModelCombo_SelectionChanged" Margin="0,0,6,0">
                                 <ComboBoxItem Content="Tiny"/>
                                 <ComboBoxItem Content="Base"/>
                                 <ComboBoxItem Content="Small"/>
                                 <ComboBoxItem Content="Medium"/>
+                                <ComboBoxItem Content="Large (Turbo)"/>
                             </ComboBox>
                             <Button x:Name="DownloadModelButton" Grid.Column="1" Content="DESCARGAR" FontSize="10" Padding="12,2" Style="{StaticResource HotkeyButtonStyle}" Height="28" Click="DownloadModelButton_Click" MinWidth="85"/>
                         </Grid>
@@ -316,10 +317,10 @@
                 <StackPanel Margin="23,0,0,10">
                     <TextBlock x:Name="GeminiModelLabel" Text="Seleccionar Modelo:" Foreground="#f4f4f5" FontSize="14" Margin="0,0,0,6"/>
                     <ComboBox x:Name="GeminiModelCombo" Height="32" FontSize="13" Cursor="Hand" SelectionChanged="GeminiModelCombo_SelectionChanged" Margin="0,0,0,6">
-                        <ComboBoxItem Content="Gemini-3-flash-preview"/>
-                        <ComboBoxItem Content="Gemini-3.1-flash-lite-preview"/>
-                        <ComboBoxItem Content="Gemini-2.5-flash"/>
-                        <ComboBoxItem Content="Gemini-2.5-flash-lite"/>
+                        <ComboBoxItem Content="gemini-3-flash-preview"/>
+                        <ComboBoxItem Content="gemini-3.1-flash-lite-preview"/>
+                        <ComboBoxItem Content="gemini-2.5-flash"/>
+                        <ComboBoxItem Content="gemini-2.5-flash-lite"/>
                     </ComboBox>
                     <CheckBox x:Name="SkipRefinementCheck" Content="Sin refinamiento (Inyectar transcripción directa)" Foreground="#a1a1aa" FontSize="12" VerticalContentAlignment="Center" Margin="0,4,0,0"/>
                 </StackPanel>

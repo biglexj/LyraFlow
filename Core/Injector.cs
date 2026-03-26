@@ -1,4 +1,3 @@
-using System.Threading.Tasks;
 using WindowsInput;
 
 namespace LyraFlow.Core
@@ -7,30 +6,36 @@ namespace LyraFlow.Core
     {
         public static void Inject(string text)
         {
-            if (string.IsNullOrEmpty(text)) return;
-            
+            if (string.IsNullOrWhiteSpace(text)) return;
+
             var sim = new InputSimulator();
-            
-            // Reemplazamos \r\n por \n para normalizar
-            text = text.Replace("\r\n", "\n");
+
+            // Normalizamos saltos de línea
+            text = text.Replace("\r\n", "\n").Replace("\r", "\n").Trim();
+
+            // Dividimos por cada salto de línea individual
+            // Si hay líneas vacías (doble \n = párrafo), se preservan como Shift+Enter extra
             var lines = text.Split('\n');
 
             for (int i = 0; i < lines.Length; i++)
             {
-                if (!string.IsNullOrEmpty(lines[i]))
+                var line = lines[i].Trim();
+
+                // Si la línea tiene contenido, la escribimos
+                if (!string.IsNullOrEmpty(line))
                 {
-                    sim.Keyboard.TextEntry(lines[i]);
+                    sim.Keyboard.TextEntry(line);
                 }
 
-                // Si no es la última línea, inyectamos un ENTER
+                // Para cada salto de línea (incluyendo líneas vacías de párrafo),
+                // usamos Shift+Enter para no disparar el envío del chat
                 if (i < lines.Length - 1)
                 {
-                    sim.Keyboard.KeyPress(WindowsInput.Native.VirtualKeyCode.RETURN);
+                    sim.Keyboard.ModifiedKeyStroke(
+                        WindowsInput.Native.VirtualKeyCode.SHIFT,
+                        WindowsInput.Native.VirtualKeyCode.RETURN);
                 }
             }
-
-            // Eliminamos espacio final opcional para limpieza absoluta
-            // sim.Keyboard.TextEntry(" "); 
         }
     }
 }

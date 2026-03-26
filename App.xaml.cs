@@ -19,6 +19,8 @@ namespace LyraFlow
         private static System.Threading.Mutex? _mutex = null;
         private System.Windows.Forms.NotifyIcon? _notifyIcon;
         private MainWindow? _configWindow;
+        private string _lastRefinedText = "";
+        private bool _isAwaitingReview = false;
 
         public static string CurrentGeminiModel { get; set; } = "gemini-3-flash-preview";
         public static bool UseGroq { get; set; } = false;
@@ -114,6 +116,7 @@ namespace LyraFlow
 
         private async void OnToggleRecord(object sender, HotkeyEventArgs e)
         {
+            Logger.Log($"--- OnToggleRecord Triggered (IsRecording: {_isRecording}) ---");
             if (!_isRecording)
             {
                 // Iniciar Grabación
@@ -164,44 +167,50 @@ namespace LyraFlow
 
             try
             {
+                Logger.Log("--- Iniciando Procesamiento de Audio ---");
                 string transcribed = "";
                 if (UseGroq)
                 {
-                    Logger.Log("Iniciando transcripción con Groq...");
+                    Logger.Log($"Transcribiendo con Groq (Key: {(!string.IsNullOrEmpty(groqKey) ? "OK" : "MISSING")})...");
                     transcribed = await Transcriber.TranscribeAsync(audioData, groqKey ?? "");
-                    Logger.Log($"Transcripción completada: \"{transcribed}\"");
                 }
                 else
                 {
-                    Logger.Log("Iniciando transcripción local (Whisper)...");
+                    Logger.Log("Transcribiendo localmente con Whisper...");
                     transcribed = await Transcriber.TranscribeLocalAsync(audioData);
-                    Logger.Log($"Transcripción local completada: \"{transcribed}\"");
                 }
                 
+                Logger.Log($"Resultado transcripción: '{transcribed}'");
+
                 if (string.IsNullOrWhiteSpace(transcribed))
                 {
-                    Logger.Log("Transcripción vacía. Cancelando refinamiento.");
+                    Logger.Log("Error: Transcripción vacía. Deteniendo.");
                     return;
                 }
 
                 string refined = "";
                 if (LyraFlow.UI.MainWindow.IsSkipRefinementEnabled)
                 {
-                    Logger.Log("Modo directo activado. Saltando refinamiento de IA.");
+                    Logger.Log("Modo directo (sin refinamiento).");
                     refined = transcribed;
                 }
                 else
                 {
-                    Logger.Log($"Refinando texto con Gemini ({CurrentGeminiModel})...");
+                    Logger.Log($"Enviando a Gemini ({CurrentGeminiModel}, Key: {(!string.IsNullOrEmpty(geminiKey) ? "OK" : "MISSING")})...");
                     refined = await Llm.RefineTextAsync(transcribed, geminiKey ?? "", CurrentGeminiModel);
-                    Logger.Log("Refinamiento completado.");
                 }
                 
+                Logger.Log($"Resultado refinamiento: '{refined}'");
+
                 if (!string.IsNullOrEmpty(refined))
                 {
-                    Logger.Log("Inyectando texto directamente...");
+                    Logger.Log($"Inyectando texto formateado...");
                     Injector.Inject(refined);
-                    Logger.Log("Texto inyectado con éxito.");
+                    Logger.Log("Inyección completada.");
+                }
+                else
+                {
+                    Logger.Log("Error: El texto refinado está vacío.");
                 }
             }
             catch (Exception ex)
@@ -210,7 +219,6 @@ namespace LyraFlow
             }
             finally
             {
-                // Volver a estado Idle al finalizar todo el proceso
                 _overlay?.SetState(OverlayState.Idle);
             }
         }

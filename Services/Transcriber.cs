@@ -42,30 +42,53 @@ namespace LyraFlow.Services
 
             var config = LyraFlow.Core.ConfigManager.Load();
             string modelName = config.SelectedLocalModel ?? "Base";
-            string fileName = $"ggml-{modelName.ToLower()}.bin";
+            string fileName = modelName.Contains("Large", StringComparison.OrdinalIgnoreCase) 
+                ? "ggml-large-v3-turbo.bin" 
+                : $"ggml-{modelName.ToLower()}.bin";
 
             string modelPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "models", fileName);
             if (!File.Exists(modelPath))
             {
                 modelPath = Path.Combine(Directory.GetCurrentDirectory(), "models", fileName);
-                if (!File.Exists(modelPath))
-                    throw new FileNotFoundException($"Modelo Whisper '{modelName}' no encontrado en {modelPath}");
             }
-
-            using var whisperFactory = WhisperFactory.FromPath(modelPath);
-            using var processor = whisperFactory.CreateBuilder()
-                .WithLanguage("auto")
-                .Build();
-
-            using var ms = new MemoryStream(wavData);
             
-            var result = "";
-            await foreach (var segment in processor.ProcessAsync(ms))
+            LyraFlow.Core.Logger.Log($"[Whisper] Verificando modelo en: {modelPath}");
+            if (!File.Exists(modelPath))
             {
-                result += segment.Text;
+                 throw new FileNotFoundException($"Modelo Whisper '{modelName}' no encontrado.");
             }
 
-            return result.Trim();
+            return await Task.Run(async () => {
+                var watch = System.Diagnostics.Stopwatch.StartNew();
+                try {
+                    LyraFlow.Core.Logger.Log($"[Whisper] Inicializando Factory ({modelName})...");
+                    using var whisperFactory = WhisperFactory.FromPath(modelPath);
+                    
+                    LyraFlow.Core.Logger.Log($"[Whisper] Creando Procesador...");
+                    using var processor = whisperFactory.CreateBuilder()
+                        .WithLanguage("auto")
+                        .Build();
+
+                    LyraFlow.Core.Logger.Log($"[Whisper] Iniciando procesamiento de audio ({wavData.Length} bytes)...");
+                    using var ms = new MemoryStream(wavData);
+                    
+                    var result = "";
+                    int segments = 0;
+                    await foreach (var segment in processor.ProcessAsync(ms))
+                    {
+                        result += segment.Text;
+                        segments++;
+                        if (segments % 10 == 0) LyraFlow.Core.Logger.Log($"[Whisper] Procesados {segments} segmentos...");
+                    }
+
+                    watch.Stop();
+                    LyraFlow.Core.Logger.Log($"[Whisper] Finalizado en {watch.ElapsedMilliseconds}ms. Segmentos: {segments}");
+                    return result.Trim();
+                } catch (Exception ex) {
+                    LyraFlow.Core.Logger.Log($"[Whisper Error] {ex.Message}");
+                    throw;
+                }
+            });
         }
     }
 }

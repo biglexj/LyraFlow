@@ -8,6 +8,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using Microsoft.Win32;
 using NHotkey;
 using NHotkey.Wpf;
 using LyraFlow.Core;
@@ -40,6 +41,11 @@ public partial class MainWindow : Window
         // Vincular cambios
         SkipRefinementCheck.Checked += (s, e) => IsSkipRefinementEnabled = true;
         SkipRefinementCheck.Unchecked += (s, e) => IsSkipRefinementEnabled = false;
+
+        // Auto-start con Windows
+        AutoStartCheck.IsChecked = config.AutoStartWithWindows;
+        AutoStartCheck.Checked += (s, e) => SetAutoStart(true);
+        AutoStartCheck.Unchecked += (s, e) => SetAutoStart(false);
 
         // Seleccionar el modelo por defecto
         GeminiModelCombo.SelectedIndex = 0;
@@ -226,6 +232,7 @@ public partial class MainWindow : Window
         config.GeminiApiKey = GeminiKeyBox.Password;
         config.GroqApiKey = GroqKeyBox.Password;
         config.SkipRefinement = IsSkipRefinementEnabled;
+        config.AutoStartWithWindows = AutoStartCheck.IsChecked == true;
         config.UseGroq = GroqRadio.IsChecked == true;
         config.SelectedGeminiModel = App.CurrentGeminiModel;
         if (WhisperModelCombo.SelectedItem is ComboBoxItem whisperItem)
@@ -262,5 +269,34 @@ public partial class MainWindow : Window
         SaveConfig();
         ExitDialogPanel.Visibility = Visibility.Collapsed;
         this.Hide();
+    }
+
+    private void SetAutoStart(bool enable)
+    {
+        try
+        {
+            using var key = Registry.CurrentUser.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Run", true);
+            if (key == null) return;
+
+            if (enable)
+            {
+                // Usar la ruta del ejecutable actual con --minimized
+                string exePath = System.Diagnostics.Process.GetCurrentProcess().MainModule?.FileName ?? "";
+                if (!string.IsNullOrEmpty(exePath))
+                {
+                    key.SetValue("LyraFlow", $"\"{exePath}\" --minimized");
+                    Logger.Log($"Auto-start habilitado: {exePath} --minimized");
+                }
+            }
+            else
+            {
+                key.DeleteValue("LyraFlow", false);
+                Logger.Log("Auto-start deshabilitado.");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Log($"Error configurando auto-start: {ex.Message}");
+        }
     }
 }

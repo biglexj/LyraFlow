@@ -69,8 +69,18 @@ namespace LyraFlow
             _notifyIcon.ContextMenuStrip.Items.Add("Salir", null, (s, args) => OnExitApp(null, null));
             _notifyIcon.DoubleClick += (s, args) => ShowConfigWindow();
 
-            // Mostrar Ventana de Configuración la primera vez
-            ShowConfigWindow();
+            // Solo mostrar la ventana si NO se inició con --minimized
+            string[] args2 = Environment.GetCommandLineArgs();
+            bool startMinimized = Array.Exists(args2, a => a.Equals("--minimized", StringComparison.OrdinalIgnoreCase));
+            
+            if (!startMinimized)
+            {
+                ShowConfigWindow();
+            }
+            else
+            {
+                Logger.Log("Iniciado en modo minimizado (auto-start).");
+            }
 
             // Registrar atajo de teclado Global: Control + Shift + Espacio
             try

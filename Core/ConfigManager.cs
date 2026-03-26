@@ -13,6 +13,7 @@ namespace LyraFlow.Core
         public string? SelectedLocalModel { get; set; }
         public bool UseGroq { get; set; }
         public bool SkipRefinement { get; set; }
+        public bool AutoStartWithWindows { get; set; }
         public string? GlobalHotkey { get; set; }
     }
 

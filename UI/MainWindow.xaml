@@ -261,6 +261,25 @@
 
             <!-- Body Area (No Scroll) -->
             <StackPanel Grid.Row="1" Margin="16,16,16,24">
+                <!-- General Section -->
+                <TextBlock Text="GENERAL" FontSize="11" FontWeight="Bold" Foreground="#a1a1aa" Margin="0,6,0,8"/>
+                <StackPanel Margin="23,0,0,10">
+                    <CheckBox x:Name="AutoStartCheck" Content="Iniciar con Windows (minimizado)" Foreground="#a1a1aa" FontSize="12" VerticalContentAlignment="Center" Margin="0,0,0,12"/>
+                    
+                    <!-- Hotkey Section -->
+                    <Grid Margin="0,0,0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock x:Name="GlobalHotkeyLabel" Text="Atajo global:" Foreground="#f4f4f5" FontSize="13" VerticalAlignment="Center" Grid.Column="0"/>
+                        <Button x:Name="HotkeyPickerButton" Content="Control+Shift+Space" Style="{StaticResource HotkeyButtonStyle}" Width="160" Height="28" Margin="10,0,0,0" ToolTip="Haz clic para cambiar el atajo" FontSize="12" Grid.Column="1" Click="HotkeyPickerButton_Click" HorizontalAlignment="Left"/>
+                    </Grid>
+                </StackPanel>
+
+                <!-- Divider -->
+                <Border Height="1" Background="#404040" Margin="0,6,0,12"/>
+
                 <!-- Transcription Mode Section -->
                 <TextBlock x:Name="TranscriptionModeLabel_Title" Text="MODO DE TRANSCRIPCIÓN" FontSize="11" FontWeight="Bold" Foreground="#a1a1aa" Margin="0,6,0,8"/>
                 <StackPanel Margin="23,0,0,14">
@@ -297,16 +316,6 @@
                     <TextBlock Text="Groq API Key:" Foreground="#f4f4f5" FontSize="12" Margin="0,8,0,4"/>
                     <PasswordBox x:Name="GroqKeyBox" Height="28" Background="#16161d" Foreground="#f4f4f5" BorderBrush="#3f3f46" Padding="5,0"/>
                 </StackPanel>
-
-                <!-- Hotkey Section -->
-                <Grid Margin="0,6,0,12">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <TextBlock x:Name="GlobalHotkeyLabel" Text="Atajo global:" Foreground="#f4f4f5" FontSize="14" VerticalAlignment="Center" Grid.Column="0"/>
-                    <Button x:Name="HotkeyPickerButton" Content="Control+Shift+Space" Style="{StaticResource HotkeyButtonStyle}" Width="190" Height="32" Margin="12,0,0,0" ToolTip="Haz clic para cambiar el atajo" FontSize="13" Grid.Column="1" Click="HotkeyPickerButton_Click"/>
-                </Grid>
 
                 <!-- Divider -->
                 <Border Height="1" Background="#404040" Margin="0,12"/>

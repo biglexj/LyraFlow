@@ -4,16 +4,19 @@
 
 ## 🚀 Características Principales
 
-- **Inyección Silenciosa Directa**: El texto aparece donde está tu cursor.
+- **Inyección Silenciosa Directa**: El texto aparece donde está tu cursor de forma instantánea.
+- **Inyección Anti-AutoSend**: Usa `Shift+Enter` para preservar párrafos y listas sin disparar el envío automático en aplicaciones de chat (WhatsApp, Telegram, Discord).
+- **Inicio Automático con Windows**: Opción "General" para iniciar LyraFlow al arrancar el sistema, minimizado directamente en el system tray.
 - **Gestor de Modelos Local**: Descarga y selecciona entre diferentes modelos de Whisper (Tiny, Base, Small, Medium) con una barra de progreso integrada.
-- **Panel de Configuración Inteligente**: Gestiona tus API Keys de **Gemini** y **Groq** con persistencia local segura.
+- **Panel de Configuración Inteligente**: Gestiona tus API Keys de **Gemini** y **Groq** con persistencia local segura y una interfaz reorganizada para mayor claridad.
 - **Transcripción Híbrida**:
   - **Local (Whisper.net)**: Privacidad total. Elige el modelo que mejor se adapte a tu hardware.
   - **Nube (Groq API)**: Transcripción ultra-rápida usando `whisper-large-v3-turbo`.
-- **Refinamiento con Gemini AI**: Corrige gramática y estilo automáticamente sin perder ni una palabra del mensaje original.
+- **Refinamiento con Gemini AI**: Corrige gramática, puntuación y estilo automáticamente.
+- **Contexto AI (`context.md`)**: Define reglas, tareas y restricciones específicas para que la IA escriba exactamente como tú necesitas.
 - **Diseño Premium**: Interfaz minimalista en turquesa con modo oscuro/claro dinámico.
 - **Diálogo de Salida Inteligente**: Panel de confirmación para **Ocultar** o **Salir**, con cierre por clic exterior o tecla `Esc`.
-- **Atajo Global**: Control total con una combinación de teclas (Ej: `Ctrl+Shift+Espacio`).
+- **Atajo Global**: Control total con una combinación de teclas personalizable (Ej: `Ctrl+Shift+Espacio`).
 
 ## 🛠️ Requisitos
 - **OS**: Windows 10/11.

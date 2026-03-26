@@ -4,7 +4,7 @@
 
 ## 🚀 Características Principales
 
-- **Inyección Silenciosa Directa**: El texto aparece donde está tu cursor, sin simular `ENTER`, evitando envíos accidentales en chats o documentos.
+- **Inyección Silenciosa Directa**: El texto aparece donde está tu cursor.
 - **Gestor de Modelos Local**: Descarga y selecciona entre diferentes modelos de Whisper (Tiny, Base, Small, Medium) con una barra de progreso integrada.
 - **Panel de Configuración Inteligente**: Gestiona tus API Keys de **Gemini** y **Groq** con persistencia local segura.
 - **Transcripción Híbrida**:

@@ -33,7 +33,7 @@
    - Vuelve a pulsar el atajo para procesar e inyectar.
 
 ## 📄 Notas de Versión
-- **v3.0**: Panel de API integrado, inyección silenciosa, diálogo de salida personalizado y rediseño visual completo en Turquesa Premium.
+- **v1.0**: Panel de API integrado, inyección silenciosa, diálogo de salida personalizado y rediseño visual completo en Turquesa Premium.
 
 ---
 *Desarrollado para maximizar tu productividad vocal.*

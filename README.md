@@ -1,23 +1,24 @@
 # LyraFlow 🎙️✨
 
-**LyraFlow** es una herramienta de dictado inteligente de "Inyección Directa" diseñada para transformar tu voz en texto refinado y profesional al instante. LyraFlow elimina la fricción de escribir, permitiéndote dictar tus ideas y verlas aparecer perfectamente puntuadas y estructuradas en cualquier aplicación de Windows (WhatsApp, Slack, Word, VS Code, etc.).
+**LyraFlow** es una herramienta de dictado inteligente de "Inyección Directa" que transforma tu voz en texto refinado y profesional al instante. Elimina la fricción de escribir, dictando tus ideas para que aparezcan perfectamente puntuadas y estructuradas en cualquier aplicación de Windows.
 
 ## 🚀 Características Principales
 
-- **Inyección Silenciosa Directa**: El texto refinado aparece directamente donde está tu cursor, sin simular la tecla `ENTER` para evitar envíos accidentales.
-- **Panel de Configuración Inteligente**: Gestiona tus API Keys de **Gemini** y **Groq** directamente desde la interfaz, con persistencia local segura.
-- **Doble Motor de Transcripción**:
-  - **Local (Whisper.net)**: Privacidad total con procesamiento local.
-  - **Nube (Groq API)**: Transcripción ultra-rápida casi instantánea.
-- **Refinamiento con Gemini AI**: Corrige gramática, estilo y estructura automáticamente sin perder ni una palabra del mensaje original.
-- **DISEÑO PREMIUM (Turquesa)**: Interfaz minimalista con modo oscuro/claro dinámico y estética de alta gama.
-- **Diálogo de Salida Inteligente**: Panel de confirmación centrado para elegir entre **Ocultar** (Bandeja) o **Salir** (Cierre total), con soporte para cerrar haciendo clic fuera o pulsando `Esc`.
-- **Atajo Global**: Inicia y detén la grabación con una combinación de teclas (Ej: `Ctrl+Shift+Espacio`).
+- **Inyección Silenciosa Directa**: El texto aparece donde está tu cursor, sin simular `ENTER`, evitando envíos accidentales en chats o documentos.
+- **Gestor de Modelos Local**: Descarga y selecciona entre diferentes modelos de Whisper (Tiny, Base, Small, Medium) con una barra de progreso integrada.
+- **Panel de Configuración Inteligente**: Gestiona tus API Keys de **Gemini** y **Groq** con persistencia local segura.
+- **Transcripción Híbrida**:
+  - **Local (Whisper.net)**: Privacidad total. Elige el modelo que mejor se adapte a tu hardware.
+  - **Nube (Groq API)**: Transcripción ultra-rápida usando `whisper-large-v3-turbo`.
+- **Refinamiento con Gemini AI**: Corrige gramática y estilo automáticamente sin perder ni una palabra del mensaje original.
+- **Diseño Premium**: Interfaz minimalista en turquesa con modo oscuro/claro dinámico.
+- **Diálogo de Salida Inteligente**: Panel de confirmación para **Ocultar** o **Salir**, con cierre por clic exterior o tecla `Esc`.
+- **Atajo Global**: Control total con una combinación de teclas (Ej: `Ctrl+Shift+Espacio`).
 
 ## 🛠️ Requisitos
-- **OS**: Windows 10 o Superior.
+- **OS**: Windows 10/11.
 - **Framework**: .NET 10.0 (WPF).
-- **API Keys**: Para el modo en la nube y refinamiento, necesitas llaves de [Google Gemini](https://aistudio.google.com/) y [Groq](https://console.groq.com/).
+- **API Keys**: Necesitas llaves de [Google Gemini](https://aistudio.google.com/) y [Groq](https://console.groq.com/) para funciones completas.
 
 ## ⚙️ Configuración y Uso
 
@@ -25,15 +26,9 @@
    ```ps1
    dotnet run
    ```
-2. **API Keys**: Al abrir la ventana de ajustes, introduce tus llaves de Gemini y Groq. Se guardarán localmente en `%LOCALAPPDATA%\LyraFlow\config.json`.
-3. **Contexto (`context.md`)**: Este archivo es el "cerebro" del refinamiento. Añade aquí tus reglas personalizadas, glosario técnico o ejemplos de formato para que la IA escriba exactamente como tú quieres.
-4. **Dictado**: 
-   - Pulsa tu atajo (Ej: `Ctrl+Shift+Espacio`) para empezar a grabar.
-   - LyraFlow silenciará el sistema automáticamente.
-   - Vuelve a pulsar el atajo para procesar e inyectar.
-
-## 📄 Notas de Versión
-- **v1.0**: Panel de API integrado, inyección silenciosa, diálogo de salida personalizado y rediseño visual completo en Turquesa Premium.
+2. **Modelos Locales**: En la pestaña ajustes, selecciona un modelo y pulsa **DESCARGAR**. Se guardará en la carpeta local y se ignorará automáticamente en Git para mantener el repo ligero.
+3. **API Keys**: Introduce tus llaves en el panel; se guardan de forma privada en `%LOCALAPPDATA%\LyraFlow\config.json`.
+4. **Contexto (`context.md`)**: Configura aquí las reglas de "negocio", glosarios y ejemplos para que la IA escriba exactamente como tú lo harías.
 
 ---
-*Desarrollado para maximizar tu productividad vocal.*
+*v1.0 - Primera Versión Principal | Desarrollado para maximizar tu productividad vocal.*

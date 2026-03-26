@@ -10,6 +10,7 @@ namespace LyraFlow.Core
         public string? GeminiApiKey { get; set; }
         public string? GroqApiKey { get; set; }
         public string? SelectedGeminiModel { get; set; }
+        public string? SelectedLocalModel { get; set; }
         public bool UseGroq { get; set; }
         public bool SkipRefinement { get; set; }
         public string? GlobalHotkey { get; set; }

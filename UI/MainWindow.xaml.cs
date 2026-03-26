@@ -11,6 +11,7 @@ using System.Windows.Shapes;
 using NHotkey;
 using NHotkey.Wpf;
 using LyraFlow.Core;
+using LyraFlow.Services;
 using Color = System.Windows.Media.Color;
 using ColorConverter = System.Windows.Media.ColorConverter;
 
@@ -43,6 +44,20 @@ public partial class MainWindow : Window
         // Seleccionar el modelo por defecto
         GeminiModelCombo.SelectedIndex = 0;
         App.CurrentGeminiModel = "gemini-3-flash-preview";
+
+        // Inicializar Modelos Locales
+        string lastLocalModel = config.SelectedLocalModel ?? "Base";
+        foreach (ComboBoxItem item in LocalModelCombo.Items)
+        {
+            if (item.Content.ToString() == lastLocalModel)
+            {
+                LocalModelCombo.SelectedItem = item;
+                break;
+            }
+        }
+        if (LocalModelCombo.SelectedItem == null) LocalModelCombo.SelectedIndex = 1; // Base
+        
+        UpdateModelStatus();
 
         this.KeyDown += MainWindow_KeyDown;
     }
@@ -152,6 +167,59 @@ public partial class MainWindow : Window
         }
     }
 
+    private void LocalModelCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (!IsLoaded) return;
+        UpdateModelStatus();
+    }
+
+    private void UpdateModelStatus()
+    {
+        if (LocalModelCombo.SelectedItem is ComboBoxItem item)
+        {
+            string modelName = item.Content.ToString()!;
+            bool downloaded = ModelDownloadService.IsModelDownloaded(modelName);
+            
+            DownloadModelButton.Visibility = downloaded ? Visibility.Collapsed : Visibility.Visible;
+            ModelStatusText.Visibility = downloaded ? Visibility.Collapsed : Visibility.Visible;
+            ModelStatusText.Text = downloaded ? "" : "Modelo no descargado";
+            ModelStatusText.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#EF4444")); // Red
+        }
+    }
+
+    private async void DownloadModelButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (LocalModelCombo.SelectedItem is ComboBoxItem item)
+        {
+            string modelName = item.Content.ToString()!;
+            DownloadModelButton.IsEnabled = false;
+            DownloadProgress.Visibility = Visibility.Visible;
+            ModelStatusText.Visibility = Visibility.Visible;
+            ModelStatusText.Text = "Descargando...";
+            ModelStatusText.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#a1a1aa"));
+
+            try
+            {
+                await ModelDownloadService.DownloadModelAsync(modelName, (progress) =>
+                {
+                    Dispatcher.Invoke(() => DownloadProgress.Value = progress);
+                });
+
+                ModelStatusText.Text = "¡Descargado!";
+                ModelStatusText.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#14b8a6")); // Turquoise
+                DownloadProgress.Visibility = Visibility.Collapsed;
+                DownloadModelButton.Visibility = Visibility.Collapsed;
+            }
+            catch (Exception ex)
+            {
+                ModelStatusText.Text = "Error en descarga";
+                ModelStatusText.Foreground = new SolidColorBrush(Colors.Red);
+                DownloadModelButton.IsEnabled = true;
+                Logger.Log($"Error descargando modelo: {ex.Message}");
+            }
+        }
+    }
+
     private void SaveConfig()
     {
         var config = ConfigManager.Load();
@@ -160,6 +228,10 @@ public partial class MainWindow : Window
         config.SkipRefinement = IsSkipRefinementEnabled;
         config.UseGroq = GroqRadio.IsChecked == true;
         config.SelectedGeminiModel = App.CurrentGeminiModel;
+        if (LocalModelCombo.SelectedItem is ComboBoxItem localItem)
+        {
+            config.SelectedLocalModel = localItem.Content.ToString();
+        }
         ConfigManager.Save(config);
     }
 

@@ -40,13 +40,16 @@ namespace LyraFlow.Services
         {
             if (wavData == null || wavData.Length == 0) return string.Empty;
 
-            string modelPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "models", "ggml-base.bin");
+            var config = LyraFlow.Core.ConfigManager.Load();
+            string modelName = config.SelectedLocalModel ?? "Base";
+            string fileName = $"ggml-{modelName.ToLower()}.bin";
+
+            string modelPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "models", fileName);
             if (!File.Exists(modelPath))
             {
-                // Fallback a ruta relativa si el binario está en otro lado durante ejecución
-                modelPath = Path.Combine(Directory.GetCurrentDirectory(), "models", "ggml-base.bin");
+                modelPath = Path.Combine(Directory.GetCurrentDirectory(), "models", fileName);
                 if (!File.Exists(modelPath))
-                    throw new FileNotFoundException("Modelo Whisper no encontrado en ./models/ggml-base.bin");
+                    throw new FileNotFoundException($"Modelo Whisper '{modelName}' no encontrado en {modelPath}");
             }
 
             using var whisperFactory = WhisperFactory.FromPath(modelPath);

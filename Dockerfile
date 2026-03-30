@@ -2,13 +2,12 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
-# Copiar solo el proyecto API para evitar conflictos con el proyecto WPF (Windows)
-COPY ["src/LyraFlow.Api/LyraFlow.Api.csproj", "LyraFlow.Api/"]
-RUN dotnet restore "LyraFlow.Api/LyraFlow.Api.csproj"
+# Copiar el proyecto y restaurar (ahora en la raíz)
+COPY ["LyraFlow.Api.csproj", "./"]
+RUN dotnet restore "LyraFlow.Api.csproj"
 
-# Copiar el código fuente de la API
-COPY ["src/LyraFlow.Api/", "LyraFlow.Api/"]
-WORKDIR "/src/LyraFlow.Api"
+# Copiar el código fuente y publicar
+COPY . .
 RUN dotnet publish "LyraFlow.Api.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
 # Ejecución

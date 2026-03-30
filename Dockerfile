@@ -1,34 +1,31 @@
-# Estapa de construcción
+# Construcción
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /src
+
+# Copiar solo el proyecto API para evitar conflictos con el proyecto WPF (Windows)
+COPY ["src/LyraFlow.Api/LyraFlow.Api.csproj", "LyraFlow.Api/"]
+RUN dotnet restore "LyraFlow.Api/LyraFlow.Api.csproj"
+
+# Copiar el código fuente de la API
+COPY ["src/LyraFlow.Api/", "LyraFlow.Api/"]
+WORKDIR "/src/LyraFlow.Api"
+RUN dotnet publish "LyraFlow.Api.csproj" -c Release -o /app/publish /p:UseAppHost=false
+
+# Ejecución
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
 WORKDIR /app
+EXPOSE 8080
 
-# Copiar archivos del proyecto y restaurar dependencias
-COPY src/LyraFlow.Api/LyraFlow.Api.csproj ./
-RUN dotnet restore
-
-# Copiar el resto de los archivos y compilar
-COPY src/LyraFlow.Api/ ./
-RUN dotnet publish -c Release -o out
-
-# Etapa de ejecución
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
-WORKDIR /app
-
-# Instalar dependencias para Whisper (libdl, etc) si es necesario
-# Generalmente el runtime de .NET 8 en Linux ya incluye lo necesario para P/Invoke
+# Dependencias para Whisper
 RUN apt-get update && apt-get install -y wget && rm -rf /var/lib/apt/lists/*
 
-# Crear carpeta de modelos y descargar modelo 'base' por defecto
+# Descargar modelo base
 RUN mkdir -p /app/models
 RUN wget -O /app/models/ggml-base.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin
 
-# Copiar archivos publicados
-COPY --from=build /app/out ./
+COPY --from=build /app/publish .
 
-# Configurar variables de entorno
 ENV ASPNETCORE_URLS=http://+:8080
 ENV Whisper__ModelsPath=/app/models
-
-EXPOSE 8080
 
 ENTRYPOINT ["dotnet", "LyraFlow.Api.dll"]

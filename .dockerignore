@@ -1,0 +1,30 @@
+# Excluir carpetas de compilación
+bin/
+obj/
+publish/
+
+# Excluir el proyecto WPF (Windows) para que no interfiera en Docker/Linux
+LyraFlow.csproj
+LyraFlow.Package.wapproj
+App.xaml
+App.xaml.cs
+UI/
+Properties/
+Icon/
+Image/
+*.pfx
+Package.appxmanifest
+
+# Otros
+.git
+.vscode
+.env
+log/
+models/
+docs/
+scripts/
+context.md
+LICENSE
+PRIVACY.md
+README.md
+RELEASE_NOTES.md

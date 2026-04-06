@@ -1,0 +1,14 @@
+{
+  "version": 2,
+  "dgSpecHash": "2VGSR/V0oH8=",
+  "success": true,
+  "projectFilePath": "D:\\Proyectos\\biglexj\\LyraFlow\\src\\LyraFlow.Api\\LyraFlow.Api.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\biglexj\\.nuget\\packages\\microsoft.extensions.ai.abstractions\\10.0.0\\microsoft.extensions.ai.abstractions.10.0.0.nupkg.sha512",
+    "C:\\Users\\biglexj\\.nuget\\packages\\newtonsoft.json\\13.0.4\\newtonsoft.json.13.0.4.nupkg.sha512",
+    "C:\\Users\\biglexj\\.nuget\\packages\\whisper.net\\1.9.0\\whisper.net.1.9.0.nupkg.sha512",
+    "C:\\Users\\biglexj\\.nuget\\packages\\whisper.net.runtime\\1.9.0\\whisper.net.runtime.1.9.0.nupkg.sha512",
+    "C:\\Users\\biglexj\\.nuget\\packages\\whisper.net.runtime.metal\\1.9.0\\whisper.net.runtime.metal.1.9.0.nupkg.sha512"
+  ],
+  "logs": []
+}

@@ -481,3 +481,16 @@ $RECYCLE.BIN/
 .env
 
 models/
+
+# Kotlin / Gradle / Android local state
+.gradle/
+.kotlin/
+**/build/
+local.properties
+*.jks
+*.keystore
+/release/
+
+# Custom local folders for Biglex J standard
+/test/
+/scratch/

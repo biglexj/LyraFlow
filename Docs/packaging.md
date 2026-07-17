@@ -1,40 +1,44 @@
-# 📦 Guía de Empaquetado y Distribución - LyraFlow
+# Empaquetado de LyraFlow
 
-Este documento resume los pasos para generar la versión distribuible de LyraFlow (v1.0).
+LyraFlow se distribuye desde el proyecto Kotlin Multiplatform. La versión vive en `gradle.properties` y los formatos se configuran en `composeApp/build.gradle.kts`.
 
-## 🚀 Flujos de Compilación
+## Build local completo
 
-Todos los scripts se encuentran en la carpeta `scripts/`.
+```powershell
+.\build-release.ps1 -LocalOnly
+```
 
-### 1. Ejecutable Portable (.exe)
-Genera un archivo único que incluye todo lo necesario (Self-Contained). No requiere instalación.
-- **Script:** `.\scripts\build-exe.ps1`
-- **Salida:** `publish\exe\LyraFlow.exe`
+El script usa el JDK completo indicado por `JAVA_HOME`, ejecuta pruebas y genera:
 
-### 2. Instalador MSIX (.msix)
-Genera un paquete de Windows firmado para una instalación limpia y profesional.
-- **Paso A (Generar):** `.\scripts\build-msix.ps1`
-- **Paso B (Firmar):** `sudo pwsh -File .\scripts\sign-msix.ps1` (Requiere Admin)
-- **Salida:** `publish\msix\LyraFlow.msix`
+- MSI y EXE mediante Compose Desktop.
+- MSIX de aplicación Full Trust mediante Windows SDK.
+- Firma de los tres artefactos con el certificado local configurado.
+- `SHA256SUMS.txt` con las huellas de los artefactos.
 
----
+La salida se guarda en `release/<versión>/windows`. Los paquetes DEB y RPM deben generarse desde Linux mediante las tareas de Compose Desktop.
 
-## 🔐 Detalles de Firma (MSIX)
+## Publicación automática
 
-Para que el MSIX funcione sin errores de seguridad, el script de firma realiza lo siguiente automáticamene:
-1. Crea un certificado auto-firmado (`LyraFlow_Dev.pfx`).
-2. Lo instala en el almacén de **Entidades de certificación raíz de confianza** del equipo.
-3. Firma el paquete usando `signtool.exe`.
+```powershell
+.\build-release.ps1
+```
 
-> [!IMPORTANT]
-> Si el script de firma falla con un error de "aplicación no asociada", ejecútalo siempre como:
-> `sudo pwsh -File .\scripts\sign-msix.ps1`
+La ejecución sin parámetros exige `main` sincronizada con `origin/main`, GitHub CLI autenticado y un tag/release inexistente. Después de construir, firmar y verificar, crea el commit `release: LyraFlow vX.Y.Z`, un tag anotado, hace push atómico de rama y tag y publica EXE, MSI, MSIX y `SHA256SUMS.txt` en GitHub Releases usando `RELEASE_MESSAGE.md`.
 
----
+Opciones disponibles:
 
-## 🛠️ Notas Técnicas
-- **ID de Aplicación:** `biglexj.LyraFlow`
-- **Assets:** Los iconos y logos se gestionan en la carpeta `Image/`.
-- **Manifest:** El archivo `Package.appxmanifest` define las capacidades (Full Trust) y la identidad visual.
+- `-Version X.Y.Z`: actualiza `versionName` y aumenta `versionCode` cuando cambia la versión.
+- `-ReleaseNotesFile archivo.md`: usa otras notas para GitHub.
+- `-SkipTests`: omite pruebas, pero conserva la compilación.
+- `-SkipBuild`: reutiliza binarios existentes y vuelve a empaquetar.
+- `-SkipSigning`: solo está permitido junto con `-LocalOnly`.
 
-🟢 **LyraFlow v1.0 - Listo para despegar.** 🚀🎙️✨
+## Build sin firma
+
+```powershell
+.\build-release.ps1 -LocalOnly -SkipSigning
+```
+
+Una publicación oficial nunca admite paquetes sin firma.
+
+El MSIX usa la identidad `biglexj.LyraFlow` y el publicador `CN=biglexj`. Para instalar un paquete firmado con certificado local, Windows debe confiar previamente en la parte pública de ese certificado.

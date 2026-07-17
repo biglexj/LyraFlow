@@ -1,5 +1,9 @@
 # Release Notes - LyraFlow 🎙️✨
 
+## [1.0.3] "Alfajor" - 2026-07-16
+
+La clave de Gemini ahora se conserva cifrada para el usuario actual de Windows y deja de perderse al salir. El menú de bandeja adopta la identidad turquesa de LyraFlow, con estados hover y esquinas suavemente redondeadas.
+
 ## [1.0.2] "Alfajor" - 2026-07-16
 
 La X vuelve a ocultar LyraFlow en la bandeja del sistema en lugar de terminar el proceso. El atajo global continúa disponible sin ocupar espacio en la barra de tareas, y el menú del icono permite restaurar la ventana o salir completamente.

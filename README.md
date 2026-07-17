@@ -29,7 +29,9 @@ Requiere JDK 17 o posterior. El proyecto está verificado con Temurin 25.
 .\gradlew.bat :composeApp:run
 ```
 
-La clave puede definirse mediante `GEMINI_API_KEY` o introducirse temporalmente desde Ajustes. La clave escrita en la interfaz no se persiste en disco.
+La clave puede definirse mediante `GEMINI_API_KEY` o introducirse desde Ajustes. En Windows se conserva cifrada con DPAPI para el usuario actual; borrar el campo elimina también la copia persistida.
+
+La tarjeta `Whisper local` instala bajo demanda el binario x64 desde la última release oficial de `ggml-org/whisper.cpp` y el modelo base en los datos locales del usuario. La interfaz muestra el progreso y permite reintentar si la descarga falla.
 
 ## Verificación
 

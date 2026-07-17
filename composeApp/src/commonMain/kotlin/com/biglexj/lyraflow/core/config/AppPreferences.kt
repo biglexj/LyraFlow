@@ -25,4 +25,5 @@ data class AppPreferences(
 data class AppConfiguration(
     val preferences: AppPreferences = AppPreferences(),
     val sessionApiKey: String = "",
+    val apiKeyStorageMessage: String = "La clave solo vive durante esta sesión.",
 )

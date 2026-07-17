@@ -9,6 +9,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import com.biglexj.lyraflow.core.config.AppConfiguration
 import com.biglexj.lyraflow.core.config.AppPreferences
+import com.biglexj.lyraflow.core.config.WhisperSetupState
 import com.biglexj.lyraflow.domain.dictation.DictationState
 import com.biglexj.lyraflow.feature.shell.LyraFlowApp
 import com.biglexj.lyraflow.feature.shell.ShellActions
@@ -23,13 +24,14 @@ class MainActivity : ComponentActivity() {
                 platform = "Android · prototipo de UI compartida",
                 state = DictationState.Idle,
                 configuration = AppConfiguration(preferences, apiKey),
-                whisperStatus = "fuera del MVP Android de la Fase 0",
+                whisperStatus = WhisperSetupState.Unsupported,
                 actions = ShellActions(
                     toggleRecording = {},
                     injectLastResult = {},
                     reset = {},
                     updatePreferences = { preferences = it },
                     updateApiKey = { apiKey = it },
+                    installWhisper = {},
                 ),
             )
         }

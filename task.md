@@ -70,3 +70,16 @@
 - [x] Validar manualmente el ciclo de bandeja.
 - [x] Generar y verificar EXE, MSI, MSIX y hashes.
 - [x] Publicar y verificar GitHub Release v1.0.2.
+
+## Parche 1.0.3 — clave y menú de bandeja
+
+- [x] Diseñar persistencia cifrada con DPAPI en Windows.
+- [x] Cargar, actualizar y borrar la clave persistente desde Ajustes.
+- [x] Reemplazar el menú nativo por un popover turquesa redondeado.
+- [x] Añadir diálogo rápido de API key desde la tarjeta Gemini.
+- [x] Conectar la tarjeta Whisper a una instalación real con progreso.
+- [x] Actualizar versión, documentación y notas a 1.0.3.
+- [x] Ejecutar pruebas y compilar escritorio.
+- [x] Validar persistencia y menú en Windows.
+- [x] Generar y verificar EXE, MSI, MSIX y hashes.
+- [ ] Publicar y verificar GitHub Release v1.0.3.

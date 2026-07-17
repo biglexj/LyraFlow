@@ -102,3 +102,11 @@ Cerrar la ventana ya no termina LyraFlow: la aplicación se oculta, desaparece d
 La validación en Windows confirmó que, tras cerrar la ventana, el proceso permanece activo sin `MainWindowHandle` y `Ctrl + Espacio` sigue reservado por LyraFlow. Las pruebas automatizadas cubren además las acciones de abrir, salir y retirar correctamente el icono de bandeja.
 
 La corrección quedó publicada oficialmente en https://github.com/biglexj/LyraFlow/releases/tag/v1.0.2 con EXE, MSI, MSIX y hashes verificados.
+
+## Parche 1.0.3 — configuración persistente
+
+La clave de Gemini se almacena cifrada con DPAPI para el usuario actual de Windows. Cuando falta, la tarjeta Gemini abre un diálogo compacto para guardarla sin navegar a Ajustes; vaciar el campo de configuración elimina la copia persistente.
+
+La tarjeta Whisper local instala ahora el binario x64 de la última release oficial de `whisper.cpp` y el modelo base dentro de `%LOCALAPPDATA%`. La descarga muestra progreso y el runtime de escritorio declara explícitamente `java.net.http`, necesario para que la distribución empaquetada pueda ejecutar este flujo.
+
+El menú de bandeja dejó de usar el aspecto genérico de Windows: ahora es un popover oscuro con acento turquesa, hover y esquinas de 18 px. La validación manual confirmó el diálogo Gemini, la persistencia cifrada, la descarga completa de Whisper y el cambio de estado a `Whisper base listo`.

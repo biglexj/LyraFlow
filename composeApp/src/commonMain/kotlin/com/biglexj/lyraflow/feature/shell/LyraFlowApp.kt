@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.biglexj.lyraflow.core.config.AppConfiguration
 import com.biglexj.lyraflow.core.config.AppPreferences
+import com.biglexj.lyraflow.core.config.WhisperSetupState
 import com.biglexj.lyraflow.core.config.next
 import com.biglexj.lyraflow.core.audio.RecordingTelemetry
 import com.biglexj.lyraflow.core.theme.LyraFlowTheme
@@ -30,6 +31,7 @@ data class ShellActions(
     val reset: () -> Unit,
     val updatePreferences: (AppPreferences) -> Unit,
     val updateApiKey: (String) -> Unit,
+    val installWhisper: () -> Unit,
 )
 
 @Composable
@@ -38,7 +40,7 @@ fun LyraFlowApp(
     state: DictationState,
     configuration: AppConfiguration,
     recordingTelemetry: RecordingTelemetry = RecordingTelemetry(),
-    whisperStatus: String,
+    whisperStatus: WhisperSetupState,
     actions: ShellActions,
 ) {
     LyraFlowTheme(configuration.preferences.themeMode) {
@@ -80,7 +82,7 @@ private fun ScreenContent(
     state: DictationState,
     configuration: AppConfiguration,
     recordingTelemetry: RecordingTelemetry,
-    whisperStatus: String,
+    whisperStatus: WhisperSetupState,
     actions: ShellActions,
     modifier: Modifier,
 ) {
@@ -96,6 +98,8 @@ private fun ScreenContent(
                     onRecord = actions.toggleRecording,
                     onInject = actions.injectLastResult,
                     onClear = actions.reset,
+                    onApiKeyChange = actions.updateApiKey,
+                    onInstallWhisper = actions.installWhisper,
                 )
                 AppDestination.Settings -> SettingsScreen(
                     configuration = configuration,

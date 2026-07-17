@@ -19,10 +19,15 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.biglexj.lyraflow.core.config.AppConfiguration
+import com.biglexj.lyraflow.core.config.WhisperSetupState
 import com.biglexj.lyraflow.core.audio.RecordingTelemetry
 import com.biglexj.lyraflow.domain.dictation.DictationState
 import com.biglexj.lyraflow.feature.components.LyraIcon
@@ -33,12 +38,25 @@ fun HomeScreen(
     platform: String,
     state: DictationState,
     configuration: AppConfiguration,
-    whisperStatus: String,
+    whisperStatus: WhisperSetupState,
     recordingTelemetry: RecordingTelemetry,
     onRecord: () -> Unit,
     onInject: () -> Unit,
     onClear: () -> Unit,
+    onApiKeyChange: (String) -> Unit,
+    onInstallWhisper: () -> Unit,
 ) {
+    var showApiKeyDialog by remember { mutableStateOf(false) }
+    if (showApiKeyDialog) {
+        ApiKeyDialog(
+            initialValue = configuration.sessionApiKey,
+            onDismiss = { showApiKeyDialog = false },
+            onSave = {
+                onApiKeyChange(it)
+                showApiKeyDialog = false
+            },
+        )
+    }
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(28.dp),
         verticalArrangement = Arrangement.spacedBy(22.dp),
@@ -55,12 +73,15 @@ fun HomeScreen(
                 detail = if (configuration.sessionApiKey.isNotBlank()) configuration.preferences.model.label else "Añade tu API key en Ajustes",
                 available = configuration.sessionApiKey.isNotBlank(),
                 modifier = Modifier.weight(1f),
+                onClick = if (configuration.sessionApiKey.isBlank()) {{ showApiKeyDialog = true }} else null,
             )
             StatusCard(
                 title = "Whisper local",
-                detail = whisperStatus,
-                available = !whisperStatus.contains("no instalado", true),
+                detail = whisperStatus.detail,
+                available = whisperStatus.available,
                 modifier = Modifier.weight(1f),
+                progress = whisperStatus.progress,
+                onClick = if (!whisperStatus.available && !whisperStatus.downloading) onInstallWhisper else null,
             )
         }
     }

@@ -23,9 +23,7 @@ class LyraFlowTrayTest {
         icon.actionListeners.forEach {
             it.actionPerformed(ActionEvent(icon, ActionEvent.ACTION_PERFORMED, "open"))
         }
-        icon.popupMenu.getItem(2).actionListeners.forEach {
-            it.actionPerformed(ActionEvent(icon, ActionEvent.ACTION_PERFORMED, "exit"))
-        }
+        tray.requestExit { exited = true }
 
         assertTrue(opened)
         assertTrue(exited)

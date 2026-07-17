@@ -1,9 +1,9 @@
 package com.biglexj.lyraflow
 
-import java.awt.MenuItem
-import java.awt.PopupMenu
 import java.awt.SystemTray
 import java.awt.TrayIcon
+import java.awt.event.MouseAdapter
+import java.awt.event.MouseEvent
 import javax.imageio.ImageIO
 
 class LyraFlowTray(
@@ -11,15 +11,35 @@ class LyraFlowTray(
     onExit: () -> Unit,
 ) : AutoCloseable {
     private val systemTray = SystemTray.getSystemTray()
-    private val trayIcon = TrayIcon(loadIcon(), "LyraFlow", createMenu(onOpen, onExit))
+    private val menu = TrayMenuWindow(
+        onOpen = { requestOpen(onOpen) },
+        onExit = { requestExit(onExit) },
+    )
+    private val trayIcon = TrayIcon(loadIcon(), "LyraFlow")
 
     init {
         trayIcon.isImageAutoSize = true
-        trayIcon.addActionListener { onOpen() }
+        trayIcon.addActionListener { requestOpen(onOpen) }
+        trayIcon.addMouseListener(object : MouseAdapter() {
+            override fun mouseReleased(event: MouseEvent) {
+                if (event.isPopupTrigger || event.button == MouseEvent.BUTTON3) menu.showAtPointer()
+            }
+        })
         systemTray.add(trayIcon)
     }
 
+    internal fun requestOpen(action: () -> Unit) {
+        menu.hideMenu()
+        action()
+    }
+
+    internal fun requestExit(action: () -> Unit) {
+        menu.hideMenu()
+        action()
+    }
+
     override fun close() {
+        menu.dispose()
         systemTray.remove(trayIcon)
     }
 
@@ -29,11 +49,6 @@ class LyraFlowTray(
             ?.let(ImageIO::read)
             ?: error("No se encontró el icono de LyraFlow")
 
-        fun createMenu(onOpen: () -> Unit, onExit: () -> Unit) = PopupMenu().apply {
-            add(MenuItem("Abrir LyraFlow").apply { addActionListener { onOpen() } })
-            addSeparator()
-            add(MenuItem("Salir").apply { addActionListener { onExit() } })
-        }
     }
 }
 

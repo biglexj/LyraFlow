@@ -26,7 +26,8 @@ import com.biglexj.lyraflow.platform.audio.DesktopAudioCapture
 import com.biglexj.lyraflow.platform.hotkey.GlobalShortcutFactory
 import com.biglexj.lyraflow.platform.injection.DesktopTextInjector
 import com.biglexj.lyraflow.platform.settings.DesktopPreferencesStore
-import com.biglexj.lyraflow.platform.whisper.WhisperSidecar
+import com.biglexj.lyraflow.platform.settings.DesktopApiKeyStore
+import com.biglexj.lyraflow.platform.whisper.WhisperInstaller
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -35,13 +36,17 @@ import kotlinx.coroutines.launch
 
 fun main() = application {
     val preferencesStore = remember { DesktopPreferencesStore() }
+    val apiKeyStore = remember { DesktopApiKeyStore() }
     var preferences by remember { mutableStateOf(preferencesStore.load()) }
-    var apiKey by remember { mutableStateOf(System.getenv("GEMINI_API_KEY").orEmpty()) }
+    var apiKey by remember {
+        mutableStateOf(apiKeyStore.load().ifBlank { System.getenv("GEMINI_API_KEY").orEmpty() })
+    }
     var recordingTelemetry by remember { mutableStateOf(RecordingTelemetry()) }
     val scope = remember { CoroutineScope(SupervisorJob() + Dispatchers.Main) }
     val audio = remember { DesktopAudioCapture() }
     val injector = remember { DesktopTextInjector() }
-    val whisper = remember { WhisperSidecar() }
+    val whisperInstaller = remember { WhisperInstaller() }
+    val whisperStatus by whisperInstaller.state.collectAsState()
     var shortcut by remember { mutableStateOf(GlobalShortcutFactory.create()) }
     var windowVisible by remember { mutableStateOf(true) }
     val coordinator = remember {
@@ -125,9 +130,13 @@ fun main() = application {
         LyraFlowApp(
             platform = "${System.getProperty("os.name")} · ${shortcut.status}",
             state = state,
-            configuration = AppConfiguration(preferences, apiKey),
+            configuration = AppConfiguration(
+                preferences = preferences,
+                sessionApiKey = apiKey,
+                apiKeyStorageMessage = "La clave se guarda cifrada para tu usuario de Windows.",
+            ),
             recordingTelemetry = recordingTelemetry,
-            whisperStatus = whisper.status,
+            whisperStatus = whisperStatus,
             actions = ShellActions(
                 toggleRecording = ::toggleRecording,
                 injectLastResult = {
@@ -148,7 +157,11 @@ fun main() = application {
                         }
                     }
                 },
-                updateApiKey = { apiKey = it },
+                updateApiKey = {
+                    apiKey = it
+                    apiKeyStore.save(it)
+                },
+                installWhisper = { scope.launch { whisperInstaller.install() } },
             ),
         )
     }

@@ -79,7 +79,7 @@ fun SettingsScreen(
                 onPreferencesChange(configuration.preferences.copy(shortcut = shortcut))
             }
         }
-        SettingsSection("Gemini API", "La clave solo vive durante esta sesión y nunca se guarda en preferencias.") {
+        SettingsSection("Gemini API", configuration.apiKeyStorageMessage) {
             ApiKeyField(configuration.sessionApiKey, onApiKeyChange)
         }
         SettingsSection("Después de transcribir", "Controla qué sucede cuando el texto está listo.") {
@@ -145,7 +145,7 @@ private fun ApiKeyField(value: String, onValueChange: (String) -> Unit) {
         onValueChange = onValueChange,
         modifier = Modifier.fillMaxWidth().widthIn(max = 680.dp),
         label = { Text("GEMINI_API_KEY") },
-        placeholder = { Text("Pega aquí tu clave para esta sesión") },
+        placeholder = { Text("Pega aquí tu clave de Gemini") },
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
         visualTransformation = if (visible) VisualTransformation.None else PasswordVisualTransformation(),

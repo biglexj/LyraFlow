@@ -1,7 +1,7 @@
-# 🎙️ LyraFlow 1.0.2 “Alfajor”
+# 🎙️ LyraFlow 1.0.3 “Alfajor”
 
-Un parche esencial para que LyraFlow vuelva a acompañarte silenciosamente desde la bandeja del sistema.
+Un parche para que LyraFlow recuerde tu configuración y se sienta propio hasta en la bandeja del sistema.
 
-- 🫥 La X oculta la ventana sin detener LyraFlow.
-- ⌨️ El atajo global continúa activo en segundo plano.
-- 🖱️ El icono de bandeja permite restaurar la ventana o salir completamente.
+- 🔐 La clave de Gemini permanece cifrada para tu usuario de Windows.
+- 🩵 Nuevo menú de bandeja turquesa, redondeado y con estados hover.
+- 🧹 Vaciar el campo elimina también la clave persistida.

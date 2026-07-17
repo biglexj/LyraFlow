@@ -411,3 +411,21 @@ Objetivo: recuperar el comportamiento residente de LyraFlow en Windows sin mante
 5. Actualizar la versión a `1.0.2`, las notas y el mensaje de release con una descripción breve del parche.
 6. Ejecutar pruebas y compilación de escritorio; realizar una comprobación manual del ciclo abrir → cerrar a bandeja → usar atajo → restaurar → salir.
 7. Generar EXE, MSI y MSIX directamente en `release/`, verificar firmas y hashes, y publicar `v1.0.2` cuando la corrección quede validada.
+
+## Parche 1.0.3 — clave persistente y menú de bandeja LyraFlow
+
+Objetivo: conservar la configuración de Gemini después de salir completamente y reemplazar el menú genérico de Windows por una superficie coherente con la identidad visual de LyraFlow.
+
+1. Crear un almacén de secretos de escritorio separado de las preferencias normales. En Windows, cifrar y descifrar la API key con DPAPI para que solo el mismo usuario del equipo pueda recuperarla.
+2. Cargar primero la clave persistida y mantener `GEMINI_API_KEY` como alternativa cuando aún no exista una clave guardada. Guardar los cambios realizados desde Ajustes y permitir borrar la clave almacenada dejando el campo vacío.
+3. Actualizar el texto de Ajustes y README para explicar que la clave se conserva protegida en Windows; mantener el comportamiento de sesión actual de Android hasta implementar su almacén seguro propio.
+4. Reemplazar el `PopupMenu` nativo por un popover ligero de bandeja con fondo oscuro, acento turquesa, estados hover y esquinas de 14–16 px. Conservar las acciones `Abrir LyraFlow` y `Salir`.
+5. Cerrar el popover al perder el foco, posicionarlo dentro del área útil de la pantalla y asegurar que no aparezca como otra aplicación en la barra de tareas.
+6. Añadir pruebas para persistencia/cifrado y acciones de bandeja; ejecutar compilación y pruebas de escritorio y validar visualmente el menú.
+7. Actualizar a `1.0.3`, generar EXE/MSI/MSIX y hashes en la raíz de `release/`, y publicar la corrección tras validarla.
+
+Ampliación aprobada durante la implementación:
+
+8. Hacer interactiva la tarjeta Gemini: cuando falte la clave, abrir un diálogo breve, guardar la clave cifrada y cerrar el diálogo al confirmar.
+9. Hacer interactiva la tarjeta Whisper local: descargar desde la release oficial de `ggml-org/whisper.cpp` el binario x64 y el modelo base oficial, mostrando progreso, éxito o error.
+10. Instalar Whisper en los datos locales del usuario —no dentro de `Program Files`— y hacer que el sidecar descubra la instalación después de terminar la descarga.

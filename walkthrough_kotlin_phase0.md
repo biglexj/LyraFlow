@@ -92,3 +92,5 @@ El símbolo superior de la navegación lateral funciona como selector rápido de
 ## Publicación automatizada
 
 `build-release.ps1` combina el preflight estricto de WinTTS con el packaging Gradle de Ely-Tesia. `-LocalOnly` ejecuta pruebas, genera EXE/MSI/MSIX, firma y calcula hashes sin tocar Git; todos los archivos quedan directamente en `release/`, sin subcarpetas. Sin parámetros exige `main` sincronizada, valida GitHub CLI, crea commit y tag anotado, realiza push atómico y publica cuatro assets usando `RELEASE_MESSAGE.md`. Las utilidades de detección de JDK/SDK, versión, firma y estado remoto viven separadas en `scripts/release/ReleaseTools.ps1`.
+
+La versión oficial `v1.0.1` quedó publicada en GitHub con los tres instaladores y `SHA256SUMS.txt`: https://github.com/biglexj/LyraFlow/releases/tag/v1.0.1

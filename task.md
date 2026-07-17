@@ -55,6 +55,6 @@
 - [x] Verificar build local, pruebas, firma y hashes.
 - [x] Documentar el comando de publicación y sus opciones seguras.
 - [x] Aplanar la salida para dejar todos los artefactos directamente en `release/`.
-- [ ] Crear commit y tag `v1.0.1` con push atómico.
-- [ ] Publicar GitHub Release con EXE, MSI, MSIX y hashes.
-- [ ] Verificar remotamente la release y sus assets.
+- [x] Crear commit y tag `v1.0.1` con push atómico.
+- [x] Publicar GitHub Release con EXE, MSI, MSIX y hashes.
+- [x] Verificar remotamente la release y sus assets.

@@ -269,7 +269,7 @@ LyraFlow-Android-X.Y.Z.aab
 SHA256SUMS.txt
 ```
 
-El build local y la publicación se separarán:
+Todos los artefactos locales se guardarán directamente en `release/`, sin carpetas por versión o plataforma. El build local y la publicación se separarán:
 
 - `build-release.ps1 -LocalOnly`: compila, valida y calcula hashes.
 - Publicación: exige árbol Git limpio, versión confirmada y credenciales válidas.

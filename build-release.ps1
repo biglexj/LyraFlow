@@ -32,7 +32,7 @@ if (-not $LocalOnly -and $SkipSigning) {
 }
 
 $tag = "v$Version"
-$output = Join-Path $root "release\$Version\windows"
+$output = Join-Path $root "release"
 $artifactNames = @(
     "LyraFlow-Windows-$Version.exe",
     "LyraFlow-Windows-$Version.msi",
@@ -86,6 +86,8 @@ if (-not $resolvedOutput.StartsWith($resolvedRoot, [StringComparison]::OrdinalIg
     throw "La salida resuelta quedó fuera del proyecto."
 }
 Get-ChildItem -LiteralPath $output -File -ErrorAction SilentlyContinue | Remove-Item -Force
+Get-ChildItem -LiteralPath $output -Directory -ErrorAction SilentlyContinue |
+    Remove-Item -Recurse -Force
 
 $exe = Join-Path $output $artifactNames[0]
 $msi = Join-Path $output $artifactNames[1]

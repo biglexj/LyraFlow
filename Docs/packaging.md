@@ -15,7 +15,7 @@ El script usa el JDK completo indicado por `JAVA_HOME`, ejecuta pruebas y genera
 - Firma de los tres artefactos con el certificado local configurado.
 - `SHA256SUMS.txt` con las huellas de los artefactos.
 
-La salida se guarda en `release/<versión>/windows`. Los paquetes DEB y RPM deben generarse desde Linux mediante las tareas de Compose Desktop.
+La salida se guarda directamente en `release/`, sin subcarpetas: todos los instaladores y `SHA256SUMS.txt` quedan juntos y fáciles de encontrar. Los paquetes DEB y RPM deben generarse desde Linux mediante las tareas de Compose Desktop.
 
 ## Publicación automática
 

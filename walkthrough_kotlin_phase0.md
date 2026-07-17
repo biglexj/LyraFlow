@@ -100,3 +100,5 @@ La versión oficial `v1.0.1` quedó publicada en GitHub con los tres instaladore
 Cerrar la ventana ya no termina LyraFlow: la aplicación se oculta, desaparece de la barra de tareas y mantiene registrado el atajo global. El icono nativo de la bandeja permite restaurar la misma ventana con clic o elegir `Salir` para liberar el atajo, detener una grabación activa y finalizar el proceso.
 
 La validación en Windows confirmó que, tras cerrar la ventana, el proceso permanece activo sin `MainWindowHandle` y `Ctrl + Espacio` sigue reservado por LyraFlow. Las pruebas automatizadas cubren además las acciones de abrir, salir y retirar correctamente el icono de bandeja.
+
+La corrección quedó publicada oficialmente en https://github.com/biglexj/LyraFlow/releases/tag/v1.0.2 con EXE, MSI, MSIX y hashes verificados.

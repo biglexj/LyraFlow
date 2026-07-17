@@ -69,4 +69,4 @@
 - [x] Ejecutar pruebas y compilar escritorio.
 - [x] Validar manualmente el ciclo de bandeja.
 - [x] Generar y verificar EXE, MSI, MSIX y hashes.
-- [ ] Publicar y verificar GitHub Release v1.0.2.
+- [x] Publicar y verificar GitHub Release v1.0.2.

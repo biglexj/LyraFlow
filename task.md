@@ -58,3 +58,15 @@
 - [x] Crear commit y tag `v1.0.1` con push atómico.
 - [x] Publicar GitHub Release con EXE, MSI, MSIX y hashes.
 - [x] Verificar remotamente la release y sus assets.
+
+## Parche 1.0.2 — bandeja del sistema
+
+- [x] Confirmar la regresión respecto de LyraFlow 1.0.0.
+- [x] Separar ocultar la ventana de salir de la aplicación.
+- [x] Añadir icono de bandeja con acciones de abrir y salir.
+- [x] Mantener el atajo activo mientras la ventana está oculta.
+- [x] Actualizar versión y notas a 1.0.2.
+- [x] Ejecutar pruebas y compilar escritorio.
+- [x] Validar manualmente el ciclo de bandeja.
+- [x] Generar y verificar EXE, MSI, MSIX y hashes.
+- [ ] Publicar y verificar GitHub Release v1.0.2.

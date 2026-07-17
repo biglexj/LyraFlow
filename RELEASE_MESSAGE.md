@@ -1,8 +1,7 @@
-# 🎙️ LyraFlow 1.0.1 “Alfajor”
+# 🎙️ LyraFlow 1.0.2 “Alfajor”
 
-La nueva LyraFlow ya funciona sobre Kotlin Multiplatform, con una interfaz Material 3 Expressive y un flujo de dictado contextual más claro.
+Un parche esencial para que LyraFlow vuelva a acompañarte silenciosamente desde la bandeja del sistema.
 
-- 🎤 Grabación mediante `Ctrl + Espacio`, personalizable con 2 o 3 teclas.
-- ✨ Gemini organiza, puntúa y limpia el dictado sin alterar su intención.
-- 🌓 Temas automático, claro y oscuro.
-- 📦 Instaladores EXE, MSI y MSIX para Windows.
+- 🫥 La X oculta la ventana sin detener LyraFlow.
+- ⌨️ El atajo global continúa activo en segundo plano.
+- 🖱️ El icono de bandeja permite restaurar la ventana o salir completamente.

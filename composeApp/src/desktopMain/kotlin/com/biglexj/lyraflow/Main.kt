@@ -1,6 +1,8 @@
 package com.biglexj.lyraflow
 
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -28,6 +30,7 @@ import com.biglexj.lyraflow.platform.whisper.WhisperSidecar
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
 fun main() = application {
@@ -40,6 +43,7 @@ fun main() = application {
     val injector = remember { DesktopTextInjector() }
     val whisper = remember { WhisperSidecar() }
     var shortcut by remember { mutableStateOf(GlobalShortcutFactory.create()) }
+    var windowVisible by remember { mutableStateOf(true) }
     val coordinator = remember {
         DictationCoordinator(GeminiTranscriptionProvider(createPlatformHttpClient()) { apiKey })
     }
@@ -76,11 +80,35 @@ fun main() = application {
         true
     }
 
+    fun exitLyraFlow() {
+        if (recording.value) {
+            recording.value = false
+            runCatching { audio.stop() }
+        }
+        shortcut.close()
+        scope.cancel()
+        exitApplication()
+    }
+
+    val tray = remember {
+        if (isSystemTraySupported()) {
+            LyraFlowTray(
+                onOpen = { windowVisible = true },
+                onExit = ::exitLyraFlow,
+            )
+        } else {
+            null
+        }
+    }
+    DisposableEffect(tray) {
+        onDispose { tray?.close() }
+    }
+
     Window(
         onCloseRequest = {
-            shortcut.close()
-            exitApplication()
+            if (tray != null) windowVisible = false else exitLyraFlow()
         },
+        visible = windowVisible,
         title = "LyraFlow",
         state = rememberWindowState(
             width = 1200.dp,
@@ -88,6 +116,12 @@ fun main() = application {
             position = WindowPosition(Alignment.Center),
         ),
     ) {
+        LaunchedEffect(windowVisible) {
+            if (windowVisible) {
+                window.toFront()
+                window.requestFocus()
+            }
+        }
         LyraFlowApp(
             platform = "${System.getProperty("os.name")} · ${shortcut.status}",
             state = state,

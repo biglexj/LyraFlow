@@ -1,5 +1,9 @@
 # Release Notes - LyraFlow 🎙️✨
 
+## [1.0.2] "Alfajor" - 2026-07-16
+
+La X vuelve a ocultar LyraFlow en la bandeja del sistema en lugar de terminar el proceso. El atajo global continúa disponible sin ocupar espacio en la barra de tareas, y el menú del icono permite restaurar la ventana o salir completamente.
+
 ## [1.0.1] "Alfajor" - 2026-07-16
 
 LyraFlow migra oficialmente a Kotlin Multiplatform con una interfaz Material 3 Expressive, temas claro/oscuro, dictado mediante hotkey, telemetría visible del micrófono y transcripción contextual con Gemini. La implementación heredada WPF fue retirada.

@@ -399,3 +399,15 @@ Objetivo: convertir `build-release.ps1` en el único punto de entrada para const
 7. Verificar en GitHub el tag, la release y sus cuatro assets; documentar el flujo en README, packaging y walkthrough.
 
 Estado comprobado antes de ejecutar: rama `main`, remoto `https://github.com/biglexj/LyraFlow.git`, sesión `gh` autenticada como `biglexj`, último tag/release `v1.0.0`; `v1.0.1` está disponible.
+
+## Parche 1.0.2 — ejecución en bandeja del sistema
+
+Objetivo: recuperar el comportamiento residente de LyraFlow en Windows sin mantener una ventana ocupando espacio en la barra de tareas.
+
+1. Separar “cerrar ventana” de “salir de la aplicación”: la X ocultará la ventana y conservará vivos el proceso, el atajo global y el coordinador de dictado.
+2. Añadir un icono de bandeja con acciones para abrir LyraFlow y salir completamente. La acción de salida liberará el atajo global, detendrá cualquier captura activa y cerrará el proceso de forma limpia.
+3. Hacer que abrir desde la bandeja restaure y enfoque la ventana, sin crear instancias adicionales.
+4. Mantener el icono de la aplicación fuera de la barra de tareas mientras la ventana esté oculta; cuando esté abierta, conservar el comportamiento normal de una ventana de escritorio.
+5. Actualizar la versión a `1.0.2`, las notas y el mensaje de release con una descripción breve del parche.
+6. Ejecutar pruebas y compilación de escritorio; realizar una comprobación manual del ciclo abrir → cerrar a bandeja → usar atajo → restaurar → salir.
+7. Generar EXE, MSI y MSIX directamente en `release/`, verificar firmas y hashes, y publicar `v1.0.2` cuando la corrección quede validada.

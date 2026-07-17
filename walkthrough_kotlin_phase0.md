@@ -103,6 +103,8 @@ La validación en Windows confirmó que, tras cerrar la ventana, el proceso perm
 
 La corrección quedó publicada oficialmente en https://github.com/biglexj/LyraFlow/releases/tag/v1.0.2 con EXE, MSI, MSIX y hashes verificados.
 
+La actualización `v1.0.3` quedó publicada oficialmente en https://github.com/biglexj/LyraFlow/releases/tag/v1.0.3 con EXE, MSI, MSIX y hashes SHA-256 verificados contra los artefactos locales.
+
 ## Parche 1.0.3 — configuración persistente
 
 La clave de Gemini se almacena cifrada con DPAPI para el usuario actual de Windows. Cuando falta, la tarjeta Gemini abre un diálogo compacto para guardarla sin navegar a Ajustes; vaciar el campo de configuración elimina la copia persistente.

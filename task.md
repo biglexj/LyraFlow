@@ -82,4 +82,4 @@
 - [x] Ejecutar pruebas y compilar escritorio.
 - [x] Validar persistencia y menú en Windows.
 - [x] Generar y verificar EXE, MSI, MSIX y hashes.
-- [ ] Publicar y verificar GitHub Release v1.0.3.
+- [x] Publicar y verificar GitHub Release v1.0.3.

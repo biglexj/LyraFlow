@@ -1,7 +1,6 @@
 package com.biglexj.lyraflow.feature.settings
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -90,6 +89,14 @@ fun SettingsScreen(
                 onCheckedChange = { onPreferencesChange(configuration.preferences.copy(autoInject = it)) },
             )
         }
+        SettingsSection("Inicio", "LyraFlow puede quedar listo desde que enciendes el equipo.") {
+            SettingSwitch(
+                title = "Iniciar con Windows",
+                supporting = "Se abre minimizado en el área de notificación.",
+                checked = configuration.preferences.launchAtStartup,
+                onCheckedChange = { onPreferencesChange(configuration.preferences.copy(launchAtStartup = it)) },
+            )
+        }
     }
 }
 
@@ -114,7 +121,8 @@ private fun SettingsSection(title: String, supporting: String, content: @Composa
 @Composable
 private fun ModelOption(model: GeminiModel, selected: Boolean, onSelect: () -> Unit) {
     Surface(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onSelect),
+        onClick = onSelect,
+        modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
         color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant),

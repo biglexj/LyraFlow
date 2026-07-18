@@ -8,6 +8,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowPosition
@@ -27,16 +28,19 @@ import com.biglexj.lyraflow.platform.hotkey.GlobalShortcutFactory
 import com.biglexj.lyraflow.platform.injection.DesktopTextInjector
 import com.biglexj.lyraflow.platform.settings.DesktopPreferencesStore
 import com.biglexj.lyraflow.platform.settings.DesktopApiKeyStore
+import com.biglexj.lyraflow.platform.settings.WindowsAutoStart
 import com.biglexj.lyraflow.platform.whisper.WhisperInstaller
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import java.awt.event.WindowFocusListener
 
-fun main() = application {
+fun main(args: Array<String>) = application {
     val preferencesStore = remember { DesktopPreferencesStore() }
     val apiKeyStore = remember { DesktopApiKeyStore() }
+    val autoStart = remember { WindowsAutoStart() }
     var preferences by remember { mutableStateOf(preferencesStore.load()) }
     var apiKey by remember {
         mutableStateOf(apiKeyStore.load().ifBlank { System.getenv("GEMINI_API_KEY").orEmpty() })
@@ -45,19 +49,30 @@ fun main() = application {
     val scope = remember { CoroutineScope(SupervisorJob() + Dispatchers.Main) }
     val audio = remember { DesktopAudioCapture() }
     val injector = remember { DesktopTextInjector() }
+    val statusOverlay = remember { LyraFlowStatusOverlay() }
     val whisperInstaller = remember { WhisperInstaller() }
     val whisperStatus by whisperInstaller.state.collectAsState()
     var shortcut by remember { mutableStateOf(GlobalShortcutFactory.create()) }
-    var windowVisible by remember { mutableStateOf(true) }
+    val startsMinimized = args.any { it.equals("--minimized", ignoreCase = true) }
+    var windowVisible by remember { mutableStateOf(!startsMinimized || !isSystemTraySupported()) }
     val coordinator = remember {
         DictationCoordinator(GeminiTranscriptionProvider(createPlatformHttpClient()) { apiKey })
     }
     val state by coordinator.state.collectAsState()
     val recording = remember { mutableStateOf(false) }
 
+    LaunchedEffect(state) {
+        statusOverlay.update(state)
+    }
+
+    LaunchedEffect(preferences.launchAtStartup) {
+        autoStart.setEnabled(preferences.launchAtStartup)
+    }
+
     fun toggleRecording() {
         if (!recording.value) {
             recordingTelemetry = RecordingTelemetry()
+            injector.rememberForegroundTarget()
             runCatching {
                 audio.start { level, durationMillis ->
                     scope.launch { recordingTelemetry = RecordingTelemetry(level, durationMillis) }
@@ -91,6 +106,7 @@ fun main() = application {
             runCatching { audio.stop() }
         }
         shortcut.close()
+        statusOverlay.dispose()
         scope.cancel()
         exitApplication()
     }
@@ -106,7 +122,10 @@ fun main() = application {
         }
     }
     DisposableEffect(tray) {
-        onDispose { tray?.close() }
+        onDispose {
+            tray?.close()
+            statusOverlay.dispose()
+        }
     }
 
     Window(
@@ -115,12 +134,21 @@ fun main() = application {
         },
         visible = windowVisible,
         title = "LyraFlow",
+        icon = painterResource("Square44x44Logo.png"),
         state = rememberWindowState(
-            width = 1200.dp,
-            height = 840.dp,
+            width = 1210.dp,
+            height = 870.dp,
             position = WindowPosition(Alignment.Center),
         ),
     ) {
+        DisposableEffect(window) {
+            val focusListener = object : WindowFocusListener {
+                override fun windowGainedFocus(event: java.awt.event.WindowEvent) = Unit
+                override fun windowLostFocus(event: java.awt.event.WindowEvent) = injector.rememberForegroundTarget()
+            }
+            window.addWindowFocusListener(focusListener)
+            onDispose { window.removeWindowFocusListener(focusListener) }
+        }
         LaunchedEffect(windowVisible) {
             if (windowVisible) {
                 window.toFront()
@@ -148,6 +176,7 @@ fun main() = application {
                     val shortcutChanged = preferences.shortcut != updated.shortcut
                     preferences = updated
                     preferencesStore.save(updated)
+                    autoStart.setEnabled(updated.launchAtStartup)
                     if (shortcutChanged) {
                         shortcut.close()
                         shortcut = GlobalShortcutFactory.create().also { replacement ->
@@ -161,7 +190,7 @@ fun main() = application {
                     apiKey = it
                     apiKeyStore.save(it)
                 },
-                installWhisper = { scope.launch { whisperInstaller.install() } },
+                installWhisper = { model -> scope.launch { whisperInstaller.install(model) } },
             ),
         )
     }

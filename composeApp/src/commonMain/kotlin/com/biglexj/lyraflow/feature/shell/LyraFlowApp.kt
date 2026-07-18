@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import com.biglexj.lyraflow.core.config.AppConfiguration
 import com.biglexj.lyraflow.core.config.AppPreferences
 import com.biglexj.lyraflow.core.config.WhisperSetupState
+import com.biglexj.lyraflow.core.config.WhisperModel
 import com.biglexj.lyraflow.core.config.next
 import com.biglexj.lyraflow.core.audio.RecordingTelemetry
 import com.biglexj.lyraflow.core.theme.LyraFlowTheme
@@ -31,7 +32,7 @@ data class ShellActions(
     val reset: () -> Unit,
     val updatePreferences: (AppPreferences) -> Unit,
     val updateApiKey: (String) -> Unit,
-    val installWhisper: () -> Unit,
+    val installWhisper: (WhisperModel) -> Unit,
 )
 
 @Composable

@@ -1,5 +1,6 @@
 package com.biglexj.lyraflow.platform.whisper
 
+import com.biglexj.lyraflow.core.config.WhisperModel
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.isRegularFile
@@ -10,7 +11,7 @@ object WhisperPaths {
         if (localData != null) Path.of(localData, "LyraFlow", "whisper")
         else Path.of(System.getProperty("user.home"), ".local", "share", "lyraflow", "whisper")
     }
-    val model: Path get() = root.resolve("models/ggml-base.bin")
+    fun model(model: WhisperModel): Path = root.resolve("models/${model.fileName}")
 
     fun executable(): Path? {
         val configured = System.getenv("LYRAFLOW_WHISPER_BIN")

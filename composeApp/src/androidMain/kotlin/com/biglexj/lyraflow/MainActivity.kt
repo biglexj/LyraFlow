@@ -31,7 +31,7 @@ class MainActivity : ComponentActivity() {
                     reset = {},
                     updatePreferences = { preferences = it },
                     updateApiKey = { apiKey = it },
-                    installWhisper = {},
+                    installWhisper = { _ -> },
                 ),
             )
         }

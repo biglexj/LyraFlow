@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.FilledTonalButton
@@ -18,6 +19,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -28,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.biglexj.lyraflow.core.config.AppConfiguration
 import com.biglexj.lyraflow.core.config.WhisperSetupState
+import com.biglexj.lyraflow.core.config.WhisperModel
 import com.biglexj.lyraflow.core.audio.RecordingTelemetry
 import com.biglexj.lyraflow.domain.dictation.DictationState
 import com.biglexj.lyraflow.feature.components.LyraIcon
@@ -44,9 +47,10 @@ fun HomeScreen(
     onInject: () -> Unit,
     onClear: () -> Unit,
     onApiKeyChange: (String) -> Unit,
-    onInstallWhisper: () -> Unit,
+    onInstallWhisper: (WhisperModel) -> Unit,
 ) {
     var showApiKeyDialog by remember { mutableStateOf(false) }
+    var showWhisperModelDialog by remember { mutableStateOf(false) }
     if (showApiKeyDialog) {
         ApiKeyDialog(
             initialValue = configuration.sessionApiKey,
@@ -54,6 +58,15 @@ fun HomeScreen(
             onSave = {
                 onApiKeyChange(it)
                 showApiKeyDialog = false
+            },
+        )
+    }
+    if (showWhisperModelDialog) {
+        WhisperModelDialog(
+            onDismiss = { showWhisperModelDialog = false },
+            onInstall = {
+                onInstallWhisper(it)
+                showWhisperModelDialog = false
             },
         )
     }
@@ -81,10 +94,38 @@ fun HomeScreen(
                 available = whisperStatus.available,
                 modifier = Modifier.weight(1f),
                 progress = whisperStatus.progress,
-                onClick = if (!whisperStatus.available && !whisperStatus.downloading) onInstallWhisper else null,
+                onClick = if (!whisperStatus.available && !whisperStatus.downloading) {{ showWhisperModelDialog = true }} else null,
             )
         }
     }
+}
+
+@Composable
+private fun WhisperModelDialog(onDismiss: () -> Unit, onInstall: (WhisperModel) -> Unit) {
+    var selected by remember { mutableStateOf(WhisperModel.Base) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Elige el modelo de Whisper") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Puedes instalar otro modelo más adelante si lo necesitas.")
+                WhisperModel.entries.forEach { model ->
+                    Surface(
+                        onClick = { selected = model },
+                        shape = MaterialTheme.shapes.medium,
+                        color = if (selected == model) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .45f),
+                    ) {
+                        Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text(model.label, style = MaterialTheme.typography.titleMedium)
+                            Text(model.description, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = { onInstall(selected) }) { Text("Instalar") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } },
+    )
 }
 
 @Composable

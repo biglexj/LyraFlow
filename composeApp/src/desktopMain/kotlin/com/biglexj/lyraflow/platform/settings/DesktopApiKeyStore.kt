@@ -15,6 +15,7 @@ class DesktopApiKeyStore(
 
     fun save(value: String) {
         if (value.isBlank()) node.remove(API_KEY) else node.put(API_KEY, protector.protect(value.trim()))
+        node.flush()
     }
 
     private companion object {

@@ -6,12 +6,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
 
-enum class LyraIconType { Home, Settings, Mic, Copy, Clear, Sparkle }
+enum class LyraIconType { Home, Settings, Mic, Copy, Clear, System, Sun, Moon }
 
 @Composable
 fun LyraIcon(type: LyraIconType, modifier: Modifier = Modifier) {
@@ -46,11 +47,30 @@ fun LyraIcon(type: LyraIconType, modifier: Modifier = Modifier) {
                 drawLine(color, Offset(size.width * .25f, size.height * .25f), Offset(size.width * .75f, size.height * .75f), stroke, StrokeCap.Round)
                 drawLine(color, Offset(size.width * .75f, size.height * .25f), Offset(size.width * .25f, size.height * .75f), stroke, StrokeCap.Round)
             }
-            LyraIconType.Sparkle -> {
-                drawLine(color, Offset(size.width * .5f, size.height * .12f), Offset(size.width * .5f, size.height * .88f), stroke, StrokeCap.Round)
-                drawLine(color, Offset(size.width * .12f, size.height * .5f), Offset(size.width * .88f, size.height * .5f), stroke, StrokeCap.Round)
-                drawLine(color, Offset(size.width * .25f, size.height * .25f), Offset(size.width * .75f, size.height * .75f), stroke, StrokeCap.Round)
-                drawLine(color, Offset(size.width * .75f, size.height * .25f), Offset(size.width * .25f, size.height * .75f), stroke, StrokeCap.Round)
+            LyraIconType.System -> {
+                drawRoundRect(color, Offset(size.width * .16f, size.height * .2f), Size(size.width * .68f, size.height * .46f), CornerRadius(size.minDimension * .07f), style = Stroke(stroke))
+                drawLine(color, Offset(size.width * .5f, size.height * .66f), Offset(size.width * .5f, size.height * .78f), stroke, StrokeCap.Round)
+                drawLine(color, Offset(size.width * .32f, size.height * .8f), Offset(size.width * .68f, size.height * .8f), stroke, StrokeCap.Round)
+            }
+            LyraIconType.Sun -> {
+                drawCircle(color, size.minDimension * .2f, center, style = Stroke(stroke))
+                repeat(8) { index ->
+                    val angle = index * Math.PI / 4
+                    val start = Offset(center.x + kotlin.math.cos(angle).toFloat() * size.width * .32f, center.y + kotlin.math.sin(angle).toFloat() * size.height * .32f)
+                    val end = Offset(center.x + kotlin.math.cos(angle).toFloat() * size.width * .43f, center.y + kotlin.math.sin(angle).toFloat() * size.height * .43f)
+                    drawLine(color, start, end, stroke, StrokeCap.Round)
+                }
+            }
+            LyraIconType.Moon -> {
+                val crescent = Path().apply {
+                    moveTo(size.width * .62f, size.height * .1f)
+                    cubicTo(size.width * .38f, size.height * .18f, size.width * .23f, size.height * .39f, size.width * .27f, size.height * .62f)
+                    cubicTo(size.width * .31f, size.height * .84f, size.width * .53f, size.height * .96f, size.width * .74f, size.height * .84f)
+                    cubicTo(size.width * .49f, size.height * .78f, size.width * .42f, size.height * .55f, size.width * .49f, size.height * .36f)
+                    cubicTo(size.width * .53f, size.height * .24f, size.width * .58f, size.height * .15f, size.width * .62f, size.height * .1f)
+                    close()
+                }
+                drawPath(crescent, color)
             }
         }
     }

@@ -44,7 +44,7 @@ fun LyraNavigationRail(
                 color = MaterialTheme.colorScheme.primaryContainer,
                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
             ) {
-                LyraIcon(LyraIconType.Sparkle, Modifier.padding(12.dp))
+                LyraIcon(themeMode.icon, Modifier.padding(12.dp))
             }
             Spacer(Modifier.weight(1f))
             Column(
@@ -66,6 +66,13 @@ fun LyraNavigationRail(
 }
 
 private val RailItemWidth = 64.dp
+
+private val ThemeMode.icon: LyraIconType
+    get() = when (this) {
+        ThemeMode.System -> LyraIconType.System
+        ThemeMode.Light -> LyraIconType.Sun
+        ThemeMode.Dark -> LyraIconType.Moon
+    }
 
 @Composable
 fun LyraNavigationBar(selected: AppDestination, onSelect: (AppDestination) -> Unit) {

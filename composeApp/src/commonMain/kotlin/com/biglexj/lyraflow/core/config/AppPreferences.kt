@@ -19,6 +19,7 @@ data class AppPreferences(
     val themeMode: ThemeMode = ThemeMode.System,
     val model: GeminiModel = GeminiModel.Fast,
     val autoInject: Boolean = true,
+    val launchAtStartup: Boolean = true,
     val shortcut: KeyboardShortcut = KeyboardShortcut.Default,
 )
 

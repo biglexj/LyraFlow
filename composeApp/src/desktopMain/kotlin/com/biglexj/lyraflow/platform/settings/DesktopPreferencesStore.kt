@@ -16,6 +16,7 @@ class DesktopPreferencesStore : PreferencesStore {
         themeMode = enumValue(node.get(THEME, ThemeMode.System.name), ThemeMode.System),
         model = enumValue(node.get(MODEL, GeminiModel.Fast.name), GeminiModel.Fast),
         autoInject = node.getBoolean(AUTO_INJECT, true),
+        launchAtStartup = node.getBoolean(LAUNCH_AT_STARTUP, true),
         shortcut = loadShortcut(),
     )
 
@@ -23,8 +24,10 @@ class DesktopPreferencesStore : PreferencesStore {
         node.put(THEME, preferences.themeMode.name)
         node.put(MODEL, preferences.model.name)
         node.putBoolean(AUTO_INJECT, preferences.autoInject)
+        node.putBoolean(LAUNCH_AT_STARTUP, preferences.launchAtStartup)
         node.put(HOTKEY_MODIFIERS, preferences.shortcut.modifiers.joinToString(",") { it.name })
         node.put(HOTKEY_KEY, preferences.shortcut.key.name)
+        node.flush()
     }
 
     private fun loadShortcut(): KeyboardShortcut {
@@ -46,6 +49,7 @@ class DesktopPreferencesStore : PreferencesStore {
         const val THEME = "theme"
         const val MODEL = "geminiModel"
         const val AUTO_INJECT = "autoInject"
+        const val LAUNCH_AT_STARTUP = "launchAtStartup"
         const val HOTKEY_MODIFIERS = "hotkeyModifiers"
         const val HOTKEY_KEY = "hotkeyKey"
     }

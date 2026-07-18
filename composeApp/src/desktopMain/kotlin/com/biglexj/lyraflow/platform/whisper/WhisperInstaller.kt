@@ -1,6 +1,7 @@
 package com.biglexj.lyraflow.platform.whisper
 
 import com.biglexj.lyraflow.core.config.WhisperSetupState
+import com.biglexj.lyraflow.core.config.WhisperModel
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -22,7 +23,7 @@ class WhisperInstaller {
     private val mutableState = MutableStateFlow(currentState())
     val state: StateFlow<WhisperSetupState> = mutableState
 
-    suspend fun install() {
+    suspend fun install(model: WhisperModel) {
         if (mutableState.value.downloading) return
         withContext(Dispatchers.IO) {
             runCatching {
@@ -31,7 +32,7 @@ class WhisperInstaller {
                 download(latestWindowsAsset(), archive, 0f, .35f, "Descargando Whisper")
                 extract(archive, WhisperPaths.root.resolve("runtime"))
                 Files.deleteIfExists(archive)
-                download(MODEL_URL, WhisperPaths.model, .35f, 1f, "Descargando modelo base")
+                download(modelUrl(model), WhisperPaths.model(model), .35f, 1f, "Descargando modelo ${model.label}")
                 checkNotNull(WhisperPaths.executable()) { "El paquete no incluyó whisper-cli.exe" }
             }.onSuccess {
                 mutableState.value = currentState()
@@ -89,12 +90,16 @@ class WhisperInstaller {
         }
     }
 
-    private fun currentState() = if (WhisperPaths.executable() != null && Files.isRegularFile(WhisperPaths.model)) {
-        WhisperSetupState("Whisper base listo", available = true)
-    } else WhisperSetupState("Clic para instalar Whisper local")
+    private fun currentState(): WhisperSetupState {
+        val installedModel = WhisperModel.entries.firstOrNull { Files.isRegularFile(WhisperPaths.model(it)) }
+        return if (WhisperPaths.executable() != null && installedModel != null) {
+            WhisperSetupState("Whisper ${installedModel.label} listo", available = true, model = installedModel)
+        } else WhisperSetupState("Clic para instalar Whisper local")
+    }
+
+    private fun modelUrl(model: WhisperModel) = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/${model.fileName}"
 
     private companion object {
         const val LATEST_RELEASE_API = "https://api.github.com/repos/ggml-org/whisper.cpp/releases/latest"
-        const val MODEL_URL = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin"
     }
 }

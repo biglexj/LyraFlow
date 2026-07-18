@@ -1,7 +1,9 @@
-# 🎙️ LyraFlow 1.0.3 “Alfajor”
+# 🎙️ LyraFlow 1.0.4
 
-Un parche para que LyraFlow recuerde tu configuración y se sienta propio hasta en la bandeja del sistema.
+Una iteración centrada en hacer el dictado visible, devolver el texto a donde estabas escribiendo y dar más aire a la ventana.
 
-- 🔐 La clave de Gemini permanece cifrada para tu usuario de Windows.
-- 🩵 Nuevo menú de bandeja turquesa, redondeado y con estados hover.
-- 🧹 Vaciar el campo elimina también la clave persistida.
+- 🖼️ La ventana principal utiliza el icono oficial de LyraFlow.
+- 🌗 Selector visual de apariencia: sistema, claro y oscuro.
+- 📏 Indicador flotante transparente y ondas mucho más compactos.
+- ↔️ Ventana ampliada a 1210 × 870 dp.
+- 🎙️ Whisper local ofrece Tiny, Base, Small, Medium y Large.

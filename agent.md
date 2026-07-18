@@ -44,7 +44,6 @@ The agent must keep documentation clean and updated according to the following g
 - **Límite de Extensión (CRÍTICO)**: No escribir registros de versión demasiado largos. Para parches pequeños, 1-2 párrafos (promedio de 3 líneas por párrafo) son suficientes. Para lanzamientos mayores, escribir un máximo de 4-5 párrafos. Evitar listas detalladas de archivos.
 - **No duplicar versiones**: Si una versión ya está registrada localmente pero aún no se ha hecho push a Git, añadir los nuevos cambios bajo la misma versión activa en lugar de crear una nueva versión de parche.
 - **Límite de Parches (Regla del .9)**: Nunca pasar de una versión de parche `.9` (por ejemplo, de `1.0.9` pasar a `1.1.0` en lugar de `1.0.10`).
-- **Nombres de Dulces**: Cada versión mayor (ej: `1.0.0`) debe nombrarse con un dulce o postre (estilo Android) y estar coordinado en `gradle.properties`, `README.md` y `RELEASE_NOTES.md`.
 
 ### 3. RELEASE_MESSAGE.md
 - Usar un formato conciso, limpio y con emojis para anunciar el lanzamiento a usuarios o canales de chat.

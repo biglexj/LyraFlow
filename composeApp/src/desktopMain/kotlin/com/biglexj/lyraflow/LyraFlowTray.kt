@@ -7,8 +7,8 @@ import java.awt.event.MouseEvent
 import javax.imageio.ImageIO
 
 class LyraFlowTray(
-    onOpen: () -> Unit,
-    onExit: () -> Unit,
+    private val onOpen: () -> Unit,
+    private val onExit: () -> Unit,
 ) : AutoCloseable {
     private val systemTray = SystemTray.getSystemTray()
     private val menu = TrayMenuWindow(
@@ -21,8 +21,16 @@ class LyraFlowTray(
         trayIcon.isImageAutoSize = true
         trayIcon.addActionListener { requestOpen(onOpen) }
         trayIcon.addMouseListener(object : MouseAdapter() {
-            override fun mouseReleased(event: MouseEvent) {
-                if (event.isPopupTrigger || event.button == MouseEvent.BUTTON3) menu.showAtPointer()
+            override fun mouseReleased(e: MouseEvent) {
+                when {
+                    e.isPopupTrigger || e.button == MouseEvent.BUTTON3 -> {
+                        if (menu.isVisible) {
+                            menu.hideMenu()
+                        } else if (!menu.wasRecentlyHidden()) {
+                            menu.showAt(e)
+                        }
+                    }
+                }
             }
         })
         systemTray.add(trayIcon)
@@ -39,7 +47,7 @@ class LyraFlowTray(
     }
 
     override fun close() {
-        menu.dispose()
+        menu.close()
         systemTray.remove(trayIcon)
     }
 
@@ -48,7 +56,6 @@ class LyraFlowTray(
             .getResource("Square44x44Logo.png")
             ?.let(ImageIO::read)
             ?: error("No se encontró el icono de LyraFlow")
-
     }
 }
 

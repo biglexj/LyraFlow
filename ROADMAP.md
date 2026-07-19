@@ -12,3 +12,4 @@ Plan de trabajo, objetivos y prioridades del proyecto.
 
 ## 🟢 Completado
 - [x] Hito inicial del proyecto
+- [x] Actualizar iconos con fondo y esquinas redondeadas para la aplicación y la bandeja de sistema.

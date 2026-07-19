@@ -33,12 +33,13 @@ class LyraFlowStatusOverlay : JWindow() {
         isVisible = true
     }
 
-    fun update(state: DictationState) {
+    fun update(state: DictationState, level: Float = 0f) {
         display.status = when (state) {
             DictationState.Idle, is DictationState.Completed, is DictationState.Failed -> OverlayStatus.Idle
             DictationState.Listening -> OverlayStatus.Listening
             is DictationState.Transcribing -> OverlayStatus.Transcribing
         }
+        display.audioLevel = level.coerceIn(0f, 1f)
         display.repaint()
     }
 
@@ -56,6 +57,8 @@ private enum class OverlayStatus(val color: Color) {
 
 private class StatusDisplay : JComponent() {
     var status: OverlayStatus = OverlayStatus.Idle
+    var audioLevel: Float = 0f
+    private var smoothedLevel: Float = 0f
     private var tick = 0
 
     init {
@@ -67,10 +70,20 @@ private class StatusDisplay : JComponent() {
         val canvas = graphics.create() as Graphics2D
         canvas.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
         val centerY = height / 2
+        smoothedLevel += (audioLevel - smoothedLevel) * 0.35f
+
         for (index in 0 until 9) {
             val moving = status != OverlayStatus.Idle
             val wave = if (moving) ((sin(tick * .33 + index * .72) + 1) * .5).toFloat() else .15f
-            val barHeight = 7 + (wave * if (status == OverlayStatus.Listening) 14 else 10).toInt()
+            val barHeight = when (status) {
+                OverlayStatus.Idle -> 6
+                OverlayStatus.Listening -> {
+                    val baseHeight = 5 + (wave * 3).toInt()
+                    val dynamicRange = (smoothedLevel * 16f * (0.6f + wave * 0.8f)).toInt()
+                    (baseHeight + dynamicRange).coerceAtMost(24)
+                }
+                OverlayStatus.Transcribing -> 7 + (wave * 9).toInt()
+            }
             val x = 6 + index * 6
             canvas.color = status.color
             canvas.fillRoundRect(x, centerY - barHeight / 2, 4, barHeight, 4, 4)

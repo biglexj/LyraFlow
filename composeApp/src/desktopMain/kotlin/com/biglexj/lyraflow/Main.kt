@@ -61,8 +61,8 @@ fun main(args: Array<String>) = application {
     val state by coordinator.state.collectAsState()
     val recording = remember { mutableStateOf(false) }
 
-    LaunchedEffect(state) {
-        statusOverlay.update(state)
+    LaunchedEffect(state, recordingTelemetry.level) {
+        statusOverlay.update(state, recordingTelemetry.level)
     }
 
     LaunchedEffect(preferences.launchAtStartup) {

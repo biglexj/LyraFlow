@@ -22,4 +22,27 @@ class DictationCoordinatorTest {
         assertEquals("punto por punto", completed.rawText)
         assertEquals(completed.rawText, completed.refinedText)
     }
+
+    @Test
+    fun retryOnErrorWorksWithAlternativeProvider() = runTest {
+        var count = 0
+        val failingProvider = TranscriptionProvider {
+            count++
+            throw RuntimeException("API Error")
+        }
+        val coordinator = DictationCoordinator(failingProvider)
+
+        coordinator.process(TranscriptionRequest(byteArrayOf(5, 6, 7)))
+        assertIs<DictationState.Failed>(coordinator.state.value)
+        assertEquals(1, count)
+
+        val successfulProvider = TranscriptionProvider {
+            TranscriptionResult("retry text", "Whisper", "tiny", 42)
+        }
+        coordinator.retry(successfulProvider)
+
+        val completed = assertIs<DictationState.Completed>(coordinator.state.value)
+        assertEquals("retry text", completed.rawText)
+        assertEquals("Whisper", completed.provider)
+    }
 }

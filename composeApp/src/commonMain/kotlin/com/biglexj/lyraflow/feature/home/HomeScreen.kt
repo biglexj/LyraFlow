@@ -48,6 +48,8 @@ fun HomeScreen(
     onClear: () -> Unit,
     onApiKeyChange: (String) -> Unit,
     onInstallWhisper: (WhisperModel) -> Unit,
+    onRetry: () -> Unit = {},
+    onRetryWhisper: () -> Unit = {},
 ) {
     var showApiKeyDialog by remember { mutableStateOf(false) }
     var showWhisperModelDialog by remember { mutableStateOf(false) }
@@ -79,7 +81,14 @@ fun HomeScreen(
             Text(platform, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         DictationHero(state, configuration, recordingTelemetry, onRecord)
-        ResultCard(state, onInject, onClear)
+        ResultCard(
+            state = state,
+            onInject = onInject,
+            onClear = onClear,
+            onRetry = onRetry,
+            onRetryWhisper = onRetryWhisper,
+            whisperAvailable = whisperStatus.available,
+        )
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             StatusCard(
                 title = "Gemini",
@@ -192,7 +201,14 @@ private fun DictationHero(
 }
 
 @Composable
-private fun ResultCard(state: DictationState, onInject: () -> Unit, onClear: () -> Unit) {
+private fun ResultCard(
+    state: DictationState,
+    onInject: () -> Unit,
+    onClear: () -> Unit,
+    onRetry: () -> Unit,
+    onRetryWhisper: () -> Unit,
+    whisperAvailable: Boolean,
+) {
     val completed = state as? DictationState.Completed
     Surface(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .35f), shape = MaterialTheme.shapes.large) {
         Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -207,6 +223,24 @@ private fun ResultCard(state: DictationState, onInject: () -> Unit, onClear: () 
                 FilledTonalButton(onClick = onInject, enabled = completed != null, modifier = Modifier.height(48.dp), shape = MaterialTheme.shapes.small) {
                     LyraIcon(LyraIconType.Copy, Modifier.size(20.dp))
                     Text("  Insertar")
+                }
+                if (state is DictationState.Failed) {
+                    FilledTonalButton(
+                        onClick = onRetry,
+                        modifier = Modifier.height(48.dp),
+                        shape = MaterialTheme.shapes.small,
+                    ) {
+                        Text("Reintentar Gemini")
+                    }
+                    if (whisperAvailable) {
+                        FilledTonalButton(
+                            onClick = onRetryWhisper,
+                            modifier = Modifier.height(48.dp),
+                            shape = MaterialTheme.shapes.small,
+                        ) {
+                            Text("Reintentar con Whisper")
+                        }
+                    }
                 }
                 OutlinedButton(onClick = onClear, enabled = state !is DictationState.Idle, modifier = Modifier.height(48.dp), shape = MaterialTheme.shapes.small) {
                     LyraIcon(LyraIconType.Clear, Modifier.size(20.dp))

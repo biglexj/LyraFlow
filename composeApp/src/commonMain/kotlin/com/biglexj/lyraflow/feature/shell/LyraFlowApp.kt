@@ -33,6 +33,8 @@ data class ShellActions(
     val updatePreferences: (AppPreferences) -> Unit,
     val updateApiKey: (String) -> Unit,
     val installWhisper: (WhisperModel) -> Unit,
+    val retry: () -> Unit = {},
+    val retryWhisper: () -> Unit = {},
 )
 
 @Composable
@@ -101,6 +103,8 @@ private fun ScreenContent(
                     onClear = actions.reset,
                     onApiKeyChange = actions.updateApiKey,
                     onInstallWhisper = actions.installWhisper,
+                    onRetry = actions.retry,
+                    onRetryWhisper = actions.retryWhisper,
                 )
                 AppDestination.Settings -> SettingsScreen(
                     configuration = configuration,

@@ -1,5 +1,19 @@
 # Release Notes - LyraFlow 🎙️✨
 
+## [1.0.6] - 2026-07-20
+
+LyraFlow añade planes de contingencia para mejorar la robustez frente a errores de la API en la nube (Gemini) y doble pulsación accidental del atajo de teclado:
+- **Planes de Contingencia ante Fallos**: El audio grabado se mantiene en memoria cuando ocurre un error en la nube (como timeouts). Se presentan dos botones en la UI para reintentar transcribir usando Gemini o Whisper local (si está instalado).
+- **Prevención de Interrupciones**: El atajo de teclado `Ctrl + Espacio` se bloquea/ignora mientras se está procesando activamente la transcripción para evitar que se reinicie el dictado de forma accidental.
+- **Adaptador de Whisper local**: Soporte completo para Whisper local en desktop mediante una implementación dedicada de `TranscriptionProvider`.
+
+## [1.0.5] - 2026-07-19
+
+Una actualización centrada en optimizar el menú de la bandeja, dar sensibilidad al micrófono en el indicador flotante y refinar la visualización de los iconos:
+- **Menú del Sistema Compacto y con Auto-Cierre**: Rediseñado al estilo nativo moderno con iconos vectoriales, soporte de temas claro/oscuro de Windows, atajos ESC/Space y cierre automático al hacer clic fuera de la ventana.
+- **Visualizador de Onda Reactivo**: El visualizador flotante ahora responde dinámicamente a la amplitud/volumen real del micrófono (onda calmada en silencio, animada al hablar).
+- **Iconos Transparentes**: Restauración del fondo transparente del icono en la bandeja de sistema y la barra de título de la aplicación.
+
 ## [1.0.4] - 2026-07-18
 
 LyraFlow incorpora un indicador flotante transparente para distinguir cuándo está listo, escuchando o transcribiendo, y recupera el foco de la última aplicación externa antes de insertar el resultado. También permite iniciar con Windows minimizado, elegir entre Tiny, Base, Small, Medium y Large para Whisper local, y conservar la clave de Gemini cifrada para el usuario actual.

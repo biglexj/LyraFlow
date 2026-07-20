@@ -12,6 +12,8 @@ class DictationCoordinator(
     private val mutableState = MutableStateFlow<DictationState>(DictationState.Idle)
     val state: StateFlow<DictationState> = mutableState.asStateFlow()
 
+    private var lastRequest: TranscriptionRequest? = null
+
     fun markListening() {
         mutableState.value = DictationState.Listening
     }
@@ -21,9 +23,24 @@ class DictationCoordinator(
     }
 
     suspend fun process(request: TranscriptionRequest) {
-        mutableState.value = DictationState.Transcribing(request.model.label)
+        lastRequest = request
+        processInternal(request, transcriber)
+    }
+
+    suspend fun retry(alternativeTranscriber: TranscriptionProvider? = null) {
+        val request = lastRequest ?: return
+        processInternal(request, alternativeTranscriber ?: transcriber)
+    }
+
+    private suspend fun processInternal(request: TranscriptionRequest, provider: TranscriptionProvider) {
+        val modelLabel = if (provider::class.simpleName?.contains("Whisper", ignoreCase = true) == true) {
+            "Whisper local"
+        } else {
+            request.model.label
+        }
+        mutableState.value = DictationState.Transcribing(modelLabel)
         mutableState.value = try {
-            val result = transcriber.transcribe(request)
+            val result = provider.transcribe(request)
             DictationState.Completed(
                 rawText = result.rawText,
                 refinedText = result.rawText,

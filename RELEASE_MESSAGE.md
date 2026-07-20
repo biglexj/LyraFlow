@@ -1,7 +1,7 @@
-# 🎙️ LyraFlow 1.0.5
+# 🎙️ LyraFlow 1.0.6
 
-Una actualización centrada en optimizar el menú de la bandeja, dar sensibilidad al micrófono en el indicador flotante y refinar la visualización de los iconos.
+Una actualización enfocada en robustez y planes de contingencia ante fallos en la transcripción en la nube y doble pulsación accidental del atajo.
 
-- 📏 **Menú del Sistema Compacto y con Auto-Cierre**: Rediseñado al estilo nativo moderno con iconos vectoriales, soporte de temas claro/oscuro de Windows, atajos ESC/Space y cierre automático perfecto al hacer clic fuera de la ventana.
-- 🎙️ **Visualizador de Onda Reactivo**: El visualizador flotante ahora responde dinámicamente a la amplitud/volumen real del micrófono (onda calmada en silencio, animada al hablar).
-- 🖼️ **Iconos Transparentes**: Restauración del fondo transparente del icono en la bandeja de sistema y la barra de título de la aplicación.
+- 🛡️ **Planes de Contingencia ante Fallos**: El audio grabado se guarda en memoria si ocurre un error o timeout en la nube. Se presentan botones en la UI para reintentar la transcripción usando Gemini o Whisper local de manera inmediata.
+- 🔒 **Prevención de Doble Pulsación**: El atajo de teclado global `Ctrl + Espacio` se deshabilita/ignora mientras se está procesando activamente la transcripción, previniendo reinicios accidentales de la grabación.
+- 💻 **Adaptador de Whisper local**: Soporte completo para Whisper local en desktop mediante la integración directa con `TranscriptionProvider` y ejecución sidecar offline.

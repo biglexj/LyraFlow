@@ -30,6 +30,7 @@ import com.biglexj.lyraflow.platform.settings.DesktopPreferencesStore
 import com.biglexj.lyraflow.platform.settings.DesktopApiKeyStore
 import com.biglexj.lyraflow.platform.settings.WindowsAutoStart
 import com.biglexj.lyraflow.platform.whisper.WhisperInstaller
+import com.biglexj.lyraflow.platform.whisper.WhisperTranscriptionProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -52,6 +53,9 @@ fun main(args: Array<String>) = application {
     val statusOverlay = remember { LyraFlowStatusOverlay() }
     val whisperInstaller = remember { WhisperInstaller() }
     val whisperStatus by whisperInstaller.state.collectAsState()
+    val whisperProvider = remember(whisperStatus.model) {
+        WhisperTranscriptionProvider { whisperStatus.model }
+    }
     var shortcut by remember { mutableStateOf(GlobalShortcutFactory.create()) }
     val startsMinimized = args.any { it.equals("--minimized", ignoreCase = true) }
     var windowVisible by remember { mutableStateOf(!startsMinimized || !isSystemTraySupported()) }
@@ -70,6 +74,9 @@ fun main(args: Array<String>) = application {
     }
 
     fun toggleRecording() {
+        if (coordinator.state.value is DictationState.Transcribing) {
+            return
+        }
         if (!recording.value) {
             recordingTelemetry = RecordingTelemetry()
             injector.rememberForegroundTarget()
@@ -191,6 +198,24 @@ fun main(args: Array<String>) = application {
                     apiKeyStore.save(it)
                 },
                 installWhisper = { model -> scope.launch { whisperInstaller.install(model) } },
+                retry = {
+                    scope.launch {
+                        coordinator.retry()
+                        if (preferences.autoInject) {
+                            val text = (coordinator.state.value as? DictationState.Completed)?.refinedText.orEmpty()
+                            injector.inject(text)
+                        }
+                    }
+                },
+                retryWhisper = {
+                    scope.launch {
+                        coordinator.retry(whisperProvider)
+                        if (preferences.autoInject) {
+                            val text = (coordinator.state.value as? DictationState.Completed)?.refinedText.orEmpty()
+                            injector.inject(text)
+                        }
+                    }
+                },
             ),
         )
     }

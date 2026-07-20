@@ -112,7 +112,7 @@ if (-not $SkipSigning) {
 
 $hashPath = Join-Path $output "SHA256SUMS.txt"
 Get-ChildItem -LiteralPath $output -File |
-    Where-Object Extension -In '.exe', '.msi', '.msix' |
+    Where-Object Extension -In '.exe', '.msi' |
     Get-FileHash -Algorithm SHA256 |
     ForEach-Object { "{0}  {1}" -f $_.Hash.ToLowerInvariant(), (Split-Path $_.Path -Leaf) } |
     Set-Content -LiteralPath $hashPath -Encoding UTF8
@@ -142,7 +142,7 @@ try {
 }
 
 Write-Host "[7/7] Creando GitHub Release..." -ForegroundColor Yellow
-$assets = @($exe, $msi, $msix, $hashPath)
+$assets = @($exe, $msi, $hashPath)
 Invoke-Checked gh (@(
     "release", "create", $tag
 ) + $assets + @(

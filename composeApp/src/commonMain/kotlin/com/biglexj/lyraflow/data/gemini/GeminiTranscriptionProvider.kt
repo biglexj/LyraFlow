@@ -39,7 +39,11 @@ class GeminiTranscriptionProvider(
         }
 
         check(response.status.isSuccess()) {
-            "Gemini respondió HTTP ${response.status.value}."
+            if (response.status.value == 429) {
+                "⚠️ Has alcanzado el límite de uso o cuota de la API de Gemini. Espera un momento o cambia la API Key / modelo."
+            } else {
+                "Gemini respondió HTTP ${response.status.value}."
+            }
         }
 
         val text = response.body<GeminiResponse>()
@@ -61,21 +65,24 @@ class GeminiTranscriptionProvider(
     }
 
     @OptIn(ExperimentalEncodingApi::class)
-    private fun createBody(request: TranscriptionRequest) = GeminiRequest(
-        contents = listOf(
-            GeminiContent(
-                parts = listOf(
-                    GeminiPart(
-                        inlineData = GeminiInlineData(
-                            mimeType = request.mimeType,
-                            data = Base64.encode(request.audio),
+    private fun createBody(request: TranscriptionRequest): GeminiRequest {
+        val prompt = request.systemPrompt.trim().ifBlank { TRANSCRIPTION_PROMPT }
+        return GeminiRequest(
+            contents = listOf(
+                GeminiContent(
+                    parts = listOf(
+                        GeminiPart(
+                            inlineData = GeminiInlineData(
+                                mimeType = request.mimeType,
+                                data = Base64.encode(request.audio),
+                            ),
                         ),
+                        GeminiPart(text = prompt),
                     ),
-                    GeminiPart(text = TRANSCRIPTION_PROMPT),
                 ),
             ),
-        ),
-    )
+        )
+    }
 
     private companion object {
         const val TRANSCRIPTION_PROMPT =

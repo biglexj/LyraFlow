@@ -52,9 +52,13 @@ class OpenAiCompatibleTranscriptionProvider(
         }
 
         check(response.status.isSuccess()) {
-            val detail = response.bodyAsText().trim().take(240)
-            "El endpoint OpenAI-compatible respondió HTTP ${response.status.value}." +
-                if (detail.isBlank()) "" else " Detalle: $detail"
+            if (response.status.value == 429) {
+                "⚠️ Has alcanzado el límite de uso o cuota del servicio OpenAI-compatible. Revisa tu saldo o intenta más tarde."
+            } else {
+                val detail = response.bodyAsText().trim().take(240)
+                "El endpoint OpenAI-compatible respondió HTTP ${response.status.value}." +
+                    if (detail.isBlank()) "" else " Detalle: $detail"
+            }
         }
 
         val text = response.body<OpenAiChatResponse>()
@@ -77,13 +81,14 @@ class OpenAiCompatibleTranscriptionProvider(
     @OptIn(ExperimentalEncodingApi::class)
     private fun createBody(request: TranscriptionRequest, model: String): OpenAiChatRequest {
         val format = request.mimeType.audioFormat()
+        val prompt = request.systemPrompt.trim().ifBlank { TRANSCRIPTION_PROMPT }
         return OpenAiChatRequest(
             model = model,
             messages = listOf(
                 OpenAiMessage(
                     role = "user",
                     content = listOf(
-                        OpenAiContentPart(text = TRANSCRIPTION_PROMPT, type = "text"),
+                        OpenAiContentPart(text = prompt, type = "text"),
                         OpenAiContentPart(
                             type = "input_audio",
                             inputAudio = OpenAiInputAudio(

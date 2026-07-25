@@ -4,6 +4,7 @@ data class TranscriptionRequest(
     val audio: ByteArray,
     val mimeType: String = "audio/wav",
     val model: String = "",
+    val systemPrompt: String = "",
 )
 
 data class TranscriptionResult(

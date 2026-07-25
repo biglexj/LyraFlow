@@ -115,6 +115,13 @@ fun SettingsScreen(
                 onValueChange = onApiKeyChange,
             )
         }
+        SettingsSection("Instrucciones de transcripción (System Prompt)", "Personaliza cómo la IA procesa y aplica formato a tus dictados por voz.") {
+            SystemPromptField(
+                value = preferences.systemPrompt,
+                onValueChange = { onPreferencesChange(preferences.copy(systemPrompt = it)) },
+                onReset = { onPreferencesChange(preferences.copy(systemPrompt = AppPreferences.DEFAULT_SYSTEM_PROMPT)) },
+            )
+        }
         SettingsSection("Atajo global", "Inicia y detén el dictado desde cualquier aplicación.") {
             ShortcutRecorder(preferences.shortcut) { shortcut ->
                 onPreferencesChange(preferences.copy(shortcut = shortcut))
@@ -258,5 +265,25 @@ private fun SettingSwitch(title: String, supporting: String, checked: Boolean, o
             Text(supporting, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Switch(checked = checked, onCheckedChange = onCheckedChange)
+    }
+}
+
+@Composable
+private fun SystemPromptField(value: String, onValueChange: (String) -> Unit, onReset: () -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            modifier = Modifier.fillMaxWidth(),
+            minLines = 4,
+            maxLines = 8,
+            shape = MaterialTheme.shapes.medium,
+            placeholder = { Text("Escribe tus instrucciones personalizadas...") },
+        )
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+            TextButton(onClick = onReset) {
+                Text("Restablecer instrucciones predeterminadas")
+            }
+        }
     }
 }

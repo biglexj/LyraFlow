@@ -100,7 +100,13 @@ fun main(args: Array<String>) = application {
             recording.value = false
             val wav = audio.stop()
             scope.launch {
-                coordinator.process(TranscriptionRequest(wav))
+                coordinator.process(
+                    TranscriptionRequest(
+                        audio = wav,
+                        model = preferences.model,
+                        systemPrompt = preferences.systemPrompt,
+                    ),
+                )
                 if (preferences.autoInject) {
                     val text = (coordinator.state.value as? DictationState.Completed)?.refinedText.orEmpty()
                     injector.inject(text)

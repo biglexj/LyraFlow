@@ -12,7 +12,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
 
-enum class LyraIconType { Home, Settings, Mic, Copy, Clear, System, Sun, Moon }
+enum class LyraIconType { Home, Settings, Mic, Copy, Clear, System, Sun, Moon, Info }
 
 @Composable
 fun LyraIcon(type: LyraIconType, modifier: Modifier = Modifier) {
@@ -71,6 +71,11 @@ fun LyraIcon(type: LyraIconType, modifier: Modifier = Modifier) {
                     close()
                 }
                 drawPath(crescent, color)
+            }
+            LyraIconType.Info -> {
+                drawCircle(color, size.minDimension * .38f, center, style = Stroke(stroke))
+                drawCircle(color, stroke * .75f, Offset(center.x, size.height * .32f))
+                drawLine(color, Offset(center.x, size.height * .44f), Offset(center.x, size.height * .7f), stroke, StrokeCap.Round)
             }
         }
     }

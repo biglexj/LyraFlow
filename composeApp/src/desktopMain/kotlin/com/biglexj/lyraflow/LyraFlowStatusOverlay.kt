@@ -38,6 +38,7 @@ class LyraFlowStatusOverlay : JWindow() {
             DictationState.Idle, is DictationState.Completed, is DictationState.Failed -> OverlayStatus.Idle
             DictationState.Listening -> OverlayStatus.Listening
             is DictationState.Transcribing -> OverlayStatus.Transcribing
+            is DictationState.AttemptFailed -> OverlayStatus.AttemptFailed
         }
         display.audioLevel = level.coerceIn(0f, 1f)
         display.repaint()
@@ -51,8 +52,9 @@ class LyraFlowStatusOverlay : JWindow() {
 
 private enum class OverlayStatus(val color: Color) {
     Idle(Color(0x7C, 0x85, 0x8B)),
-    Listening(Color(0x00, 0xB8, 0x8A)),
-    Transcribing(Color(0x70, 0x8C, 0xFF)),
+    Listening(Color(0x00, 0xA8, 0x96)),
+    Transcribing(Color(0x7F, 0x52, 0xFF)),
+    AttemptFailed(Color(0xE5, 0x53, 0x53)),
 }
 
 private class StatusDisplay : JComponent() {
@@ -82,7 +84,7 @@ private class StatusDisplay : JComponent() {
                     val dynamicRange = (smoothedLevel * 16f * (0.6f + wave * 0.8f)).toInt()
                     (baseHeight + dynamicRange).coerceAtMost(24)
                 }
-                OverlayStatus.Transcribing -> 7 + (wave * 9).toInt()
+                OverlayStatus.Transcribing, OverlayStatus.AttemptFailed -> 7 + (wave * 9).toInt()
             }
             val x = 6 + index * 6
             canvas.color = status.color

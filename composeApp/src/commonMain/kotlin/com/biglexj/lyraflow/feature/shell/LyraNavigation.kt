@@ -28,6 +28,7 @@ fun LyraNavigationRail(
     selected: AppDestination,
     themeMode: ThemeMode,
     onCycleTheme: () -> Unit,
+    onOpenAbout: () -> Unit = {},
     onSelect: (AppDestination) -> Unit,
 ) {
     Surface(color = MaterialTheme.colorScheme.surface) {
@@ -61,6 +62,24 @@ fun LyraNavigationRail(
                 }
             }
             Spacer(Modifier.weight(1f))
+            Surface(
+                onClick = onOpenAbout,
+                modifier = Modifier.width(RailItemWidth).height(48.dp).semantics {
+                    contentDescription = "Acerca de LyraFlow"
+                },
+                shape = MaterialTheme.shapes.small,
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .45f),
+                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            ) {
+                Column(
+                    modifier = Modifier.padding(vertical = 6.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    LyraIcon(LyraIconType.Info, Modifier.size(18.dp))
+                    Text("Acerca de", style = MaterialTheme.typography.labelSmall)
+                }
+            }
         }
     }
 }
@@ -75,14 +94,35 @@ private val ThemeMode.icon: LyraIconType
     }
 
 @Composable
-fun LyraNavigationBar(selected: AppDestination, onSelect: (AppDestination) -> Unit) {
+fun LyraNavigationBar(
+    selected: AppDestination,
+    onOpenAbout: () -> Unit = {},
+    onSelect: (AppDestination) -> Unit,
+) {
     Surface(color = MaterialTheme.colorScheme.surface) {
         Row(
             modifier = Modifier.fillMaxWidth().height(76.dp).padding(horizontal = 16.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             AppDestination.entries.forEach { destination ->
                 DestinationButton(destination, selected == destination, onSelect, Modifier.weight(1f))
+            }
+            Surface(
+                onClick = onOpenAbout,
+                modifier = Modifier.weight(1f),
+                shape = MaterialTheme.shapes.small,
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .45f),
+                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            ) {
+                Column(
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 9.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    LyraIcon(LyraIconType.Info, Modifier.size(22.dp))
+                    Text("Acerca de", style = MaterialTheme.typography.labelLarge)
+                }
             }
         }
     }

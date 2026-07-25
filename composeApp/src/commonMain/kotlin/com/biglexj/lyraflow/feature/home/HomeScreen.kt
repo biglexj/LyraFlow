@@ -167,7 +167,8 @@ private fun DictationHero(
     onRecord: () -> Unit,
 ) {
     val listening = state is DictationState.Listening
-    val processing = state is DictationState.Transcribing
+    val attemptFailed = state is DictationState.AttemptFailed
+    val processing = state is DictationState.Transcribing || attemptFailed
     ElevatedCard(shape = MaterialTheme.shapes.large) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(24.dp),
@@ -197,7 +198,8 @@ private fun DictationHero(
             }
             DictationVisualizer(
                 listening = listening,
-                processing = processing,
+                processing = state is DictationState.Transcribing,
+                attemptFailed = attemptFailed,
                 level = telemetry.level,
                 modifier = Modifier.fillMaxWidth().height(56.dp),
             )
@@ -277,7 +279,7 @@ private fun ResultCard(
 private fun statusTitle(state: DictationState): String = when (state) {
     DictationState.Idle -> "Listo para escucharte"
     DictationState.Listening -> "Te estoy escuchando"
-    is DictationState.Transcribing -> "Dándole forma a tus ideas"
+    is DictationState.Transcribing, is DictationState.AttemptFailed -> "Dándole forma a tus ideas"
     is DictationState.Completed -> "Listo en ${state.elapsedMillis} ms"
     is DictationState.Failed -> "Algo interrumpió el dictado"
 }

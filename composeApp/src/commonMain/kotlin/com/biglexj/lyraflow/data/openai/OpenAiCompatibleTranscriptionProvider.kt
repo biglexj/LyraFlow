@@ -106,6 +106,7 @@ class OpenAiCompatibleTranscriptionProvider(
     private companion object {
         const val TRANSCRIPTION_PROMPT =
             "Convierte este dictado en texto final, claro y bien escrito, conservando fielmente su intención. " +
+                "Preserva de forma íntegra el idioma original expresado por el usuario (incluyendo español, inglés, chino, japonés o cualquier idioma y caracteres CJK o símbolos), sin traducir ni omitir caracteres o uniones. " +
                 "Corrige puntuación, concordancia, repeticiones involuntarias y falsos comienzos. " +
                 "Ordena las ideas y crea párrafos o listas cuando el hablante enumere elementos. " +
                 "Interpreta órdenes de formato habladas según el contexto, por ejemplo 'punto', 'coma', " +

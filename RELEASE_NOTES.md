@@ -1,5 +1,16 @@
 # Release Notes - LyraFlow 🎙️✨
 
+## [1.0.8] - 2026-07-25
+
+LyraFlow adopta la interfaz Material Expressive, suma la sección oficial "Acerca de" con modalidades de apoyo, comprobación de actualizaciones desde GitHub Releases y feedback transparente:
+- **Badge y Diálogo "Acerca de la Aplicación"**: Nueva ventana con información de versión, autoría (`biglexj`), licencia MIT y enlaces de apoyo directo (`https://www.biglexj.com/donaciones`), Buy Me a Coffee y GitHub.
+- **Auto-Actualizador desde GitHub Releases**: Sistema de comprobación silenciosa al iniciar la aplicación y verificación manual con descarga o redirección a releases de GitHub.
+- **Sanitización de Changelogs**: Limpieza automática de Markdown crudo (`sanitizeMarkdown()`) para mostrar notas de versión comprensibles y sin código/formato roto en el `UpdateBanner`.
+- **Toast Global "Estás al día"**: Notificación flotante no intrusiva con animación `AnimatedVisibility` (fade + slide) que se auto-descarta a los 4 segundos al verificar manualmente sin nuevas versiones disponibles.
+- **Material Expressive UI**: Implementación del nuevo lenguaje de diseño M3 Expressive con paleta de colores vibrantes (`#7F52FF`), geometrías suaves (`16.dp`–`36.dp`) y micro-animaciones fluidas.
+- **Reintentos Automáticos de Transcripción**: Sistema de auto-recuperación transparente que ejecuta un máximo de 2 intentos en caso de fallos temporales de red o de la API de transcripción.
+- **Preservación Multilingüe y CJK**: Refuerzo de las instrucciones prompt para conservar de forma íntegra caracteres CJK (chino, japonés), símbolos y uniones de texto sin traducir ni omitir fragmentos.
+
 ## [1.0.7] - 2026-07-24
 
 LyraFlow amplía la configuración de proveedores y facilita el cambio de modelo desde la pantalla principal:

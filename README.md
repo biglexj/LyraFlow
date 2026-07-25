@@ -7,6 +7,8 @@ LyraFlow es una aplicación de dictado inteligente construida con Kotlin Multipl
 - Atajo global `Ctrl + Espacio` en Windows, personalizable con combinaciones de 2 o 3 teclas.
 - Captura WAV mono a 16 kHz con nivel y duración visibles.
 - Transcripción y corrección contextual mediante Gemini o cualquier API OpenAI-compatible cuyo modelo acepte audio.
+- Comprobación automática de actualizaciones desde GitHub Releases con sanitización del body y toast flotante global.
+- Modal e insignia "Acerca de la Aplicación" con opciones de apoyo oficial y donación directa.
 - Compatibilidad prevista con Whisper local mediante sidecar.
 - Inserción directa usando portapapeles y simulación de teclado.
 - Temas automático, claro y oscuro con Material 3 Expressive.

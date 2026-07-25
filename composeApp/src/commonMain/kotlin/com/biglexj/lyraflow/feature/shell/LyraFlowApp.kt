@@ -1,18 +1,31 @@
 package com.biglexj.lyraflow.feature.shell
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.biglexj.lyraflow.core.config.AppConfiguration
@@ -21,10 +34,18 @@ import com.biglexj.lyraflow.core.config.WhisperSetupState
 import com.biglexj.lyraflow.core.config.WhisperModel
 import com.biglexj.lyraflow.core.config.next
 import com.biglexj.lyraflow.core.audio.RecordingTelemetry
+import com.biglexj.lyraflow.core.network.createPlatformHttpClient
 import com.biglexj.lyraflow.core.theme.LyraFlowTheme
+import com.biglexj.lyraflow.core.update.UpdateChecker
+import com.biglexj.lyraflow.core.update.UpdateRelease
+import com.biglexj.lyraflow.core.update.UpdateService
 import com.biglexj.lyraflow.domain.dictation.DictationState
+import com.biglexj.lyraflow.feature.about.AboutDialog
 import com.biglexj.lyraflow.feature.home.HomeScreen
 import com.biglexj.lyraflow.feature.settings.SettingsScreen
+import com.biglexj.lyraflow.feature.update.UpdateBanner
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 data class ShellActions(
     val toggleRecording: () -> Unit,
@@ -48,29 +69,128 @@ fun LyraFlowApp(
 ) {
     LyraFlowTheme(configuration.preferences.themeMode) {
         var destination by remember { mutableStateOf(AppDestination.Home) }
-        Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-            BoxWithConstraints {
-                val wide = maxWidth >= 720.dp
-                if (wide) {
-                    Row(Modifier.fillMaxSize()) {
-                        LyraNavigationRail(
-                            selected = destination,
-                            themeMode = configuration.preferences.themeMode,
-                            onCycleTheme = {
-                                actions.updatePreferences(
-                                    configuration.preferences.copy(
-                                        themeMode = configuration.preferences.themeMode.next(),
-                                    ),
-                                )
-                            },
-                            onSelect = { destination = it },
-                        )
-                        ScreenContent(destination, platform, state, configuration, recordingTelemetry, whisperStatus, actions, Modifier.weight(1f))
-                    }
+        var showAboutDialog by remember { mutableStateOf(false) }
+        var availableUpdate by remember { mutableStateOf<UpdateRelease?>(null) }
+        var upToDate by remember { mutableStateOf(false) }
+        val scope = rememberCoroutineScope()
+        val updateService = remember { UpdateService(createPlatformHttpClient()) }
+
+        // Verificación silenciosa al iniciar: no muestra ningún mensaje si todo está al día.
+        val checkSilent: suspend () -> Unit = {
+            val remoteRelease = updateService.checkLatestRelease()
+            if (remoteRelease != null && UpdateChecker.isNewerVersion("1.0.8", remoteRelease.version)) {
+                availableUpdate = remoteRelease
+            }
+        }
+
+        // Verificación manual: muestra el mensaje de "al día" si no hay actualización.
+        val checkForUpdates: () -> Unit = {
+            upToDate = false
+            scope.launch {
+                val remoteRelease = updateService.checkLatestRelease()
+                if (remoteRelease != null && UpdateChecker.isNewerVersion("1.0.8", remoteRelease.version)) {
+                    availableUpdate = remoteRelease
+                    upToDate = false
                 } else {
-                    Column(Modifier.fillMaxSize()) {
-                        ScreenContent(destination, platform, state, configuration, recordingTelemetry, whisperStatus, actions, Modifier.weight(1f))
-                        LyraNavigationBar(destination) { destination = it }
+                    upToDate = true
+                }
+            }
+        }
+
+        LaunchedEffect(Unit) { checkSilent() }
+
+        // Auto-ocultar el toast de "al día" tras 4 segundos.
+        LaunchedEffect(upToDate) {
+            if (upToDate) {
+                delay(4_000)
+                upToDate = false
+            }
+        }
+
+        if (showAboutDialog) {
+            AboutDialog(
+                onDismiss = { showAboutDialog = false },
+                onCheckForUpdates = checkForUpdates,
+            )
+        }
+
+        Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+            Box(Modifier.fillMaxSize()) {
+                BoxWithConstraints(Modifier.fillMaxSize()) {
+                    val wide = maxWidth >= 720.dp
+                    if (wide) {
+                        Row(Modifier.fillMaxSize()) {
+                            LyraNavigationRail(
+                                selected = destination,
+                                themeMode = configuration.preferences.themeMode,
+                                onCycleTheme = {
+                                    actions.updatePreferences(
+                                        configuration.preferences.copy(
+                                            themeMode = configuration.preferences.themeMode.next(),
+                                        ),
+                                    )
+                                },
+                                onOpenAbout = { showAboutDialog = true },
+                                onSelect = { destination = it },
+                            )
+                            ScreenContent(
+                                destination = destination,
+                                platform = platform,
+                                state = state,
+                                configuration = configuration,
+                                recordingTelemetry = recordingTelemetry,
+                                whisperStatus = whisperStatus,
+                                actions = actions,
+                                availableUpdate = availableUpdate,
+                                onDismissUpdate = { availableUpdate = null },
+                                onOpenAbout = { showAboutDialog = true },
+                                onCheckForUpdates = checkForUpdates,
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+                    } else {
+                        Column(Modifier.fillMaxSize()) {
+                            ScreenContent(
+                                destination = destination,
+                                platform = platform,
+                                state = state,
+                                configuration = configuration,
+                                recordingTelemetry = recordingTelemetry,
+                                whisperStatus = whisperStatus,
+                                actions = actions,
+                                availableUpdate = availableUpdate,
+                                onDismissUpdate = { availableUpdate = null },
+                                onOpenAbout = { showAboutDialog = true },
+                                onCheckForUpdates = checkForUpdates,
+                                modifier = Modifier.weight(1f),
+                            )
+                            LyraNavigationBar(destination, onOpenAbout = { showAboutDialog = true }) { destination = it }
+                        }
+                    }
+                }
+
+                // Toast global de "al día" — visible sobre cualquier pantalla.
+                AnimatedVisibility(
+                    visible = upToDate,
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = 16.dp),
+                    enter = fadeIn() + slideInVertically { -it },
+                    exit = fadeOut() + slideOutVertically { -it },
+                ) {
+                    Card(
+                        shape = MaterialTheme.shapes.medium,
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                        ),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+                    ) {
+                        Text(
+                            text = "✅ Estás en la última versión de LyraFlow.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
+                        )
                     }
                 }
             }
@@ -87,6 +207,10 @@ private fun ScreenContent(
     recordingTelemetry: RecordingTelemetry,
     whisperStatus: WhisperSetupState,
     actions: ShellActions,
+    availableUpdate: UpdateRelease?,
+    onDismissUpdate: () -> Unit,
+    onOpenAbout: () -> Unit,
+    onCheckForUpdates: () -> Unit,
     modifier: Modifier,
 ) {
     Box(modifier) {
@@ -111,8 +235,19 @@ private fun ScreenContent(
                     configuration = configuration,
                     onPreferencesChange = actions.updatePreferences,
                     onApiKeyChange = actions.updateApiKey,
+                    onOpenAbout = onOpenAbout,
+                    onCheckForUpdates = onCheckForUpdates,
                 )
             }
+        }
+        if (availableUpdate != null) {
+            UpdateBanner(
+                release = availableUpdate,
+                onDismiss = onDismissUpdate,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+            )
         }
     }
 }

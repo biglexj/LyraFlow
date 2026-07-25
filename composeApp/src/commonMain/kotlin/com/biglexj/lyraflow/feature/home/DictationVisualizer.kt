@@ -19,6 +19,7 @@ import kotlin.math.sin
 fun DictationVisualizer(
     listening: Boolean,
     processing: Boolean,
+    attemptFailed: Boolean = false,
     level: Float,
     modifier: Modifier = Modifier,
 ) {
@@ -31,6 +32,7 @@ fun DictationVisualizer(
     ).value
     val primary = MaterialTheme.colorScheme.primary
     val secondary = MaterialTheme.colorScheme.secondary
+    val errorColor = MaterialTheme.colorScheme.error.copy(alpha = 0.88f)
     val idle = MaterialTheme.colorScheme.outlineVariant
 
     Canvas(modifier) {
@@ -39,11 +41,13 @@ fun DictationVisualizer(
         repeat(bars) { index ->
             val pulse = ((sin(phase + index * .72f) + 1f) / 2f)
             val energy = when {
+                attemptFailed -> .28f + .52f * pulse
                 listening -> .12f + level.coerceAtLeast(.08f) * .88f * pulse
                 processing -> .24f + .68f * pulse
                 else -> .18f + .08f * sin(index.toFloat()).coerceAtLeast(0f)
             }
             val color = when {
+                attemptFailed -> lerp(primary, errorColor, 0.85f)
                 listening -> primary
                 processing -> lerp(primary, secondary, pulse)
                 else -> idle

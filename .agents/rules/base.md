@@ -1,3 +1,7 @@
+---
+trigger: always_on
+---
+
 # Agent Instructions - LyraFlow
 
 ## AI Models (CRITICAL)

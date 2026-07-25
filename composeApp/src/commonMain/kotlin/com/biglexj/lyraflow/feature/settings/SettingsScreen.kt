@@ -42,6 +42,8 @@ fun SettingsScreen(
     configuration: AppConfiguration,
     onPreferencesChange: (AppPreferences) -> Unit,
     onApiKeyChange: (String) -> Unit,
+    onOpenAbout: () -> Unit = {},
+    onCheckForUpdates: () -> Unit = {},
 ) {
     val preferences = configuration.preferences
     val provider = preferences.provider
@@ -133,6 +135,26 @@ fun SettingsScreen(
                 checked = preferences.launchAtStartup,
                 onCheckedChange = { onPreferencesChange(preferences.copy(launchAtStartup = it)) },
             )
+        }
+        SettingsSection("Acerca de la Aplicación", "Información de versión, autoría y comprobación de actualizaciones.") {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text("LyraFlow v1.0.8", style = MaterialTheme.typography.titleMedium)
+                    Text("Creado por biglexj (2026) • Licencia MIT", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(onClick = onCheckForUpdates) {
+                        Text("Buscar actualizaciones")
+                    }
+                    TextButton(onClick = onOpenAbout) {
+                        Text("Ver detalles")
+                    }
+                }
+            }
         }
     }
 }

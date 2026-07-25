@@ -24,7 +24,26 @@ class DictationCoordinatorTest {
     }
 
     @Test
-    fun retryOnErrorWorksWithAlternativeProvider() = runTest {
+    fun autoRetriesOnFirstFailureAndSucceedsOnSecondAttempt() = runTest {
+        var count = 0
+        val FlakyProvider = TranscriptionProvider {
+            count++
+            if (count == 1) {
+                throw RuntimeException("Temporary network glitch")
+            }
+            TranscriptionResult("exito al segundo intento", "Gemini", "gemini-3.6-flash", 100)
+        }
+        val coordinator = DictationCoordinator(FlakyProvider)
+
+        coordinator.process(TranscriptionRequest(byteArrayOf(1, 2, 3)))
+
+        val completed = assertIs<DictationState.Completed>(coordinator.state.value)
+        assertEquals("exito al segundo intento", completed.rawText)
+        assertEquals(2, count)
+    }
+
+    @Test
+    fun failsAfterExhaustingMaxAttempts() = runTest {
         var count = 0
         val failingProvider = TranscriptionProvider {
             count++
@@ -34,7 +53,7 @@ class DictationCoordinatorTest {
 
         coordinator.process(TranscriptionRequest(byteArrayOf(5, 6, 7)))
         assertIs<DictationState.Failed>(coordinator.state.value)
-        assertEquals(1, count)
+        assertEquals(2, count)
 
         val successfulProvider = TranscriptionProvider {
             TranscriptionResult("retry text", "Whisper", "tiny", 42)

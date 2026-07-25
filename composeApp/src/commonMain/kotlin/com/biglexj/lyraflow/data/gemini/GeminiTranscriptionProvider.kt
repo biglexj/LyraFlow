@@ -25,10 +25,12 @@ class GeminiTranscriptionProvider(
     override suspend fun transcribe(request: TranscriptionRequest): TranscriptionResult {
         val key = apiKey().trim()
         require(key.isNotEmpty()) { "Configura GEMINI_API_KEY para transcribir." }
+        val model = request.model.trim()
+        require(model.isNotEmpty()) { "Configura un modelo de Gemini para transcribir." }
 
         val started = TimeSource.Monotonic.markNow()
         val response = client.post(
-            "https://generativelanguage.googleapis.com/v1beta/models/${request.model.id}:generateContent",
+            "https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent",
         ) {
             header("x-goog-api-key", key)
             header(HttpHeaders.Accept, ContentType.Application.Json)
@@ -45,14 +47,15 @@ class GeminiTranscriptionProvider(
             .firstOrNull()
             ?.content
             ?.parts
-            ?.firstNotNullOfOrNull { it.text }
+            ?.mapNotNull { it.text }
+            ?.joinToString("")
             ?.trim()
             .orEmpty()
 
         return TranscriptionResult(
             rawText = text,
             provider = "Gemini",
-            model = request.model.id,
+            model = model,
             elapsedMillis = started.elapsedNow().inWholeMilliseconds,
         )
     }

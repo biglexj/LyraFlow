@@ -14,6 +14,15 @@
 - [x] Documentar resultados, límites y siguiente decisión en `walkthrough_kotlin_phase0.md`.
 - [x] Alinear el arranque Gradle con Ely-Tesia para aceptar el JDK moderno instalado sin descargar un JDK 17 adicional.
 
+## Refactorización de proveedores multimodales — 2026-07-24
+
+- [x] Separar la configuración de proveedor, modelo y endpoint del dominio de transcripción.
+- [x] Actualizar el catálogo de Gemini a `gemini-3.6-flash` y `gemini-3.5-flash-lite`.
+- [x] Añadir el adaptador OpenAI-compatible con audio y texto en una sola solicitud.
+- [x] Migrar preferencias y claves cifradas conservando compatibilidad con la configuración anterior.
+- [x] Añadir pruebas de contrato para Gemini, OpenAI-compatible y persistencia de escritorio.
+- [x] Verificar pruebas de escritorio y compilación Android con el SDK local.
+
 ## Material 3 Expressive
 
 - [x] Crear tokens de color, forma y tipografía para temas claro/oscuro/sistema.

@@ -1,7 +1,8 @@
-# 🎙️ LyraFlow 1.0.6
+# 🎙️ LyraFlow 1.0.7
 
-Una actualización enfocada en robustez y planes de contingencia ante fallos en la transcripción en la nube y doble pulsación accidental del atajo.
+LyraFlow amplía la configuración de proveedores multimodales y permite cambiar el modelo desde la pantalla principal.
 
-- 🛡️ **Planes de Contingencia ante Fallos**: El audio grabado se guarda en memoria si ocurre un error o timeout en la nube. Se presentan botones en la UI para reintentar la transcripción usando Gemini o Whisper local de manera inmediata.
-- 🔒 **Prevención de Doble Pulsación**: El atajo de teclado global `Ctrl + Espacio` se deshabilita/ignora mientras se está procesando activamente la transcripción, previniendo reinicios accidentales de la grabación.
-- 💻 **Adaptador de Whisper local**: Soporte completo para Whisper local en desktop mediante la integración directa con `TranscriptionProvider` y ejecución sidecar offline.
+- 🎛️ **Selector de modelos**: la tarjeta del proveedor abre el modal de API cuando falta la clave y el selector de modelos cuando ya está configurada.
+- 🌐 **Proveedores multimodales**: soporte para Gemini y OpenAI/compatible con endpoint, modelo y API configurables para servicios que acepten audio.
+- 🔐 **Configuración por proveedor**: las claves se conservan separadas y las preferencias se guardan sin sobrescribir otros proveedores.
+- 🧪 **Refactorización y pruebas**: se amplió la cobertura de preferencias, claves y transcripción, y se retiró el archivo local de instrucciones del agente.

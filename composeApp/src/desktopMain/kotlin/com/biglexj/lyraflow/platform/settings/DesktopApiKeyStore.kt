@@ -1,5 +1,6 @@
 package com.biglexj.lyraflow.platform.settings
 
+import com.biglexj.lyraflow.core.model.AiProvider
 import com.sun.jna.platform.win32.Crypt32Util
 import java.nio.charset.StandardCharsets
 import java.util.Base64
@@ -9,18 +10,31 @@ class DesktopApiKeyStore(
     private val node: Preferences = Preferences.userRoot().node(NODE),
     private val protector: ApiKeyProtector = platformProtector(),
 ) {
-    fun load(): String = runCatching {
-        node.get(API_KEY, null)?.let(protector::unprotect).orEmpty()
+    fun load(provider: AiProvider = AiProvider.Gemini): String = runCatching {
+        val stored = node.get(keyName(provider), null)
+            ?: if (provider == AiProvider.Gemini) node.get(LEGACY_API_KEY, null) else null
+        stored?.let(protector::unprotect).orEmpty()
     }.getOrDefault("")
 
-    fun save(value: String) {
-        if (value.isBlank()) node.remove(API_KEY) else node.put(API_KEY, protector.protect(value.trim()))
+    fun save(value: String) = save(AiProvider.Gemini, value)
+
+    fun save(provider: AiProvider, value: String) {
+        val key = keyName(provider)
+        if (value.isBlank()) {
+            node.remove(key)
+            if (provider == AiProvider.Gemini) node.remove(LEGACY_API_KEY)
+        } else {
+            node.put(key, protector.protect(value.trim()))
+        }
         node.flush()
     }
 
     private companion object {
         const val NODE = "com/biglexj/lyraflow"
-        const val API_KEY = "geminiApiKey.protected"
+        const val API_KEY_PREFIX = "aiApiKey."
+        const val LEGACY_API_KEY = "geminiApiKey.protected"
+
+        fun keyName(provider: AiProvider): String = "$API_KEY_PREFIX${provider.name}.protected"
 
         fun platformProtector(): ApiKeyProtector =
             if (System.getProperty("os.name").contains("windows", ignoreCase = true)) DpapiApiKeyProtector()

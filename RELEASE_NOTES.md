@@ -1,11 +1,20 @@
 # Release Notes - LyraFlow 🎙️✨
 
+## [1.0.7] - 2026-07-24
+
+LyraFlow amplía la configuración de proveedores y facilita el cambio de modelo desde la pantalla principal:
+- **Selector de modelos en Inicio**: la tarjeta del proveedor abre el modal de API cuando falta la clave y el selector de modelos cuando ya está configurada.
+- **Proveedores multimodales extensibles**: Gemini y OpenAI/compatible comparten una configuración editable para conectar APIs, gateways y modelos compatibles con audio.
+- **Claves y preferencias por proveedor**: cada proveedor conserva su clave, endpoint y modelo sin sobrescribir la configuración de los demás.
+- **Mantenimiento**: se retiró el archivo local de instrucciones del agente y se reforzó la cobertura de pruebas de preferencias y transcripción.
+
 ## [1.0.6] - 2026-07-20
 
 LyraFlow añade planes de contingencia para mejorar la robustez frente a errores de la API en la nube (Gemini) y doble pulsación accidental del atajo de teclado:
 - **Planes de Contingencia ante Fallos**: El audio grabado se mantiene en memoria cuando ocurre un error en la nube (como timeouts). Se presentan dos botones en la UI para reintentar transcribir usando Gemini o Whisper local (si está instalado).
 - **Prevención de Interrupciones**: El atajo de teclado `Ctrl + Espacio` se bloquea/ignora mientras se está procesando activamente la transcripción para evitar que se reinicie el dictado de forma accidental.
 - **Adaptador de Whisper local**: Soporte completo para Whisper local en desktop mediante una implementación dedicada de `TranscriptionProvider`.
+- **Proveedores multimodales extensibles**: Gemini usa el catálogo actualizado y LyraFlow incorpora un adaptador OpenAI-compatible configurable para OpenAI, gateways y modelos compatibles con `input_audio`, con claves separadas por proveedor.
 
 ## [1.0.5] - 2026-07-19
 

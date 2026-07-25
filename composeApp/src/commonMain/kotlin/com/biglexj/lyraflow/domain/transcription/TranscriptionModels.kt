@@ -1,11 +1,9 @@
 package com.biglexj.lyraflow.domain.transcription
 
-import com.biglexj.lyraflow.core.model.GeminiModel
-
 data class TranscriptionRequest(
     val audio: ByteArray,
     val mimeType: String = "audio/wav",
-    val model: GeminiModel = GeminiModel.Fast,
+    val model: String = "",
 )
 
 data class TranscriptionResult(

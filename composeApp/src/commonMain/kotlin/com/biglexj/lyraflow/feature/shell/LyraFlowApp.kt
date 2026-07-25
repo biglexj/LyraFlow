@@ -102,6 +102,7 @@ private fun ScreenContent(
                     onInject = actions.injectLastResult,
                     onClear = actions.reset,
                     onApiKeyChange = actions.updateApiKey,
+                    onPreferencesChange = actions.updatePreferences,
                     onInstallWhisper = actions.installWhisper,
                     onRetry = actions.retry,
                     onRetryWhisper = actions.retryWhisper,

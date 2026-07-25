@@ -6,7 +6,7 @@ LyraFlow es una aplicación de dictado inteligente construida con Kotlin Multipl
 
 - Atajo global `Ctrl + Espacio` en Windows, personalizable con combinaciones de 2 o 3 teclas.
 - Captura WAV mono a 16 kHz con nivel y duración visibles.
-- Transcripción y corrección contextual mediante Gemini.
+- Transcripción y corrección contextual mediante Gemini o cualquier API OpenAI-compatible cuyo modelo acepte audio.
 - Compatibilidad prevista con Whisper local mediante sidecar.
 - Inserción directa usando portapapeles y simulación de teclado.
 - Temas automático, claro y oscuro con Material 3 Expressive.
@@ -18,7 +18,7 @@ LyraFlow es una aplicación de dictado inteligente construida con Kotlin Multipl
 - Kotlin Multiplatform 2.3.10.
 - Compose Multiplatform 1.11.1.
 - Gradle 9.4.1.
-- Ktor para Gemini.
+- Ktor para APIs multimodales nativas y OpenAI-compatible.
 - JNA para integraciones de escritorio.
 
 ## Ejecutar en escritorio
@@ -29,7 +29,9 @@ Requiere JDK 17 o posterior. El proyecto está verificado con Temurin 25.
 .\gradlew.bat :composeApp:run
 ```
 
-La clave puede definirse mediante `GEMINI_API_KEY` o introducirse desde Ajustes. En Windows se conserva cifrada con DPAPI para el usuario actual; borrar el campo elimina también la copia persistida.
+Desde Ajustes puedes seleccionar Gemini o `OpenAI / compatible`, escribir el identificador del modelo y configurar el endpoint completo. La clave puede definirse mediante `LYRAFLOW_API_KEY`, `GEMINI_API_KEY` u `OPENAI_API_KEY`, o introducirse desde Ajustes. En Windows se conserva cifrada con DPAPI por proveedor; borrar el campo elimina también la copia persistida.
+
+El adaptador compatible envía audio y la instrucción en una sola solicitud Chat Completions usando `input_audio`. Esto permite conectar OpenAI, gateways, Qwen, servidores vLLM/SGLang y otros servicios con ese contrato. La compatibilidad del protocolo no garantiza que todos los modelos acepten audio: el modelo y la ruta elegidos deben soportarlo.
 
 La tarjeta `Whisper local` instala bajo demanda el binario x64 desde la última release oficial de `ggml-org/whisper.cpp` y el modelo base en los datos locales del usuario. La interfaz muestra el progreso y permite reintentar si la descarga falla.
 
@@ -56,7 +58,7 @@ El flujo automático crea el commit de release, el tag, realiza un push atómico
 
 ## Estado de plataforma
 
-- Windows: hotkey, audio, Gemini e inyección disponibles.
+- Windows: hotkey, audio, Gemini, OpenAI-compatible, Whisper local e inyección disponibles.
 - Linux: paquetes configurados; hotkey e inyección nativos aún en desarrollo.
 - Android: interfaz compartida compilable; captura y permisos aún pendientes.
 

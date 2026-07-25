@@ -5,6 +5,7 @@ import com.biglexj.lyraflow.domain.transcription.TranscriptionRequest
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.CancellationException
 
 class DictationCoordinator(
     private val transcriber: TranscriptionProvider,
@@ -33,12 +34,7 @@ class DictationCoordinator(
     }
 
     private suspend fun processInternal(request: TranscriptionRequest, provider: TranscriptionProvider) {
-        val modelLabel = if (provider::class.simpleName?.contains("Whisper", ignoreCase = true) == true) {
-            "Whisper local"
-        } else {
-            request.model.label
-        }
-        mutableState.value = DictationState.Transcribing(modelLabel)
+        mutableState.value = DictationState.Transcribing(request.model.ifBlank { "Modelo seleccionado" })
         mutableState.value = try {
             val result = provider.transcribe(request)
             DictationState.Completed(
@@ -47,6 +43,8 @@ class DictationCoordinator(
                 provider = result.provider,
                 elapsedMillis = result.elapsedMillis,
             )
+        } catch (error: CancellationException) {
+            throw error
         } catch (error: Throwable) {
             DictationState.Failed(error.message ?: "Error desconocido")
         }

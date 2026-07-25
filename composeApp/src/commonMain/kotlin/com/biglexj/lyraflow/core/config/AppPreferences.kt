@@ -1,7 +1,8 @@
 package com.biglexj.lyraflow.core.config
 
-import com.biglexj.lyraflow.core.model.GeminiModel
 import com.biglexj.lyraflow.core.hotkey.KeyboardShortcut
+import com.biglexj.lyraflow.core.model.AiProvider
+import com.biglexj.lyraflow.core.model.ProviderConfiguration
 
 enum class ThemeMode(val label: String) {
     System("Automático"),
@@ -17,14 +18,22 @@ fun ThemeMode.next(): ThemeMode = when (this) {
 
 data class AppPreferences(
     val themeMode: ThemeMode = ThemeMode.System,
-    val model: GeminiModel = GeminiModel.Fast,
+    val provider: AiProvider = AiProvider.Gemini,
+    val model: String = AiProvider.Gemini.defaultModel,
+    val endpoint: String = AiProvider.Gemini.defaultEndpoint,
     val autoInject: Boolean = true,
     val launchAtStartup: Boolean = true,
     val shortcut: KeyboardShortcut = KeyboardShortcut.Default,
-)
+) {
+    val providerConfiguration: ProviderConfiguration
+        get() = ProviderConfiguration(
+            provider = provider,
+            model = model.trim().ifBlank { provider.defaultModel },
+            endpoint = endpoint.trim().ifBlank { provider.defaultEndpoint },
+        )
+}
 
 data class AppConfiguration(
     val preferences: AppPreferences = AppPreferences(),
     val sessionApiKey: String = "",
-    val apiKeyStorageMessage: String = "La clave solo vive durante esta sesión.",
 )

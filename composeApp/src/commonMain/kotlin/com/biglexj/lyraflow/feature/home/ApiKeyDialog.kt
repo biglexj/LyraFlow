@@ -12,19 +12,25 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import com.biglexj.lyraflow.core.model.AiProvider
 
 @Composable
-fun ApiKeyDialog(initialValue: String, onDismiss: () -> Unit, onSave: (String) -> Unit) {
+fun ApiKeyDialog(
+    initialValue: String,
+    provider: AiProvider,
+    onDismiss: () -> Unit,
+    onSave: (String) -> Unit,
+) {
     var value by remember(initialValue) { mutableStateOf(initialValue) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Conectar con Gemini") },
+        title = { Text("Conectar con ${provider.label}") },
         text = {
             OutlinedTextField(
                 value = value,
                 onValueChange = { value = it },
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("Gemini API key") },
+                label = { Text("Clave de API") },
                 placeholder = { Text("Pega aquí tu clave") },
                 singleLine = true,
                 visualTransformation = PasswordVisualTransformation(),

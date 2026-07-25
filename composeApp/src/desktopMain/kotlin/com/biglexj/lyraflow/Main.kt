@@ -16,8 +16,9 @@ import androidx.compose.ui.window.rememberWindowState
 import androidx.compose.ui.window.application
 import com.biglexj.lyraflow.core.config.AppConfiguration
 import com.biglexj.lyraflow.core.audio.RecordingTelemetry
+import com.biglexj.lyraflow.core.model.AiProvider
 import com.biglexj.lyraflow.core.network.createPlatformHttpClient
-import com.biglexj.lyraflow.data.gemini.GeminiTranscriptionProvider
+import com.biglexj.lyraflow.data.provider.MultimodalTranscriptionProvider
 import com.biglexj.lyraflow.domain.dictation.DictationCoordinator
 import com.biglexj.lyraflow.domain.dictation.DictationState
 import com.biglexj.lyraflow.domain.transcription.TranscriptionRequest
@@ -44,7 +45,7 @@ fun main(args: Array<String>) = application {
     val autoStart = remember { WindowsAutoStart() }
     var preferences by remember { mutableStateOf(preferencesStore.load()) }
     var apiKey by remember {
-        mutableStateOf(apiKeyStore.load().ifBlank { System.getenv("GEMINI_API_KEY").orEmpty() })
+        mutableStateOf(apiKeyStore.load(preferences.provider).ifBlank { environmentApiKey(preferences.provider) })
     }
     var recordingTelemetry by remember { mutableStateOf(RecordingTelemetry()) }
     val scope = remember { CoroutineScope(SupervisorJob() + Dispatchers.Main) }
@@ -60,7 +61,13 @@ fun main(args: Array<String>) = application {
     val startsMinimized = args.any { it.equals("--minimized", ignoreCase = true) }
     var windowVisible by remember { mutableStateOf(!startsMinimized || !isSystemTraySupported()) }
     val coordinator = remember {
-        DictationCoordinator(GeminiTranscriptionProvider(createPlatformHttpClient()) { apiKey })
+        DictationCoordinator(
+            MultimodalTranscriptionProvider(
+                client = createPlatformHttpClient(),
+                apiKey = { apiKey },
+                configuration = { preferences.providerConfiguration },
+            ),
+        )
     }
     val state by coordinator.state.collectAsState()
     val recording = remember { mutableStateOf(false) }
@@ -93,7 +100,7 @@ fun main(args: Array<String>) = application {
             recording.value = false
             val wav = audio.stop()
             scope.launch {
-                coordinator.process(TranscriptionRequest(wav, model = preferences.model))
+                coordinator.process(TranscriptionRequest(wav))
                 if (preferences.autoInject) {
                     val text = (coordinator.state.value as? DictationState.Completed)?.refinedText.orEmpty()
                     injector.inject(text)
@@ -168,7 +175,6 @@ fun main(args: Array<String>) = application {
             configuration = AppConfiguration(
                 preferences = preferences,
                 sessionApiKey = apiKey,
-                apiKeyStorageMessage = "La clave se guarda cifrada para tu usuario de Windows.",
             ),
             recordingTelemetry = recordingTelemetry,
             whisperStatus = whisperStatus,
@@ -181,6 +187,9 @@ fun main(args: Array<String>) = application {
                 reset = coordinator::reset,
                 updatePreferences = { updated ->
                     val shortcutChanged = preferences.shortcut != updated.shortcut
+                    if (preferences.provider != updated.provider) {
+                        apiKey = apiKeyStore.load(updated.provider).ifBlank { environmentApiKey(updated.provider) }
+                    }
                     preferences = updated
                     preferencesStore.save(updated)
                     autoStart.setEnabled(updated.launchAtStartup)
@@ -195,7 +204,7 @@ fun main(args: Array<String>) = application {
                 },
                 updateApiKey = {
                     apiKey = it
-                    apiKeyStore.save(it)
+                    apiKeyStore.save(preferences.provider, it)
                 },
                 installWhisper = { model -> scope.launch { whisperInstaller.install(model) } },
                 retry = {
@@ -220,3 +229,8 @@ fun main(args: Array<String>) = application {
         )
     }
 }
+
+private fun environmentApiKey(provider: AiProvider): String =
+    System.getenv("LYRAFLOW_API_KEY").orEmpty().ifBlank {
+        System.getenv(provider.apiKeyEnvironmentVariable).orEmpty()
+    }

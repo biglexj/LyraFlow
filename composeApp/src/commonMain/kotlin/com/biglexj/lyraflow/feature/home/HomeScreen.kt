@@ -29,6 +29,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.biglexj.lyraflow.core.config.AppConfiguration
+import com.biglexj.lyraflow.core.config.AppPreferences
 import com.biglexj.lyraflow.core.config.WhisperSetupState
 import com.biglexj.lyraflow.core.config.WhisperModel
 import com.biglexj.lyraflow.core.audio.RecordingTelemetry
@@ -47,19 +48,33 @@ fun HomeScreen(
     onInject: () -> Unit,
     onClear: () -> Unit,
     onApiKeyChange: (String) -> Unit,
+    onPreferencesChange: (AppPreferences) -> Unit,
     onInstallWhisper: (WhisperModel) -> Unit,
     onRetry: () -> Unit = {},
     onRetryWhisper: () -> Unit = {},
 ) {
     var showApiKeyDialog by remember { mutableStateOf(false) }
+    var showModelDialog by remember { mutableStateOf(false) }
     var showWhisperModelDialog by remember { mutableStateOf(false) }
     if (showApiKeyDialog) {
         ApiKeyDialog(
             initialValue = configuration.sessionApiKey,
+            provider = configuration.preferences.provider,
             onDismiss = { showApiKeyDialog = false },
             onSave = {
                 onApiKeyChange(it)
                 showApiKeyDialog = false
+            },
+        )
+    }
+    if (showModelDialog) {
+        ModelSelectorDialog(
+            provider = configuration.preferences.provider,
+            selectedModel = configuration.preferences.model,
+            onDismiss = { showModelDialog = false },
+            onSelect = { model ->
+                onPreferencesChange(configuration.preferences.copy(model = model))
+                showModelDialog = false
             },
         )
     }
@@ -87,15 +102,22 @@ fun HomeScreen(
             onClear = onClear,
             onRetry = onRetry,
             onRetryWhisper = onRetryWhisper,
+            providerLabel = configuration.preferences.provider.label,
             whisperAvailable = whisperStatus.available,
         )
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             StatusCard(
-                title = "Gemini",
-                detail = if (configuration.sessionApiKey.isNotBlank()) configuration.preferences.model.label else "Añade tu API key en Ajustes",
+                title = configuration.preferences.provider.label,
+                detail = if (configuration.sessionApiKey.isNotBlank()) configuration.preferences.model else "Añade tu API key en Ajustes",
                 available = configuration.sessionApiKey.isNotBlank(),
                 modifier = Modifier.weight(1f),
-                onClick = if (configuration.sessionApiKey.isBlank()) {{ showApiKeyDialog = true }} else null,
+                onClick = {
+                    if (configuration.sessionApiKey.isBlank()) {
+                        showApiKeyDialog = true
+                    } else {
+                        showModelDialog = true
+                    }
+                },
             )
             StatusCard(
                 title = "Whisper local",
@@ -103,7 +125,7 @@ fun HomeScreen(
                 available = whisperStatus.available,
                 modifier = Modifier.weight(1f),
                 progress = whisperStatus.progress,
-                onClick = if (!whisperStatus.available && !whisperStatus.downloading) {{ showWhisperModelDialog = true }} else null,
+                onClick = if (!whisperStatus.available && !whisperStatus.downloading) { { showWhisperModelDialog = true } } else null,
             )
         }
     }
@@ -207,6 +229,7 @@ private fun ResultCard(
     onClear: () -> Unit,
     onRetry: () -> Unit,
     onRetryWhisper: () -> Unit,
+    providerLabel: String,
     whisperAvailable: Boolean,
 ) {
     val completed = state as? DictationState.Completed
@@ -230,7 +253,7 @@ private fun ResultCard(
                         modifier = Modifier.height(48.dp),
                         shape = MaterialTheme.shapes.small,
                     ) {
-                        Text("Reintentar Gemini")
+                        Text("Reintentar $providerLabel")
                     }
                     if (whisperAvailable) {
                         FilledTonalButton(

@@ -23,23 +23,23 @@ Proveedores iniciales:
 
 - **Gemini Transcription**: proveedor cloud predeterminado.
 - **Whisper Local**: proveedor offline para escritorio.
-- **OpenAI Transcription**: posible proveedor cloud posterior, fuera del primer hito.
+- **OpenAI-compatible Transcription**: adaptador cloud configurable por endpoint y modelo, capaz de conectar OpenAI, gateways y servidores que implementen Chat Completions con entrada `input_audio`.
 
 No se introducirá una abstracción llamada Groq ni un fallback silencioso hacia Groq.
 
 ## Modelo Gemini correcto
 
-Aurora no utiliza un modelo STT con un nombre independiente. Envía el WAV como `inlineData` a un modelo Gemini Flash multimodal y solicita una transcripción de texto.
+Aurora no utiliza un modelo STT con un nombre independiente. Envía el WAV como `inline_data` a un modelo Gemini Flash multimodal y solicita una transcripción de texto.
 
-El selector actual de Aurora usa:
+El catálogo actual usa:
 
-1. `gemini-3.1-flash-lite` como primera opción rápida.
-2. `gemini-3.5-flash` como segunda opción/inteligente.
+1. `gemini-3.5-flash-lite` como primera opción rápida.
+2. `gemini-3.6-flash` como segunda opción/inteligente.
 
 Para LyraFlow se propone invertir el sentido según el perfil:
 
-- **Rápido**: `gemini-3.1-flash-lite`.
-- **Inteligente**: `gemini-3.5-flash`.
+- **Rápido**: `gemini-3.5-flash-lite`.
+- **Inteligente**: `gemini-3.6-flash`.
 - **Automático**: medir latencia y calidad, con fallback configurable.
 
 `gemini-3.1-flash-tts-preview` no es un transcriptor; genera audio desde texto y no formará parte de la lista STT.
@@ -69,6 +69,8 @@ LyraFlow/
 │       │       │   └── transcription/
 │       │       ├── data/
 │       │       │   ├── gemini/
+│       │       │   ├── openai/
+│       │       │   ├── provider/
 │       │       │   ├── models/
 │       │       │   └── settings/
 │       │       └── feature/
@@ -130,6 +132,7 @@ Global shortcut
     -> AudioNormalizer / VAD
     -> TranscriptionProvider
        -> GeminiTranscriptionProvider
+       -> OpenAiCompatibleTranscriptionProvider
        -> WhisperLocalProvider
     -> TextRefinementPolicy
     -> ReviewPolicy

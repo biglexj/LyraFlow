@@ -15,8 +15,8 @@ $repository = "biglexj/LyraFlow"
 $propertiesPath = Join-Path $root "gradle.properties"
 $releaseNotesPath = Join-Path $root $ReleaseNotesFile
 $properties = Get-Content -LiteralPath $propertiesPath -Raw -Encoding UTF8
-$versionMatch = [regex]::Match($properties, '(?m)^lyraflow\.versionName=(\d+\.\d+\.\d+)$')
-$codeMatch = [regex]::Match($properties, '(?m)^lyraflow\.versionCode=(\d+)$')
+$versionMatch = [regex]::Match($properties, '(?m)^lyraflow\.versionName=(\d+\.\d+\.\d+)')
+$codeMatch = [regex]::Match($properties, '(?m)^lyraflow\.versionCode=(\d+)')
 if (-not $versionMatch.Success -or -not $codeMatch.Success) {
     throw "No se pudo leer la versión centralizada de LyraFlow."
 }

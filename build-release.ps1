@@ -85,6 +85,7 @@ $resolvedOutput = [IO.Path]::GetFullPath($output).TrimEnd('\') + '\'
 if (-not $resolvedOutput.StartsWith($resolvedRoot, [StringComparison]::OrdinalIgnoreCase)) {
     throw "La salida resuelta quedó fuera del proyecto."
 }
+Get-ChildItem -LiteralPath $output -File -ErrorAction SilentlyContinue | ForEach-Object { $_.IsReadOnly = $false }
 Get-ChildItem -LiteralPath $output -File -ErrorAction SilentlyContinue | Remove-Item -Force
 Get-ChildItem -LiteralPath $output -Directory -ErrorAction SilentlyContinue |
     Remove-Item -Recurse -Force

@@ -11,6 +11,7 @@ Plan de trabajo, objetivos y prioridades del proyecto.
 - [ ] Incorporar una prueba de integración opcional contra un endpoint configurado por el usuario.
 
 ## 🟢 Completado
+- [x] **v1.0.9** (2026-07-27) — Detección dinámica de tema oscuro nativo en tiempo real y rediseño de apariencia Material 3 Expressive.
 - [x] Hito inicial del proyecto
 - [x] Actualizar iconos con fondo y esquinas redondeadas para la aplicación y la bandeja de sistema.
 - [x] Separar el dominio de dictado de Gemini mediante un catálogo de proveedores multimodales.

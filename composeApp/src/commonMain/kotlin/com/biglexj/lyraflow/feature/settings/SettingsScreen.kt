@@ -56,15 +56,42 @@ fun SettingsScreen(
             Text("Haz que LyraFlow trabaje a tu manera.", color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         SettingsSection("Apariencia", "Elige cómo se adapta LyraFlow a tu escritorio.") {
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                ThemeMode.entries.forEach { mode ->
-                    FilterChip(
-                        selected = preferences.themeMode == mode,
-                        onClick = { onPreferencesChange(preferences.copy(themeMode = mode)) },
-                        label = { Text(mode.label) },
-                        modifier = Modifier.height(48.dp),
-                        shape = MaterialTheme.shapes.small,
-                    )
+            Surface(
+                color = MaterialTheme.colorScheme.surface,
+                shape = MaterialTheme.shapes.medium,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+            ) {
+                Row(
+                    modifier = Modifier.padding(6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    ThemeMode.entries.forEach { mode ->
+                        val selected = preferences.themeMode == mode
+                        Surface(
+                            onClick = { onPreferencesChange(preferences.copy(themeMode = mode)) },
+                            shape = MaterialTheme.shapes.small,
+                            color = if (selected) MaterialTheme.colorScheme.primaryContainer else androidx.compose.ui.graphics.Color.Transparent,
+                            border = if (selected) BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)) else null,
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 18.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                val icon = when (mode) {
+                                    ThemeMode.System -> "💻"
+                                    ThemeMode.Light -> "☀️"
+                                    ThemeMode.Dark -> "🌙"
+                                }
+                                Text(icon, style = MaterialTheme.typography.bodyMedium)
+                                Text(
+                                    text = mode.label,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -150,7 +177,7 @@ fun SettingsScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text("LyraFlow v1.0.8", style = MaterialTheme.typography.titleMedium)
+                    Text("LyraFlow v1.0.9", style = MaterialTheme.typography.titleMedium)
                     Text("Creado por biglexj (2026) • Licencia MIT", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

@@ -8,6 +8,11 @@ import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -15,6 +20,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.biglexj.lyraflow.core.config.ThemeMode
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 
 private val LightColors = lightColorScheme(
     primary = Color(0xFF7F52FF),
@@ -89,10 +96,34 @@ private val LyraTypography = Typography(
     labelLarge = TextStyle(fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, lineHeight = 20.sp),
 )
 
+/**
+ * Mantiene una observación dinámica e instantánea del tema del sistema operativo.
+ * Combina la API de Compose con la consulta directa al registro de Windows (o plataforma) cada 1 segundo
+ * para reaccionar al instante cuando el usuario cambia a Modo Oscuro en Ajustes de Windows/Android.
+ */
+@Composable
+fun rememberDynamicSystemInDarkTheme(): Boolean {
+    val composeSystemDark = isSystemInDarkTheme()
+    val platformDark = isPlatformInDarkTheme()
+    var isDarkState by remember { mutableStateOf(composeSystemDark || platformDark) }
+
+    LaunchedEffect(Unit) {
+        while (isActive) {
+            delay(1_000)
+            val currentPlatform = isPlatformInDarkTheme()
+            if (isDarkState != currentPlatform) {
+                isDarkState = currentPlatform
+            }
+        }
+    }
+    return isDarkState
+}
+
 @Composable
 fun LyraFlowTheme(mode: ThemeMode, content: @Composable () -> Unit) {
+    val systemInDark = rememberDynamicSystemInDarkTheme()
     val useDark = when (mode) {
-        ThemeMode.System -> isSystemInDarkTheme()
+        ThemeMode.System -> systemInDark
         ThemeMode.Light -> false
         ThemeMode.Dark -> true
     }

@@ -1,5 +1,12 @@
 # Release Notes - LyraFlow 🎙️✨
 
+## [1.0.9] - 2026-07-27
+
+LyraFlow mejora la detección del tema oscuro nativo en tiempo real y rediseña el selector de apariencia con estética Material 3 Expressive:
+- **Detección Dinámica de Modo Oscuro Nativo**: Integración directa con el Registro del Sistema Operativo en tiempo real para alternar al modo oscuro de forma instantánea sin necesidad de reiniciar la aplicación al cambiar las preferencias del sistema.
+- **Rediseño del Selector de Apariencia (Pill Container)**: Reemplazo de los selectores tradicionales por una barra de navegación segmentada con bordes suaves (*Material 3 Expressive*) e iconos ilustrativos (Automático, Claro, Oscuro).
+- **Actualización de Reglas y Estándares del Sistema**: Consolidación del marco de trabajo y guía de desarrollo de interfaz multiplataforma.
+
 ## [1.0.8] - 2026-07-25
 
 LyraFlow adopta la interfaz Material Expressive, suma la sección oficial "Acerca de" con modalidades de apoyo, comprobación de actualizaciones desde GitHub Releases y feedback transparente:
@@ -71,4 +78,4 @@ El atajo predeterminado es `Ctrl + Espacio`. Puede grabarse otra combinación de
 - **Logging**: Mejorado el sistema de logs con perfiles de rendimiento detallados.
 
 ---
-*LyraFlow v1.0.0 - Elevando la productividad vocal.*
+*LyraFlow v1.0.9 - Elevando la productividad vocal.*

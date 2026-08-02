@@ -15,10 +15,12 @@ import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.rememberWindowState
 import androidx.compose.ui.window.application
 import com.biglexj.lyraflow.core.config.AppConfiguration
+import com.biglexj.lyraflow.core.config.HistoryRetentionPeriod
 import com.biglexj.lyraflow.core.audio.RecordingTelemetry
 import com.biglexj.lyraflow.core.model.AiProvider
 import com.biglexj.lyraflow.core.network.createPlatformHttpClient
 import com.biglexj.lyraflow.data.provider.MultimodalTranscriptionProvider
+import com.biglexj.lyraflow.data.history.InMemoryTranscriptionHistoryRepository
 import com.biglexj.lyraflow.domain.dictation.DictationCoordinator
 import com.biglexj.lyraflow.domain.dictation.DictationState
 import com.biglexj.lyraflow.domain.transcription.TranscriptionRequest
@@ -60,13 +62,16 @@ fun main(args: Array<String>) = application {
     var shortcut by remember { mutableStateOf(GlobalShortcutFactory.create()) }
     val startsMinimized = args.any { it.equals("--minimized", ignoreCase = true) }
     var windowVisible by remember { mutableStateOf(!startsMinimized || !isSystemTraySupported()) }
-    val coordinator = remember {
+    val historyRepository = remember { InMemoryTranscriptionHistoryRepository() }
+    val coordinator = remember(historyRepository) {
         DictationCoordinator(
-            MultimodalTranscriptionProvider(
+            transcriber = MultimodalTranscriptionProvider(
                 client = createPlatformHttpClient(),
                 apiKey = { apiKey },
                 configuration = { preferences.providerConfiguration },
             ),
+            historyRepository = historyRepository,
+            isHistoryEnabled = { preferences.historyRetention != HistoryRetentionPeriod.Disabled },
         )
     }
     val state by coordinator.state.collectAsState()
@@ -167,7 +172,70 @@ fun main(args: Array<String>) = application {
                 override fun windowLostFocus(event: java.awt.event.WindowEvent) = injector.rememberForegroundTarget()
             }
             window.addWindowFocusListener(focusListener)
-            onDispose { window.removeWindowFocusListener(focusListener) }
+
+            val dropTargetListener = object : java.awt.dnd.DropTargetListener {
+                override fun dragEnter(dtde: java.awt.dnd.DropTargetDragEvent) {
+                    dtde.acceptDrag(java.awt.dnd.DnDConstants.ACTION_COPY)
+                }
+
+                override fun dragOver(dtde: java.awt.dnd.DropTargetDragEvent) {
+                    dtde.acceptDrag(java.awt.dnd.DnDConstants.ACTION_COPY)
+                }
+
+                override fun dropActionChanged(dtde: java.awt.dnd.DropTargetDragEvent) {
+                    dtde.acceptDrag(java.awt.dnd.DnDConstants.ACTION_COPY)
+                }
+
+                override fun dragExit(dte: java.awt.dnd.DropTargetEvent) = Unit
+
+                override fun drop(evt: java.awt.dnd.DropTargetDropEvent) {
+                    try {
+                        evt.acceptDrop(java.awt.dnd.DnDConstants.ACTION_COPY)
+                        val droppedFiles = evt.transferable.getTransferData(java.awt.datatransfer.DataFlavor.javaFileListFlavor) as? List<*>
+                        val audioFile = droppedFiles?.firstOrNull() as? java.io.File
+                        if (audioFile != null && audioFile.exists()) {
+                            val bytes = audioFile.readBytes()
+                            scope.launch {
+                                coordinator.process(
+                                    TranscriptionRequest(
+                                        audio = bytes,
+                                        model = preferences.model,
+                                        systemPrompt = preferences.systemPrompt,
+                                    ),
+                                )
+                                if (preferences.autoInject) {
+                                    val text = (coordinator.state.value as? DictationState.Completed)?.refinedText.orEmpty()
+                                    injector.inject(text)
+                                }
+                            }
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+            }
+            fun registerDropTargetRecursively(component: java.awt.Component) {
+                try {
+                    component.dropTarget = java.awt.dnd.DropTarget(component, dropTargetListener)
+                } catch (_: Throwable) {}
+
+                if (component is java.awt.Container) {
+                    component.addContainerListener(object : java.awt.event.ContainerAdapter() {
+                        override fun componentAdded(e: java.awt.event.ContainerEvent) {
+                            registerDropTargetRecursively(e.child)
+                        }
+                    })
+                    component.components.forEach { child ->
+                        registerDropTargetRecursively(child)
+                    }
+                }
+            }
+
+            registerDropTargetRecursively(window)
+
+            onDispose {
+                window.removeWindowFocusListener(focusListener)
+            }
         }
         LaunchedEffect(windowVisible) {
             if (windowVisible) {
@@ -184,6 +252,7 @@ fun main(args: Array<String>) = application {
             ),
             recordingTelemetry = recordingTelemetry,
             whisperStatus = whisperStatus,
+            historyRepository = historyRepository,
             actions = ShellActions(
                 toggleRecording = ::toggleRecording,
                 injectLastResult = {

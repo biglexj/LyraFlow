@@ -9,19 +9,32 @@ import com.biglexj.lyraflow.core.hotkey.ShortcutKey
 import com.biglexj.lyraflow.core.hotkey.ShortcutModifier
 import java.util.prefs.Preferences
 
+import com.biglexj.lyraflow.core.config.SystemPromptMode
+
 class DesktopPreferencesStore(
     private val node: Preferences = Preferences.userRoot().node("com/biglexj/lyraflow"),
 ) : PreferencesStore {
 
-    override fun load(): AppPreferences = AppPreferences(
-        themeMode = enumValue(node.get(THEME, ThemeMode.System.name), ThemeMode.System),
-        provider = enumValue(node.get(PROVIDER, AiProvider.Gemini.name), AiProvider.Gemini),
-        model = loadModel(),
-        endpoint = node.get(ENDPOINT, currentProvider().defaultEndpoint).ifBlank { currentProvider().defaultEndpoint },
-        autoInject = node.getBoolean(AUTO_INJECT, true),
-        launchAtStartup = node.getBoolean(LAUNCH_AT_STARTUP, true),
-        shortcut = loadShortcut(),
-    )
+    override fun load(): AppPreferences {
+        val provider = currentProvider()
+        val promptMode = enumValue(node.get(SYSTEM_PROMPT_MODE, SystemPromptMode.Smart.name), SystemPromptMode.Smart)
+        val fallbackPrompt = when (promptMode) {
+            SystemPromptMode.Smart -> AppPreferences.DEFAULT_SYSTEM_PROMPT
+            SystemPromptMode.Literal -> AppPreferences.LITERAL_SYSTEM_PROMPT
+            SystemPromptMode.Custom -> AppPreferences.DEFAULT_SYSTEM_PROMPT
+        }
+        return AppPreferences(
+            themeMode = enumValue(node.get(THEME, ThemeMode.System.name), ThemeMode.System),
+            provider = provider,
+            model = loadModel(),
+            endpoint = node.get(ENDPOINT, provider.defaultEndpoint).ifBlank { provider.defaultEndpoint },
+            autoInject = node.getBoolean(AUTO_INJECT, true),
+            launchAtStartup = node.getBoolean(LAUNCH_AT_STARTUP, true),
+            shortcut = loadShortcut(),
+            systemPromptMode = promptMode,
+            systemPrompt = node.get(SYSTEM_PROMPT, fallbackPrompt),
+        )
+    }
 
     override fun save(preferences: AppPreferences) {
         node.put(THEME, preferences.themeMode.name)
@@ -32,6 +45,8 @@ class DesktopPreferencesStore(
         node.putBoolean(LAUNCH_AT_STARTUP, preferences.launchAtStartup)
         node.put(HOTKEY_MODIFIERS, preferences.shortcut.modifiers.joinToString(",") { it.name })
         node.put(HOTKEY_KEY, preferences.shortcut.key.name)
+        node.put(SYSTEM_PROMPT_MODE, preferences.systemPromptMode.name)
+        node.put(SYSTEM_PROMPT, preferences.systemPrompt)
         node.flush()
     }
 
@@ -74,5 +89,7 @@ class DesktopPreferencesStore(
         const val LAUNCH_AT_STARTUP = "launchAtStartup"
         const val HOTKEY_MODIFIERS = "hotkeyModifiers"
         const val HOTKEY_KEY = "hotkeyKey"
+        const val SYSTEM_PROMPT_MODE = "systemPromptMode"
+        const val SYSTEM_PROMPT = "systemPrompt"
     }
 }

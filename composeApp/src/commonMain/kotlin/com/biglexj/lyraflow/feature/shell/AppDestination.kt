@@ -7,5 +7,6 @@ enum class AppDestination(
     val icon: LyraIconType,
 ) {
     Home("Inicio", LyraIconType.Home),
+    History("Historial", LyraIconType.History),
     Settings("Ajustes", LyraIconType.Settings),
 }

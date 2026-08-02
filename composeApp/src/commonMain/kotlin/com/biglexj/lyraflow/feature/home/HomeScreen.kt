@@ -183,7 +183,7 @@ private fun DictationHero(
                 when {
                     listening -> "Habla con naturalidad. LyraFlow se encarga del resto."
                     processing -> "Procesando el audio y organizando tus ideas…"
-                    else -> "Pulsa ${configuration.preferences.shortcut.label} o comienza desde aquí."
+                    else -> "Pulsa ${configuration.preferences.shortcut.label} o arrastra tu audio aquí."
                 },
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,

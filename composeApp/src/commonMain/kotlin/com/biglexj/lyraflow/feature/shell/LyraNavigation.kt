@@ -28,31 +28,39 @@ fun LyraNavigationRail(
     selected: AppDestination,
     themeMode: ThemeMode,
     onCycleTheme: () -> Unit,
+    visibleDestinations: List<AppDestination> = AppDestination.entries,
     onOpenAbout: () -> Unit = {},
     onSelect: (AppDestination) -> Unit,
 ) {
     Surface(color = MaterialTheme.colorScheme.surface) {
         Column(
-            modifier = Modifier.fillMaxHeight().width(92.dp).padding(horizontal = 10.dp, vertical = 18.dp),
+            modifier = Modifier.fillMaxHeight().width(98.dp).padding(horizontal = 8.dp, vertical = 18.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Surface(
                 onClick = onCycleTheme,
-                modifier = Modifier.width(RailItemWidth).height(52.dp).semantics {
+                modifier = Modifier.width(RailItemWidth).height(64.dp).semantics {
                     contentDescription = "Tema ${themeMode.label}. Cambiar tema."
                 },
                 shape = MaterialTheme.shapes.small,
                 color = MaterialTheme.colorScheme.primaryContainer,
                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
             ) {
-                LyraIcon(themeMode.icon, Modifier.padding(12.dp))
+                Column(
+                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 9.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    LyraIcon(themeMode.icon, Modifier.size(22.dp))
+                    Text("Tema", style = MaterialTheme.typography.labelLarge, maxLines = 1, softWrap = false)
+                }
             }
             Spacer(Modifier.weight(1f))
             Column(
                 modifier = Modifier.width(RailItemWidth),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                AppDestination.entries.forEach { destination ->
+                visibleDestinations.forEach { destination ->
                     DestinationButton(
                         destination,
                         selected == destination,
@@ -64,7 +72,7 @@ fun LyraNavigationRail(
             Spacer(Modifier.weight(1f))
             Surface(
                 onClick = onOpenAbout,
-                modifier = Modifier.width(RailItemWidth).height(48.dp).semantics {
+                modifier = Modifier.width(RailItemWidth).height(64.dp).semantics {
                     contentDescription = "Acerca de LyraFlow"
                 },
                 shape = MaterialTheme.shapes.small,
@@ -72,19 +80,19 @@ fun LyraNavigationRail(
                 contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
             ) {
                 Column(
-                    modifier = Modifier.padding(vertical = 6.dp),
+                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 9.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    LyraIcon(LyraIconType.Info, Modifier.size(18.dp))
-                    Text("Acerca de", style = MaterialTheme.typography.labelSmall)
+                    LyraIcon(LyraIconType.Info, Modifier.size(22.dp))
+                    Text("Acerca de", style = MaterialTheme.typography.labelLarge, maxLines = 1, softWrap = false)
                 }
             }
         }
     }
 }
 
-private val RailItemWidth = 64.dp
+private val RailItemWidth = 78.dp
 
 private val ThemeMode.icon: LyraIconType
     get() = when (this) {
@@ -96,6 +104,7 @@ private val ThemeMode.icon: LyraIconType
 @Composable
 fun LyraNavigationBar(
     selected: AppDestination,
+    visibleDestinations: List<AppDestination> = AppDestination.entries,
     onOpenAbout: () -> Unit = {},
     onSelect: (AppDestination) -> Unit,
 ) {
@@ -105,7 +114,7 @@ fun LyraNavigationBar(
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            AppDestination.entries.forEach { destination ->
+            visibleDestinations.forEach { destination ->
                 DestinationButton(destination, selected == destination, onSelect, Modifier.weight(1f))
             }
             Surface(
@@ -116,12 +125,12 @@ fun LyraNavigationBar(
                 contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
             ) {
                 Column(
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 9.dp),
+                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 9.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     LyraIcon(LyraIconType.Info, Modifier.size(22.dp))
-                    Text("Acerca de", style = MaterialTheme.typography.labelLarge)
+                    Text("Acerca de", style = MaterialTheme.typography.labelLarge, maxLines = 1, softWrap = false)
                 }
             }
         }
@@ -137,18 +146,18 @@ private fun DestinationButton(
 ) {
     Surface(
         onClick = { onSelect(destination) },
-        modifier = modifier,
+        modifier = modifier.height(64.dp),
         shape = MaterialTheme.shapes.small,
         color = if (selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface,
         contentColor = if (selected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 9.dp),
+            modifier = Modifier.padding(horizontal = 4.dp, vertical = 9.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             LyraIcon(destination.icon, Modifier.size(22.dp))
-            Text(destination.label, style = MaterialTheme.typography.labelLarge)
+            Text(destination.label, style = MaterialTheme.typography.labelLarge, maxLines = 1, softWrap = false)
         }
     }
 }

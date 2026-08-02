@@ -1,4 +1,20 @@
-# Release Notes - LyraFlow 🎙️✨
+# 🎙️✨ LyraFlow — Historial de Versiones
+
+📌 **Versión actual: `1.1.0` · Versión mínima requerida: `1.0.0`**
+
+> [!IMPORTANT]
+> **Regla del .9 para Versionado:**
+> - Nunca se debe pasar de una versión de parche `.9` (ej. de `1.0.9` no se pasa a `1.0.10`). Al alcanzar el límite del parche `.9`, se incrementa el número menor/secundario (ej. pasando a `1.1.0`).
+> - De igual manera, al alcanzar el límite de la versión menor `1.9.9` (o ante hitos de arquitectura significativos posteriores a `1.9.x`), se debe saltar obligatoriamente al siguiente número mayor completo, pasando a **`2.0.0`**. No se permiten números como `1.9.10` o `1.10.x`.
+> - **Nombres de Dulces para Versiones Mayores:** Cada versión mayor debe nombrarse con un nombre de dulce o postre al estilo de las versiones clásicas de Android en orden alfabético. El nombre debe reflejarse coordinadamente en el `README.md`, en este archivo y, cuando corresponda, en el `package.json` del frontend.
+
+## [1.1.0] - 2026-08-01
+
+LyraFlow alcanza la versión menor 1.1.0 incorporando importación nativa por arrastre (Drag & Drop), historial temporal con purga automática y operación offline autónoma sin dependencia de API Keys:
+- **Importación Directa por Arrastre (Drag & Drop)**: Soporte completo para arrastrar archivos de audio (`.wav`, `.mp3`, `.m4a`, `.ogg`) directamente sobre la ventana principal con indicador nativo de copia/importación `(+)` para iniciar la transcripción instantánea.
+- **Pestaña de Historial Temporal & Retención Configurable**: Persistencia local en Room/SQLite con vista dedicada de dictados recientes, borrado individual, copia en 1 clic y selector de retención (24 horas, 7 días, 30 días o ilimitado) con purga automática silenciosa al iniciar la aplicación.
+- **Operación Offline Autónoma & Protección de Modos IA**: Funcionamiento 100% independiente de API Keys en modo *Voz original*. Si no se detecta clave API configurada, la interfaz bloquea reactivamente los modos de refinamiento IA (*Inteligente* y *Personalizado*) y la selección de modelos con candados visuales (`🔒`) e indicativos informativos claros.
+- **Refinamiento de UX & Estética UI**: Subtítulos dinámicos de estado ("*Pulsa Ctrl + Espacio o arrastra tu audio aquí*"), limpieza de elementos duplicados de la interfaz y menú de bandeja del sistema optimizado.
 
 ## [1.0.9] - 2026-07-27
 

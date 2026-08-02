@@ -1,5 +1,7 @@
 package com.biglexj.lyraflow.domain.dictation
 
+import com.biglexj.lyraflow.core.model.TranscriptionHistoryEntry
+import com.biglexj.lyraflow.data.history.TranscriptionHistoryRepository
 import com.biglexj.lyraflow.domain.transcription.TranscriptionProvider
 import com.biglexj.lyraflow.domain.transcription.TranscriptionRequest
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -10,6 +12,8 @@ import kotlinx.coroutines.CancellationException
 
 class DictationCoordinator(
     private val transcriber: TranscriptionProvider,
+    private val historyRepository: TranscriptionHistoryRepository? = null,
+    private val isHistoryEnabled: () -> Boolean = { true },
 ) {
     private val mutableState = MutableStateFlow<DictationState>(DictationState.Idle)
     val state: StateFlow<DictationState> = mutableState.asStateFlow()
@@ -47,6 +51,18 @@ class DictationCoordinator(
             )
             try {
                 val result = provider.transcribe(request)
+                if (result.rawText.isNotBlank() && isHistoryEnabled()) {
+                    historyRepository?.saveEntry(
+                        TranscriptionHistoryEntry(
+                            id = (System.currentTimeMillis().toString() + "-" + (1000..9999).random()),
+                            timestampMs = System.currentTimeMillis(),
+                            rawTranscript = result.rawText,
+                            refinedText = result.rawText,
+                            providerName = result.provider,
+                            audioDurationMs = result.elapsedMillis
+                        )
+                    )
+                }
                 mutableState.value = DictationState.Completed(
                     rawText = result.rawText,
                     refinedText = result.rawText,

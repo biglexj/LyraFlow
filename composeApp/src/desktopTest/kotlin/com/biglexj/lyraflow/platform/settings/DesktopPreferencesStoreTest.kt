@@ -1,5 +1,6 @@
 package com.biglexj.lyraflow.platform.settings
 
+import com.biglexj.lyraflow.core.config.SystemPromptMode
 import com.biglexj.lyraflow.core.model.AiProvider
 import java.util.UUID
 import java.util.prefs.Preferences
@@ -39,6 +40,25 @@ class DesktopPreferencesStoreTest {
             assertEquals(AiProvider.OpenAiCompatible, restored.provider)
             assertEquals("qwen-audio", restored.model)
             assertEquals("http://localhost:8000/v1/chat/completions", restored.endpoint)
+        } finally {
+            node.removeNode()
+        }
+    }
+
+    @Test
+    fun persistsSystemPromptModeAndCustomPrompt() {
+        val node = Preferences.userRoot().node("com/biglexj/lyraflow/test/${UUID.randomUUID()}")
+        try {
+            val original = com.biglexj.lyraflow.core.config.AppPreferences(
+                systemPromptMode = SystemPromptMode.Literal,
+                systemPrompt = com.biglexj.lyraflow.core.config.AppPreferences.LITERAL_SYSTEM_PROMPT,
+            )
+            DesktopPreferencesStore(node).save(original)
+
+            val restored = DesktopPreferencesStore(node).load()
+
+            assertEquals(SystemPromptMode.Literal, restored.systemPromptMode)
+            assertEquals(com.biglexj.lyraflow.core.config.AppPreferences.LITERAL_SYSTEM_PROMPT, restored.systemPrompt)
         } finally {
             node.removeNode()
         }

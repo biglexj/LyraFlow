@@ -40,7 +40,13 @@ import com.biglexj.lyraflow.core.update.UpdateChecker
 import com.biglexj.lyraflow.core.update.UpdateRelease
 import com.biglexj.lyraflow.core.update.UpdateService
 import com.biglexj.lyraflow.domain.dictation.DictationState
+import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
+import com.biglexj.lyraflow.data.history.InMemoryTranscriptionHistoryRepository
+import com.biglexj.lyraflow.data.history.TranscriptionHistoryRepository
 import com.biglexj.lyraflow.feature.about.AboutDialog
+import com.biglexj.lyraflow.feature.history.HistoryScreen
 import com.biglexj.lyraflow.feature.home.HomeScreen
 import com.biglexj.lyraflow.feature.settings.SettingsScreen
 import com.biglexj.lyraflow.feature.update.UpdateBanner
@@ -66,6 +72,7 @@ fun LyraFlowApp(
     recordingTelemetry: RecordingTelemetry = RecordingTelemetry(),
     whisperStatus: WhisperSetupState,
     actions: ShellActions,
+    historyRepository: TranscriptionHistoryRepository = remember { InMemoryTranscriptionHistoryRepository() },
 ) {
     LyraFlowTheme(configuration.preferences.themeMode) {
         var destination by remember { mutableStateOf(AppDestination.Home) }
@@ -78,7 +85,7 @@ fun LyraFlowApp(
         // Verificación silenciosa al iniciar: no muestra ningún mensaje si todo está al día.
         val checkSilent: suspend () -> Unit = {
             val remoteRelease = updateService.checkLatestRelease()
-            if (remoteRelease != null && UpdateChecker.isNewerVersion("1.0.9", remoteRelease.version)) {
+            if (remoteRelease != null && UpdateChecker.isNewerVersion("1.1.0", remoteRelease.version)) {
                 availableUpdate = remoteRelease
             }
         }
@@ -88,7 +95,7 @@ fun LyraFlowApp(
             upToDate = false
             scope.launch {
                 val remoteRelease = updateService.checkLatestRelease()
-                if (remoteRelease != null && UpdateChecker.isNewerVersion("1.0.9", remoteRelease.version)) {
+                if (remoteRelease != null && UpdateChecker.isNewerVersion("1.1.0", remoteRelease.version)) {
                     availableUpdate = remoteRelease
                     upToDate = false
                 } else {
@@ -97,7 +104,19 @@ fun LyraFlowApp(
             }
         }
 
+        val historyEnabled = configuration.preferences.historyRetention != com.biglexj.lyraflow.core.config.HistoryRetentionPeriod.Disabled
+        val visibleDestinations = remember(historyEnabled) {
+            if (historyEnabled) AppDestination.entries else AppDestination.entries.filter { it != AppDestination.History }
+        }
+
         LaunchedEffect(Unit) { checkSilent() }
+
+        LaunchedEffect(configuration.preferences.historyRetention) {
+            if (!historyEnabled && destination == AppDestination.History) {
+                destination = AppDestination.Home
+            }
+            historyRepository.purgeExpired(configuration.preferences.historyRetention.hours)
+        }
 
         // Auto-ocultar el toast de "al día" tras 4 segundos.
         LaunchedEffect(upToDate) {
@@ -130,6 +149,7 @@ fun LyraFlowApp(
                                         ),
                                     )
                                 },
+                                visibleDestinations = visibleDestinations,
                                 onOpenAbout = { showAboutDialog = true },
                                 onSelect = { destination = it },
                             )
@@ -145,6 +165,7 @@ fun LyraFlowApp(
                                 onDismissUpdate = { availableUpdate = null },
                                 onOpenAbout = { showAboutDialog = true },
                                 onCheckForUpdates = checkForUpdates,
+                                historyRepository = historyRepository,
                                 modifier = Modifier.weight(1f),
                             )
                         }
@@ -162,9 +183,14 @@ fun LyraFlowApp(
                                 onDismissUpdate = { availableUpdate = null },
                                 onOpenAbout = { showAboutDialog = true },
                                 onCheckForUpdates = checkForUpdates,
+                                historyRepository = historyRepository,
                                 modifier = Modifier.weight(1f),
                             )
-                            LyraNavigationBar(destination, onOpenAbout = { showAboutDialog = true }) { destination = it }
+                            LyraNavigationBar(
+                                selected = destination,
+                                visibleDestinations = visibleDestinations,
+                                onOpenAbout = { showAboutDialog = true },
+                            ) { destination = it }
                         }
                     }
                 }
@@ -211,8 +237,12 @@ private fun ScreenContent(
     onDismissUpdate: () -> Unit,
     onOpenAbout: () -> Unit,
     onCheckForUpdates: () -> Unit,
+    historyRepository: TranscriptionHistoryRepository,
     modifier: Modifier,
 ) {
+    val scope = rememberCoroutineScope()
+    val historyEntries by historyRepository.history.collectAsState()
+    val clipboardManager = LocalClipboardManager.current
     Box(modifier) {
         Crossfade(targetState = destination, label = "main-navigation") { current ->
             when (current) {
@@ -230,6 +260,18 @@ private fun ScreenContent(
                     onInstallWhisper = actions.installWhisper,
                     onRetry = actions.retry,
                     onRetryWhisper = actions.retryWhisper,
+                )
+                AppDestination.History -> HistoryScreen(
+                    entries = historyEntries,
+                    onCopyText = { text ->
+                        clipboardManager.setText(AnnotatedString(text))
+                    },
+                    onDeleteEntry = { id ->
+                        scope.launch { historyRepository.deleteEntry(id) }
+                    },
+                    onClearAll = {
+                        scope.launch { historyRepository.clearHistory() }
+                    },
                 )
                 AppDestination.Settings -> SettingsScreen(
                     configuration = configuration,

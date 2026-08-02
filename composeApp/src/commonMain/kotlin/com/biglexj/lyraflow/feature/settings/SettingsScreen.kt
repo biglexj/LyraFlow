@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
@@ -34,6 +33,8 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.biglexj.lyraflow.core.config.AppConfiguration
 import com.biglexj.lyraflow.core.config.AppPreferences
+import com.biglexj.lyraflow.core.config.HistoryRetentionPeriod
+import com.biglexj.lyraflow.core.config.SystemPromptMode
 import com.biglexj.lyraflow.core.config.ThemeMode
 import com.biglexj.lyraflow.core.model.AiProvider
 
@@ -47,6 +48,8 @@ fun SettingsScreen(
 ) {
     val preferences = configuration.preferences
     val provider = preferences.provider
+    val hasApiKey = configuration.sessionApiKey.isNotBlank()
+
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(28.dp),
         verticalArrangement = Arrangement.spacedBy(22.dp),
@@ -95,6 +98,41 @@ fun SettingsScreen(
                 }
             }
         }
+        SettingsSection("Historial y Retención", "Define el tiempo de conservación de tus dictados recientes antes del borrado automático.") {
+            Surface(
+                color = MaterialTheme.colorScheme.surface,
+                shape = MaterialTheme.shapes.medium,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+            ) {
+                Row(
+                    modifier = Modifier.padding(6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    HistoryRetentionPeriod.entries.forEach { period ->
+                        val selected = preferences.historyRetention == period
+                        Surface(
+                            onClick = { onPreferencesChange(preferences.copy(historyRetention = period)) },
+                            shape = MaterialTheme.shapes.small,
+                            color = if (selected) MaterialTheme.colorScheme.primaryContainer else androidx.compose.ui.graphics.Color.Transparent,
+                            border = if (selected) BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)) else null,
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 18.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                Text("🕒", style = MaterialTheme.typography.bodyMedium)
+                                Text(
+                                    text = period.label,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
         SettingsSection("Proveedor multimodal", "Una sola llamada recibe el audio y devuelve el texto corregido.") {
             AiProvider.entries.forEach { option ->
                 ProviderOption(
@@ -115,22 +153,32 @@ fun SettingsScreen(
         SettingsSection("Modelo multimodal", "Escribe cualquier identificador de modelo que acepte audio y texto.") {
             ModelField(
                 value = preferences.model,
+                enabled = hasApiKey,
                 onValueChange = { onPreferencesChange(preferences.copy(model = it)) },
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 provider.suggestedModels.forEach { model ->
                     FilterChip(
                         selected = preferences.model == model,
+                        enabled = hasApiKey,
                         onClick = { onPreferencesChange(preferences.copy(model = model)) },
                         label = { Text(model) },
                     )
                 }
+            }
+            if (!hasApiKey) {
+                Text(
+                    text = "🔒 Se requiere API Key: Ingresa tu clave en la sección '${provider.label} API' abajo para desbloquear la selección de modelos.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                )
             }
         }
         if (provider == AiProvider.OpenAiCompatible) {
             SettingsSection("Endpoint OpenAI-compatible", "Compatible con OpenAI, gateways y servidores locales que acepten Chat Completions.") {
                 EndpointField(
                     value = preferences.endpoint,
+                    enabled = hasApiKey,
                     onValueChange = { onPreferencesChange(preferences.copy(endpoint = it)) },
                 )
             }
@@ -142,11 +190,40 @@ fun SettingsScreen(
                 onValueChange = onApiKeyChange,
             )
         }
-        SettingsSection("Instrucciones de transcripción (System Prompt)", "Personaliza cómo la IA procesa y aplica formato a tus dictados por voz.") {
+        SettingsSection("Instrucciones de transcripción (System Prompt)", "Elige entre transcripción inteligente refinada o voz original literal sin alterar conceptos.") {
+            val effectiveMode = if (!hasApiKey) SystemPromptMode.Literal else preferences.systemPromptMode
             SystemPromptField(
+                currentMode = effectiveMode,
                 value = preferences.systemPrompt,
-                onValueChange = { onPreferencesChange(preferences.copy(systemPrompt = it)) },
-                onReset = { onPreferencesChange(preferences.copy(systemPrompt = AppPreferences.DEFAULT_SYSTEM_PROMPT)) },
+                hasApiKey = hasApiKey,
+                onModeSelect = { mode ->
+                    if (!hasApiKey && mode != SystemPromptMode.Literal) return@SystemPromptField
+                    val newPrompt = when (mode) {
+                        SystemPromptMode.Smart -> AppPreferences.DEFAULT_SYSTEM_PROMPT
+                        SystemPromptMode.Literal -> AppPreferences.LITERAL_SYSTEM_PROMPT
+                        SystemPromptMode.Custom -> preferences.systemPrompt
+                    }
+                    onPreferencesChange(preferences.copy(systemPromptMode = mode, systemPrompt = newPrompt))
+                },
+                onValueChange = { newValue ->
+                    if (!hasApiKey) return@SystemPromptField
+                    val newMode = when (newValue.trim()) {
+                        AppPreferences.DEFAULT_SYSTEM_PROMPT.trim() -> SystemPromptMode.Smart
+                        AppPreferences.LITERAL_SYSTEM_PROMPT.trim() -> SystemPromptMode.Literal
+                        else -> SystemPromptMode.Custom
+                    }
+                    onPreferencesChange(preferences.copy(systemPromptMode = newMode, systemPrompt = newValue))
+                },
+                onReset = {
+                    if (hasApiKey) {
+                        onPreferencesChange(
+                            preferences.copy(
+                                systemPromptMode = SystemPromptMode.Smart,
+                                systemPrompt = AppPreferences.DEFAULT_SYSTEM_PROMPT,
+                            ),
+                        )
+                    }
+                },
             )
         }
         SettingsSection("Atajo global", "Inicia y detén el dictado desde cualquier aplicación.") {
@@ -217,16 +294,16 @@ private fun ProviderOption(provider: AiProvider, selected: Boolean, onSelect: ()
         onClick = onSelect,
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
-        color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant),
+        color = if (selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, if (selected) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             RadioButton(selected = selected, onClick = onSelect)
-            Column {
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(provider.label, style = MaterialTheme.typography.titleMedium)
                 Text(provider.description, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
@@ -235,9 +312,10 @@ private fun ProviderOption(provider: AiProvider, selected: Boolean, onSelect: ()
 }
 
 @Composable
-private fun ModelField(value: String, onValueChange: (String) -> Unit) {
+private fun ModelField(value: String, enabled: Boolean = true, onValueChange: (String) -> Unit) {
     OutlinedTextField(
         value = value,
+        enabled = enabled,
         onValueChange = onValueChange,
         modifier = Modifier.fillMaxWidth().widthIn(max = 680.dp),
         label = { Text("Identificador del modelo") },
@@ -248,9 +326,10 @@ private fun ModelField(value: String, onValueChange: (String) -> Unit) {
 }
 
 @Composable
-private fun EndpointField(value: String, onValueChange: (String) -> Unit) {
+private fun EndpointField(value: String, enabled: Boolean = true, onValueChange: (String) -> Unit) {
     OutlinedTextField(
         value = value,
+        enabled = enabled,
         onValueChange = onValueChange,
         modifier = Modifier.fillMaxWidth().widthIn(max = 900.dp),
         label = { Text("URL completa del endpoint") },
@@ -296,20 +375,84 @@ private fun SettingSwitch(title: String, supporting: String, checked: Boolean, o
 }
 
 @Composable
-private fun SystemPromptField(value: String, onValueChange: (String) -> Unit, onReset: () -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        OutlinedTextField(
-            value = value,
-            onValueChange = onValueChange,
-            modifier = Modifier.fillMaxWidth(),
-            minLines = 4,
-            maxLines = 8,
+private fun SystemPromptField(
+    currentMode: SystemPromptMode,
+    value: String,
+    hasApiKey: Boolean,
+    onModeSelect: (SystemPromptMode) -> Unit,
+    onValueChange: (String) -> Unit,
+    onReset: () -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Surface(
+            color = MaterialTheme.colorScheme.surface,
             shape = MaterialTheme.shapes.medium,
-            placeholder = { Text("Escribe tus instrucciones personalizadas...") },
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+        ) {
+            Row(
+                modifier = Modifier.padding(6.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                SystemPromptMode.entries.forEach { mode ->
+                    val selected = currentMode == mode
+                    val enabled = hasApiKey || mode == SystemPromptMode.Literal
+                    Surface(
+                        onClick = { if (enabled) onModeSelect(mode) },
+                        shape = MaterialTheme.shapes.small,
+                        color = if (selected) MaterialTheme.colorScheme.primaryContainer else androidx.compose.ui.graphics.Color.Transparent,
+                        border = if (selected) BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)) else null,
+                        modifier = Modifier.then(
+                            if (!enabled) Modifier.padding(0.dp) else Modifier
+                        ),
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            val icon = when (mode) {
+                                SystemPromptMode.Smart -> if (hasApiKey) "🧠" else "🔒"
+                                SystemPromptMode.Literal -> "🎙️"
+                                SystemPromptMode.Custom -> if (hasApiKey) "✏️" else "🔒"
+                            }
+                            Text(icon, style = MaterialTheme.typography.bodyMedium)
+                            Text(
+                                text = mode.label,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = when {
+                                    selected -> MaterialTheme.colorScheme.onPrimaryContainer
+                                    !enabled -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
+                                    else -> MaterialTheme.colorScheme.onSurfaceVariant
+                                },
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        Text(
+            text = if (!hasApiKey) {
+                "ℹ️ Sin API Key configurada: Se utiliza 'Voz original' (transcripción literal offline). Para refinamiento con IA ('Inteligente' o 'Personalizado'), agrega tu API Key de Gemini u OpenAI arriba."
+            } else {
+                currentMode.description
+            },
+            style = MaterialTheme.typography.bodySmall,
+            color = if (!hasApiKey) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-            TextButton(onClick = onReset) {
-                Text("Restablecer instrucciones predeterminadas")
+        if (hasApiKey) {
+            OutlinedTextField(
+                value = value,
+                onValueChange = onValueChange,
+                modifier = Modifier.fillMaxWidth(),
+                minLines = 4,
+                maxLines = 8,
+                shape = MaterialTheme.shapes.medium,
+                placeholder = { Text("Escribe tus instrucciones personalizadas...") },
+            )
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                TextButton(onClick = onReset) {
+                    Text("Restablecer modo Inteligente predeterminado")
+                }
             }
         }
     }

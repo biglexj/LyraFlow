@@ -49,7 +49,7 @@ fun AboutDialog(
                     color = MaterialTheme.colorScheme.primaryContainer,
                 ) {
                     Text(
-                        text = "v1.0.9 • MIT License",
+                        text = "v1.1.0 • MIT License",
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),

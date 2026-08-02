@@ -16,6 +16,19 @@ fun ThemeMode.next(): ThemeMode = when (this) {
     ThemeMode.Dark -> ThemeMode.System
 }
 
+enum class SystemPromptMode(val label: String, val description: String) {
+    Smart("Inteligente", "Refina puntuación, formato y corrige muletillas"),
+    Literal("Voz original", "Transcripción literal palabra por palabra sin refinar"),
+    Custom("Personalizado", "Instrucciones personalizadas"),
+}
+
+enum class HistoryRetentionPeriod(val hours: Long, val label: String) {
+    Disabled(0L, "Desactivado"),
+    Hours24(24L, "24 horas"),
+    Hours48(48L, "48 horas"),
+    Hours72(72L, "72 horas (3 días)"),
+}
+
 data class AppPreferences(
     val themeMode: ThemeMode = ThemeMode.System,
     val provider: AiProvider = AiProvider.Gemini,
@@ -24,7 +37,9 @@ data class AppPreferences(
     val autoInject: Boolean = true,
     val launchAtStartup: Boolean = true,
     val shortcut: KeyboardShortcut = KeyboardShortcut.Default,
+    val systemPromptMode: SystemPromptMode = SystemPromptMode.Smart,
     val systemPrompt: String = DEFAULT_SYSTEM_PROMPT,
+    val historyRetention: HistoryRetentionPeriod = HistoryRetentionPeriod.Hours24,
 ) {
     val providerConfiguration: ProviderConfiguration
         get() = ProviderConfiguration(
@@ -45,6 +60,12 @@ data class AppPreferences(
                 "'nueva línea' y 'punto por punto', sin escribir literalmente esas órdenes. " +
                 "No resumas, no inventes información y no cambies nombres, cifras, rutas ni fragmentos de código. " +
                 "Devuelve únicamente el texto final, sin comentarios, comillas ni bloques Markdown. " +
+                "Si no hay voz clara, devuelve una cadena vacía."
+
+        const val LITERAL_SYSTEM_PROMPT =
+            "Transcribe el audio tal cual dice el usuario, de forma literal, palabra por palabra, sin refinar, corregir, estructurar, resumir ni omitir nada. " +
+                "Conserva fielmente todas las palabras, modismos e ideas expresadas exactamente como se pronunciaron. " +
+                "Devuelve únicamente el texto transcrito de forma directa, sin comentarios, aclaraciones, comillas ni bloques Markdown. " +
                 "Si no hay voz clara, devuelve una cadena vacía."
     }
 }

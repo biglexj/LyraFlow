@@ -187,7 +187,18 @@ fun SettingsScreen(
             ApiKeyField(
                 value = configuration.sessionApiKey,
                 label = provider.apiKeyEnvironmentVariable,
-                onValueChange = onApiKeyChange,
+                onValueChange = { newKey ->
+                    val wasEmpty = configuration.sessionApiKey.isBlank()
+                    onApiKeyChange(newKey)
+                    if (wasEmpty && newKey.isNotBlank() && preferences.systemPromptMode == SystemPromptMode.Literal) {
+                        onPreferencesChange(
+                            preferences.copy(
+                                systemPromptMode = SystemPromptMode.Smart,
+                                systemPrompt = AppPreferences.DEFAULT_SYSTEM_PROMPT,
+                            ),
+                        )
+                    }
+                },
             )
         }
         SettingsSection("Instrucciones de transcripción (System Prompt)", "Elige entre transcripción inteligente refinada o voz original literal sin alterar conceptos.") {

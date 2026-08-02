@@ -41,7 +41,27 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import java.awt.event.WindowFocusListener
 
+private fun tryAcquireSingleInstanceLock(port: Int = 49281): java.net.ServerSocket? {
+    return try {
+        java.net.ServerSocket(port, 1, java.net.InetAddress.getByName("127.0.0.1"))
+    } catch (_: Exception) {
+        null
+    }
+}
+
 fun main(args: Array<String>) = application {
+    val singleInstanceSocket = remember { tryAcquireSingleInstanceLock(49281) }
+    if (singleInstanceSocket == null) {
+        // Otra instancia de LyraFlow ya está ejecutándose. Salir para evitar tray icons duplicados.
+        return@application
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            try { singleInstanceSocket.close() } catch (_: Exception) {}
+        }
+    }
+
     val preferencesStore = remember { DesktopPreferencesStore() }
     val apiKeyStore = remember { DesktopApiKeyStore() }
     val autoStart = remember { WindowsAutoStart() }

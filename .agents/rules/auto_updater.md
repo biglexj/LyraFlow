@@ -1,11 +1,7 @@
----
-trigger: always_on
----
-
 # 🚀 Regla y Sistema de Auto-Actualización desde GitHub Releases
 
 > [!IMPORTANT]
-> Todos los proyectos de aplicación (Android, Kotlin Multiplatform, Desktop) DEBEN incluir compatibilidad para la **comprobación automática y descarga directa de actualizaciones desde GitHub Releases**.
+> Todos los proyectos de aplicación (Android, Kotlin Multiplatform, Desktop) DEBEN incluir compatibilidad para la **comprobación automática, descarga interactiva e instalación directa de actualizaciones desde GitHub Releases**.
 
 ## Requerimientos Obligatorios
 
@@ -13,19 +9,26 @@ trigger: always_on
    - Al iniciar la aplicación, consultar la API de GitHub (`https://api.github.com/repos/{owner}/{repo}/releases/latest`) en segundo plano sin interrumpir al usuario.
    - **No mostrar ningún mensaje** si ya se está en la última versión (el check de inicio es transparente).
 2. **Verificación Manual**:
-   - Si el usuario pulsa "Buscar actualizaciones" (en Ajustes o en el diálogo Acerca de), mostrar el resultado siempre:
-     - Hay nueva versión → mostrar el `UpdateBanner`.
-     - Ya en la última versión → mostrar un **toast global flotante** (✅ "Estás en la última versión") que se auto-descarta a los 4 segundos con `AnimatedVisibility` + `fadeOut`.
-3. **Comparación Semántica de Versiones**:
-   - Comparar la versión de la app instalada contra el `tag_name` de GitHub usando el módulo `UpdateChecker.isNewerVersion`.
-4. **Descarga e Instalación Directa en Android**:
-   - En Android, utilizar `DownloadManager` para encolar la descarga del archivo `.apk` directamente en la carpeta de descargas del dispositivo.
-   - Solicitar la instalación (`Intent.ACTION_VIEW` con `application/vnd.android.package-archive`).
-5. **Enlace Directo o Navegador en Desktop**:
-   - Redirigir al archivo instalador o a la página de la release de GitHub.
-6. **Sanitización del `body` de GitHub Releases**:
-   - El campo `body` de la API de GitHub viene en Markdown crudo con `\r\n`, `**negrita**`, `##Títulos`, etc.
-   - **Siempre sanitizar** antes de mostrarlo en la UI con la función `sanitizeMarkdown()` (ver guía técnica `github_auto_updater_guide.md`).
-   - Limitar a 2 líneas máximo con `overflow = TextOverflow.Ellipsis`.
-7. **Interfaz No Intrusiva (Material Expressive)**:
-   - Mostrar un banner de notificación de actualización (`UpdateBanner`) discreto solo cuando exista una versión superior, permitiendo al usuario "Actualizar" o "Ahora no".
+   - Si el usuario pulsa "Buscar actualizaciones" (en Ajustes o en el diálogo Acerca de), mostrar la verificación inmediatamente:
+     - Hay nueva versión → Abrir el `UpdateModalDialog` al 80% de ancho de forma síncrona.
+     - Ya en la última versión → Mostrar un **Toast flotante centrado en la parte superior** (✅ "¡Estás en la última versión!") que se desvanece automáticamente a los **4 segundos**. No usar diálogos bloqueantes para este caso.
+3. **Transición Flotante y Cierre de Diálogos Secundarios [CRÍTICO]**:
+   - Al accionar "Buscar actualizaciones" desde un diálogo flotante (ej. "Acerca de"), la ventana flotante DEBE cerrarse en la misma acción y activar `showUpdateModal = true` de forma síncrona en el hilo principal.
+   - **Prohibido**: No dejar gaps ni estados intermedios vacíos que causen parpadeos o destellos blancos entre modales. Si el "Acerca de" es una página completa, no aplica el cierre.
+4. **Modal Central Interactivo (Ancho al 80%) [CRÍTICO]**:
+   - En Android y escritorio, mostrar las actualizaciones dentro de un **Modal Central Interactivo (`UpdateModalDialog`)**.
+   - El diálogo DEBE usar `DialogProperties(usePlatformDefaultWidth = false)` con `fillMaxWidth(0.80f)` (máximo 480.dp) para garantizar espacio holgado sin compresión de botones.
+   - Ocultar automáticamente el `UpdateBanner` superior cuando el modal central esté visible (`state.showUpdateModal == true`).
+5. **Sanitización Canónica del `body` en Markdown [CRÍTICO]**:
+   - Las notas de versión DEBEN sanitizarse mediante la función canónica **`sanitizeReleaseNotes(body: String): String`** para eliminar Markdown crudo (`#`, `**`, `*`, `-`, enlaces `[]()` y etiquetas HTML) antes de mostrarse en la UI.
+   - Las líneas de encabezado (`#`) se convierten en texto plano. Los ítems de lista (`-`, `*`) se reemplazan por `• `. El resultado se muestra en un contenedor desplazable con títulos legibles.
+6. **Descarga e Instalación Directa en Android**:
+   - Utilizar flujo de red HTTP con seguimiento de redirecciones 302/307 y reporte de progreso en vivo (0-100%).
+   - Validar la integridad del archivo ejecutable o APK (`PK\x03\x04` magic bytes).
+   - Solicitar la instalación limpia mediante `androidx.core.content.FileProvider` (`Intent.ACTION_VIEW` con `application/vnd.android.package-archive`).
+7. **Notificación de Usuario (Toast Flotante)**:
+   - Los avisos de "Sin actualizaciones" o errores de red deben mostrarse mediante un **Toast flotante** (sin bloqueo de UI), posicionado **centrado en la parte superior** de la pantalla, con una duración exacta de **4 segundos** antes de desaparecer.
+8. **Consistencia Paritaria Windows Desktop JVM [CRÍTICO]**:
+   - Ninguna funcionalidad de descarga o actualización debe estar restringida únicamente a Android.
+   - El motor **`AutoDownloader`** DEBE ejecutar peticiones HTTP asíncronas en ambas plataformas, descargando al almacenamiento persistente (`.elytesia/` en Windows / `filesDir` en Android) con barra o indicador de progreso (0-100%) visible.
+   - Para versiones Windows JVM, incluir la lógica de ejecución del instalador (`.exe` o `.msi`) mediante `ProcessBuilder` con privilegios solicitados y cierre de la instancia actual.

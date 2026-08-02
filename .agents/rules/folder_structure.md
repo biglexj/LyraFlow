@@ -5,27 +5,47 @@ trigger: always_on
 # 📁 Regla de Estructura de Carpetas — LyraFlow
 
 > [!CAUTION]
-> Esta regla es **CRÍTICA y no negociable**. Todo nuevo archivo, carpeta o módulo creado por el agente DEBE seguir esta convención.
+> Esta regla es **CRÍTICA y no negociable**. Todo nuevo archivo, carpeta o módulo creado por el agente DEBE seguir esta convención. Violar esta estructura es inaceptable y debe ser corregido inmediatamente.
 
 ## Estructura Raíz del Proyecto
 
 ```
 LyraFlow/                           # Raíz del repositorio
-├── .agents/rules/                  # Reglas del agente (base.md, folder_structure.md)
+├── .agents/rules/                  # Reglas del agente (base.md, folder_structure.md, ...)
 ├── Core/                           # Lógica central del sistema
 ├── Services/                       # Servicios de negocio y comunicación
 ├── UI/                             # Vistas e interfaces organizadas por features
-├── Docs/                           # Documentación técnica
-├── scratch/                        # Scripts utilitarios de mantenimiento (solo en raíz)
+├── Docs/                           # Documentación técnica y guías del proyecto
+├── scratch/                        # Scripts utilitarios de mantenimiento (solo raíz)
 ├── test/                           # Scripts de prueba temporales (ignorado en .gitignore)
 ├── agent.md                        # Instrucciones principales del agente (raíz)
-├── INSTRUCCIONES_AGENTE.md          # Archivo ejecutable directo para el agente (raíz)
 ├── ROADMAP.md                      # Plan de trabajo y prioridades
 ├── RELEASE_NOTES.md                # Historial de cambios por versión
+├── RELEASE_MESSAGE.md              # Mensaje de anuncio del último lanzamiento
 └── README.md                       # Documentación pública del proyecto
 ```
 
+## Reglas de Nomenclatura [CRÍTICO]
+
+| Elemento | Convención | Ejemplo |
+|---|---|---|
+| Carpetas de feature | `PascalCase` o `camelCase` según stack | `MusicFeature/`, `music/` |
+| Archivos de componente | `PascalCase` + sufijo de tipo | `HomeScreen.kt`, `ResultCard.kt` |
+| Archivos de modelo / data classes | `PascalCase` | `TranscriptionRequest`, `AppPreferences` |
+| Constantes | `SCREAMING_SNAKE_CASE` | `DEFAULT_SYSTEM_PROMPT` |
+| Variables / funciones | `camelCase` | `processDictation()`, `systemPromptMode` |
+
 ## Reglas Estructurales Obligatorias
-- **Uso de `scratch/`**: Solo en la raíz del proyecto para scripts utilitarios.
-- **Límite de líneas**: Archivos de más de **400 líneas** deben dividirse en sub-módulos/componentes.
-- **Centro Oficial de Documentación**: Para cualquier duda sobre arquitectura, consultar [d:\Proyectos\biglexj\Aurora---Blog\docs\es](file:///d:/Proyectos/biglexj/Aurora---Blog/docs/es).
+
+### ✅ PERMITIDO
+- Usar `test/` en la raíz para scripts temporales de prueba.
+- Usar `scratch/` en la raíz para scripts de mantenimiento, organizados en subcategorías.
+
+### ❌ PROHIBIDO — VIOLACIONES COMUNES A EVITAR
+- **Nunca** crear carpetas `scratch/` dentro de carpetas de código fuente (`src/`, `composeApp/`).
+- **Nunca** colocar archivos de lógica de negocio directamente en la raíz sin una estructura semántica.
+- **Nunca** duplicar componentes: si ya existe en componentes compartidos, importarlo; no copiarlo.
+
+## Regla de Crecimiento de Archivos
+
+Si un archivo supera las **400 líneas**, el agente DEBE proponer su división en sub-componentes antes de continuar añadiendo código. Los archivos de más de **600 líneas** son **deuda técnica activa** y deben registrarse en el ROADMAP como tarea de refactorización pendiente.

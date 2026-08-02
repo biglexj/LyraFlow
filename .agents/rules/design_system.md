@@ -18,6 +18,10 @@
    - Banners de notificación e indicadores de estado no intrusivos integrados en la UI.
    - Indicadores de carga expresivos (barras de progreso lineales dinámicas y spinners adaptativos).
 
-4. **Prohibición de Estilos Desactualizados**:
+4. **Dimensionamiento de Diálogos y Modales en Móvil [OBLIGATORIO]**:
+   - En Android y dispositivos móviles, los diálogos modales DEBEN configurarse con `DialogProperties(usePlatformDefaultWidth = false)` y `fillMaxWidth(0.80f)` (ancho exacto del 80% de pantalla).
+   - Se prohíbe el uso de anchos angostos por defecto que causen compresión o saltos de línea no deseados en botones de acción.
+
+5. **Prohibición de Estilos Desactualizados**:
    - **Prohibido** utilizar estilos planos de Material UI desfasados o layouts rígidos sin elevación ni padding dinámico.
    - **Prohibido** utilizar colores primarios planos y rígidos (rojo puro #FF0000, azul puro #0000FF). Usar paletas tonales derivadas de Material 3 Expressive (`primaryContainer`, `onPrimaryContainer`, `surfaceContainerHighest`).

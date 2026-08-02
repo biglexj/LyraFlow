@@ -7,6 +7,7 @@ Plan de trabajo, objetivos y prioridades del proyecto.
 - [ ] Añadir adaptadores nativos únicamente cuando un proveedor no exponga audio mediante OpenAI-compatible.
 
 ## 🟡 Intermedio (Prioridad Media/Baja)
+- [ ] In-App Silent Auto-Update con barra de progreso, descarga en segundo plano y reinicio transparente en caliente ("Instalar y Reiniciar" sin tocar descargas).
 - [ ] Añadir perfiles de proveedor para conservar también modelos y endpoints recientes por servicio.
 - [ ] Incorporar una prueba de integración opcional contra un endpoint configurado por el usuario.
 

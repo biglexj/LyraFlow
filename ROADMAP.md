@@ -12,7 +12,7 @@ Plan de trabajo, objetivos y prioridades del proyecto.
 - [ ] Incorporar una prueba de integración opcional contra un endpoint configurado por el usuario.
 
 ## 🟢 Completado
-- [x] **v1.1.0** (2026-08-02) — Dictado inteligente & transcripción multimodal con Drag & Drop, Pestañas de System Prompt (*Voz Original* vs *Inteligente*), Single-Instance Lock con listener socket ping y bypass dev (`isDev`), Auto-actualizador In-App silencioso con barra de progreso y reinicio en caliente, Persistencia de estado de ventana (Sección 5), Catálogo GPT-5.6 (`gpt-5.6-luna`, `gpt-5.6-terra`, `gpt-5.6-sol`) y Feedback Center.
+- [x] **v1.1.1** (2026-08-02) — Dictado inteligente & transcripción multimodal con Drag & Drop, Pestañas de System Prompt (*Voz Original* vs *Inteligente*), Single-Instance Lock con listener socket ping y bypass dev (`isDev`), Auto-actualizador In-App silencioso con barra de progreso y reinicio en caliente, Persistencia de estado de ventana (Sección 5), Catálogo GPT-5.6 (`gpt-5.6-luna`, `gpt-5.6-terra`, `gpt-5.6-sol`) y Feedback Center.
 - [x] In-App Silent Auto-Update con barra de progreso, descarga en segundo plano e instalación pasiva silenciosa ("Instalar y Reiniciar" sin tocar descargas).
 - [x] Persistencia de Estado de Ventana (Sección 5: ancho, alto, posición y estado de maximizado entre sesiones).
 - [x] Single-Instance Lock inteligente con listener socket ping y bypass automático en entorno de desarrollo (`-Dlyraflow.dev=true`).

@@ -1,6 +1,6 @@
-# 🎙️✨ LyraFlow 1.1.0 — Dictado Multimodal, Voz Original & Auto-Update In-App
+# 🎙️✨ LyraFlow 1.1.1 — Dictado Multimodal, Voz Original & Auto-Update In-App
 
-¡Llegó **LyraFlow v1.1.0**! Un hito principal en la evolución del dictado inteligente y la transcripción de audio para escritorio en Windows.
+¡Llegó **LyraFlow v1.1.1**! Un hito principal en la evolución del dictado inteligente y la transcripción de audio para escritorio en Windows.
 
 ### 🌟 Novedades Destacadas
 
@@ -15,4 +15,4 @@
 - 💬 **Feedback Center Integrado**: Enlace directo a GitHub Issues en el diálogo "Acerca de" para reportar sugerencias e inconsistencias.
 
 ---
-*LyraFlow v1.1.0 — Transcripción sin fricción, a la velocidad de tu voz.*
+*LyraFlow v1.1.1 — Transcripción sin fricción, a la velocidad de tu voz.*

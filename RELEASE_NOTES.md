@@ -1,6 +1,6 @@
 # 🎙️✨ LyraFlow — Historial de Versiones
 
-📌 **Versión actual: `1.1.0` · Versión mínima requerida: `1.0.0`**
+📌 **Versión actual: `1.1.1` · Versión mínima requerida: `1.0.0`**
 
 > [!IMPORTANT]
 > **Regla del .9 para Versionado:**
@@ -8,7 +8,7 @@
 > - De igual manera, al alcanzar el límite de la versión menor `1.9.9` (o ante hitos de arquitectura significativos posteriores a `1.9.x`), se debe saltar obligatoriamente al siguiente número mayor completo, pasando a **`2.0.0`**. No se permiten números como `1.9.10` o `1.10.x`.
 > - **Nombres de Dulces para Versiones Mayores:** Cada versión mayor debe nombrarse con un nombre de dulce o postre al estilo de las versiones clásicas de Android en orden alfabético. El nombre debe reflejarse coordinadamente en el `README.md`, en este archivo y, cuando corresponda, en el `package.json` del frontend.
 
-## [1.1.0] - 2026-08-02
+## [1.1.1] - 2026-08-02
 
 LyraFlow alcanza la versión menor 1.1.0 incorporando dictado multimodal inteligente, atajo global de voz original, auto-actualizador silencioso in-app, garantía de instancia única optimizada y persistencia completa de interfaz:
 - **Pestañas de System Prompt (*Voz Original* vs *Inteligente*)**: Selector en formato pill M3 Expressive para alternar entre transcripción inteligente procesada por IA o transcripción literal (*Voz original*) sin refinar ni modificar palabras del usuario.

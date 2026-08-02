@@ -32,3 +32,6 @@
    - Ninguna funcionalidad de descarga o actualización debe estar restringida únicamente a Android.
    - El motor **`AutoDownloader`** DEBE ejecutar peticiones HTTP asíncronas en ambas plataformas, descargando al almacenamiento persistente (`.elytesia/` en Windows / `filesDir` en Android) con barra o indicador de progreso (0-100%) visible.
    - Para versiones Windows JVM, incluir la lógica de ejecución del instalador (`.exe` o `.msi`) mediante `ProcessBuilder` con privilegios solicitados y cierre de la instancia actual.
+9. **Verificación Previa Obligatoria de la Release en GitHub [CRÍTICO]**:
+   - Antes de cambiar el número de versión (`versionName` / `versionCode`), redactar notas de versión (`RELEASE_NOTES.md`) o preparar anuncios (`RELEASE_MESSAGE.md`), el agente DEBE verificar la última release publicada en GitHub Releases (`https://api.github.com/repos/{owner}/{repo}/releases/latest`).
+   - La nueva versión DEBE ser strictly superior a la última tag publicada en GitHub para evitar colisiones de versionado (ej. si `v1.1.0` ya fue lanzada en GitHub, el nuevo lanzamiento DEBE ser `v1.1.1`).

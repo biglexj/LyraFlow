@@ -44,11 +44,17 @@ import java.awt.event.WindowFocusListener
 private const val SINGLE_INSTANCE_PORT = 49281
 
 private class SingleInstanceLock(
+    private val isDev: Boolean,
     private val port: Int = SINGLE_INSTANCE_PORT,
 ) {
     private var serverSocket: java.net.ServerSocket? = null
 
     fun tryAcquire(onFocusRequested: () -> Unit): Boolean {
+        // En entorno de desarrollo (ej. ./gradlew :composeApp:run o IDE), no bloquear la ejecución del dev server
+        if (isDev) {
+            return true
+        }
+
         return try {
             val socket = java.net.ServerSocket(port, 50, java.net.InetAddress.getByName("127.0.0.1"))
             serverSocket = socket
@@ -91,7 +97,11 @@ private class SingleInstanceLock(
 }
 
 fun main(args: Array<String>) {
-    val lock = SingleInstanceLock()
+    val isDev = System.getProperty("lyraflow.dev") == "true" ||
+        System.getProperty("idea.active") != null ||
+        System.getProperty("sun.java.command", "").contains("composeApp")
+
+    val lock = SingleInstanceLock(isDev = isDev)
     var bringToFrontCallback: (() -> Unit)? = null
 
     val isPrimary = lock.tryAcquire {

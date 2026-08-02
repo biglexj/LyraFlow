@@ -87,7 +87,7 @@ android {
 compose.desktop {
     application {
         mainClass = "com.biglexj.lyraflow.MainKt"
-        jvmArgs += listOf("--enable-native-access=ALL-UNNAMED")
+        jvmArgs += listOf("--enable-native-access=ALL-UNNAMED", "-Dlyraflow.dev=true")
         nativeDistributions {
             modules("java.net.http")
             targetFormats(

@@ -9,8 +9,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
+import androidx.compose.ui.window.WindowPlacement
 import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.rememberWindowState
 import androidx.compose.ui.window.application
@@ -202,7 +204,22 @@ fun main(args: Array<String>) {
         true
     }
 
+    val savedWindowState = remember { preferencesStore.loadWindowState() }
+    val windowState = rememberWindowState(
+        placement = if (savedWindowState.isMaximized) WindowPlacement.Maximized else WindowPlacement.Floating,
+        size = DpSize(savedWindowState.widthDp.dp, savedWindowState.heightDp.dp),
+        position = WindowPosition(Alignment.Center),
+    )
+
+    fun saveCurrentWindowState() {
+        val isMaximized = windowState.placement == WindowPlacement.Maximized
+        val widthDp = if (isMaximized) savedWindowState.widthDp else windowState.size.width.value.toInt().coerceAtLeast(600)
+        val heightDp = if (isMaximized) savedWindowState.heightDp else windowState.size.height.value.toInt().coerceAtLeast(400)
+        preferencesStore.saveWindowState(widthDp = widthDp, heightDp = heightDp, isMaximized = isMaximized)
+    }
+
     fun exitLyraFlow() {
+        saveCurrentWindowState()
         if (recording.value) {
             recording.value = false
             runCatching { audio.stop() }
@@ -232,16 +249,13 @@ fun main(args: Array<String>) {
 
     Window(
         onCloseRequest = {
+            saveCurrentWindowState()
             if (tray != null) windowVisible = false else exitLyraFlow()
         },
         visible = windowVisible,
         title = "LyraFlow",
         icon = painterResource("Square44x44Logo.png"),
-        state = rememberWindowState(
-            width = 1210.dp,
-            height = 870.dp,
-            position = WindowPosition(Alignment.Center),
-        ),
+        state = windowState,
     ) {
         DisposableEffect(window) {
             bringToFrontCallback = {
@@ -320,6 +334,7 @@ fun main(args: Array<String>) {
             registerDropTargetRecursively(window)
 
             onDispose {
+                saveCurrentWindowState()
                 window.removeWindowFocusListener(focusListener)
             }
         }

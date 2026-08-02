@@ -11,9 +11,28 @@ import java.util.prefs.Preferences
 
 import com.biglexj.lyraflow.core.config.SystemPromptMode
 
+data class WindowStatePreferences(
+    val widthDp: Int = 1210,
+    val heightDp: Int = 870,
+    val isMaximized: Boolean = false,
+)
+
 class DesktopPreferencesStore(
     private val node: Preferences = Preferences.userRoot().node("com/biglexj/lyraflow"),
 ) : PreferencesStore {
+
+    fun loadWindowState(): WindowStatePreferences = WindowStatePreferences(
+        widthDp = node.getInt(WINDOW_WIDTH, 1210),
+        heightDp = node.getInt(WINDOW_HEIGHT, 870),
+        isMaximized = node.getBoolean(WINDOW_MAXIMIZED, false),
+    )
+
+    fun saveWindowState(widthDp: Int, heightDp: Int, isMaximized: Boolean) {
+        node.putInt(WINDOW_WIDTH, widthDp)
+        node.putInt(WINDOW_HEIGHT, heightDp)
+        node.putBoolean(WINDOW_MAXIMIZED, isMaximized)
+        node.flush()
+    }
 
     override fun load(): AppPreferences {
         val provider = currentProvider()
@@ -92,5 +111,8 @@ class DesktopPreferencesStore(
         const val HOTKEY_KEY = "hotkeyKey"
         const val SYSTEM_PROMPT_MODE = "systemPromptMode"
         const val SYSTEM_PROMPT = "systemPrompt"
+        const val WINDOW_WIDTH = "windowWidth"
+        const val WINDOW_HEIGHT = "windowHeight"
+        const val WINDOW_MAXIMIZED = "windowMaximized"
     }
 }

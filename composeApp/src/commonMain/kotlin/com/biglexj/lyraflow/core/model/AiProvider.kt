@@ -29,12 +29,14 @@ enum class AiProvider(
     OpenAiCompatible(
         label = "OpenAI / compatible",
         description = "OpenAI, gateways, Qwen, modelos locales y otros endpoints compatibles.",
-        defaultModel = "gpt-4o-audio-preview",
+        defaultModel = "gpt-5.6-luna",
         defaultEndpoint = "https://api.openai.com/v1/chat/completions",
         apiKeyEnvironmentVariable = "OPENAI_API_KEY",
         suggestedModels = listOf(
-            "gpt-4o-audio-preview",
-            "gpt-4o-mini-audio-preview",
+            "gpt-5.6-luna",
+            "gpt-5.6-terra",
+            "gpt-5.6-sol",
+            "gpt-audio-5.6",
         ),
     ),
 }

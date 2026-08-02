@@ -25,6 +25,22 @@ class DesktopPreferencesStoreTest {
     }
 
     @Test
+    fun migratesObsoleteOpenAiModelNamesToCurrentDefault() {
+        val node = Preferences.userRoot().node("com/biglexj/lyraflow/test/${UUID.randomUUID()}")
+        try {
+            node.put("aiProvider", AiProvider.OpenAiCompatible.name)
+            node.put("aiModel", "gpt-audio-1.5")
+
+            val preferences = DesktopPreferencesStore(node).load()
+
+            assertEquals(AiProvider.OpenAiCompatible, preferences.provider)
+            assertEquals("gpt-5.6-luna", preferences.model)
+        } finally {
+            node.removeNode()
+        }
+    }
+
+    @Test
     fun persistsTheCompatibleEndpointAndModel() {
         val node = Preferences.userRoot().node("com/biglexj/lyraflow/test/${UUID.randomUUID()}")
         try {

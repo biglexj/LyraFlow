@@ -48,3 +48,12 @@ Para garantizar la mejor experiencia con Inteligencia Artificial:
 ## 4. 🎨 Integración con el Sistema Operativo y Bandeja (System Tray)
 - **Minimización a la Bandeja**: El botón de cerrar (`X`) o minimizar debe ocultar la ventana en el tray manteniendo activo el atajo global (*Global Hotkey*).
 - **Menú Contextual Nativo**: Menú de bandeja con atajos de teclado, opción para abrir/restaurar ventana y opción de salida definitiva.
+
+---
+
+## 5. 📐 Persistencia Obligatoria del Estado y Dimensiones de la Ventana (Window State Persistence) [CRÍTICO]
+Toda aplicación de escritorio DEBE recordar automáticamente su tamaño (ancho, alto), posición en pantalla y estado de maximizado (`isMaximized` / `WindowPlacement.Maximized`) entre sesiones:
+
+- **Restauración al Iniciar**: Al arrancar la aplicación, se leen los valores guardados en la configuración local de usuario (`window_state`). Si el usuario previamente maximizó la ventana o cambió su tamaño, la app **DEBE abrirse exactamente con las mismas dimensiones y estado de maximizado que tenía antes de cerrarse**.
+- **Guardado Continuo o al Cerrar**: Al cambiar las dimensiones de la ventana, al maximizar/restaurar o al ejecutar `onCloseRequested`, la aplicación guarda las propiedades de `WindowState` de forma transparente.
+- **Prohibición**: Queda strictly prohibido forzar que la ventana se reinicie siempre en un tamaño fijo predeterminado o en modo flotante sin recordar si el usuario la maximizó o personalizó en su sesión previa.

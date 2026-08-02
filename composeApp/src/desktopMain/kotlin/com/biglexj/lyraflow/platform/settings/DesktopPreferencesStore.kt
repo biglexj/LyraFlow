@@ -74,6 +74,7 @@ class DesktopPreferencesStore(
         return when (storedModel) {
             "Fast" -> if (provider == AiProvider.Gemini) "gemini-3.5-flash-lite" else provider.defaultModel
             "Smart" -> if (provider == AiProvider.Gemini) "gemini-3.6-flash" else provider.defaultModel
+            "gpt-audio-1.5", "gpt-4o-audio-preview" -> provider.defaultModel
             "" -> provider.defaultModel
             else -> storedModel
         }

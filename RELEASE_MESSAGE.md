@@ -1,14 +1,18 @@
-# 🎙️✨ LyraFlow 1.1.0 — Dictado Multimodal & Operación Offline Autónoma
+# 🎙️✨ LyraFlow 1.1.0 — Dictado Multimodal, Voz Original & Auto-Update In-App
 
 ¡Llegó **LyraFlow v1.1.0**! Un hito principal en la evolución del dictado inteligente y la transcripción de audio para escritorio en Windows.
 
 ### 🌟 Novedades Destacadas
 
-- 📁 **Importación Directa por Arrastre (Drag & Drop)**: Arrastra cualquier archivo de audio (.wav, .mp3, .m4a, .ogg) directamente sobre la pantalla principal para iniciar la transcripción instantánea con acción nativa de copiar/importar `(+)`.
-- 🕒 **Historial Temporal con Purga Automática**: Nueva pestaña dedicada para consultar dictados recientes, copiarlos en 1 clic y gestionar la retención (24h, 7 días, 30 días o ilimitado) con borrado automático silencioso.
-- 🎙️ **Autonomía Offline Completa (Whisper Local)**: Funciona 100% sin necesidad de API Key en modo *Voz original*. Si no se configura API Key, la app opera como un transcriptor offline clásico bloqueando inteligentemente los modos IA.
-- 🔒 **Protección de Selección de Modos e IA**: Bloqueo reactivo con candados visuales (`🔒`) en los modos *Inteligente* y *Personalizado* y en los campos de modelo cuando no hay clave API configurada.
-- 🎨 **Experiencia UI Refinada**: Mensajes contextuales claros (*"Pulsa Ctrl + Espacio o arrastra tu audio aquí"*), menú de bandeja optimizado e interfaz Material 3 Expressive fluida.
+- 🎙️ **Pestañas de System Prompt (*Voz Original* vs *Inteligente*)**: Alterna fácilmente entre dictado inteligente refinado por IA o transcripción literal (*Voz original*) sin refinar ni modificar tus expresiones.
+- ⚡ **Auto-Migración Reactiva al Ingresar API Key**: La aplicación detecta cuando ingresas tu clave API por primera vez y migra automáticamente de *Voz original* a *Inteligente*.
+- 🔄 **Auto-Actualización In-App Silenciosa (Fricción Cero)**: Descarga transparente en segundo plano con barra de progreso en MB/porcentaje y botón *"Instalar y Reiniciar 🚀"* para actualizar en caliente sin tocar descargas.
+- 🔒 **Single-Instance Lock con Socket Listener Ping & Bypass Dev**: Garantía de instancia única que enfoca la ventana activa en producción y permite ejecuciones de prueba simultáneas en entorno de desarrollo (`isDev`).
+- 📐 **Persistencia de Geometría y Estado de Ventana**: Memoria transparente de ancho, alto y modo maximizado entre sesiones para abrirse exactamente donde lo dejaste.
+- 🤖 **Catálogo Oficial GPT-5.6**: Soporte nativo para `gpt-5.6-luna`, `gpt-5.6-terra`, `gpt-5.6-sol` y `gpt-audio-5.6` con auto-migración de claves anteriores.
+- 📁 **Importación Directa por Arrastre (Drag & Drop)**: Arrastra cualquier archivo de audio (.wav, .mp3, .m4a, .ogg) directamente sobre la ventana principal.
+- 🕒 **Historial Temporal & Retención Configurable**: Vista dedicada de dictados recientes, copia en 1 clic y purga automática configurable.
+- 💬 **Feedback Center Integrado**: Enlace directo a GitHub Issues en el diálogo "Acerca de" para reportar sugerencias e inconsistencias.
 
 ---
 *LyraFlow v1.1.0 — Transcripción sin fricción, a la velocidad de tu voz.*

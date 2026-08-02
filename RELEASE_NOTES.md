@@ -8,13 +8,18 @@
 > - De igual manera, al alcanzar el límite de la versión menor `1.9.9` (o ante hitos de arquitectura significativos posteriores a `1.9.x`), se debe saltar obligatoriamente al siguiente número mayor completo, pasando a **`2.0.0`**. No se permiten números como `1.9.10` o `1.10.x`.
 > - **Nombres de Dulces para Versiones Mayores:** Cada versión mayor debe nombrarse con un nombre de dulce o postre al estilo de las versiones clásicas de Android en orden alfabético. El nombre debe reflejarse coordinadamente en el `README.md`, en este archivo y, cuando corresponda, en el `package.json` del frontend.
 
-## [1.1.0] - 2026-08-01
+## [1.1.0] - 2026-08-02
 
-LyraFlow alcanza la versión menor 1.1.0 incorporando importación nativa por arrastre (Drag & Drop), historial temporal con purga automática y operación offline autónoma sin dependencia de API Keys:
-- **Importación Directa por Arrastre (Drag & Drop)**: Soporte completo para arrastrar archivos de audio (`.wav`, `.mp3`, `.m4a`, `.ogg`) directamente sobre la ventana principal con indicador nativo de copia/importación `(+)` para iniciar la transcripción instantánea.
-- **Pestaña de Historial Temporal & Retención Configurable**: Persistencia local en Room/SQLite con vista dedicada de dictados recientes, borrado individual, copia en 1 clic y selector de retención (24 horas, 7 días, 30 días o ilimitado) con purga automática silenciosa al iniciar la aplicación.
-- **Operación Offline Autónoma & Protección de Modos IA**: Funcionamiento 100% independiente de API Keys en modo *Voz original*. Si no se detecta clave API configurada, la interfaz bloquea reactivamente los modos de refinamiento IA (*Inteligente* y *Personalizado*) y la selección de modelos con candados visuales (`🔒`) e indicativos informativos claros.
-- **Refinamiento de UX & Estética UI**: Subtítulos dinámicos de estado ("*Pulsa Ctrl + Espacio o arrastra tu audio aquí*"), limpieza de elementos duplicados de la interfaz y menú de bandeja del sistema optimizado.
+LyraFlow alcanza la versión menor 1.1.0 incorporando dictado multimodal inteligente, atajo global de voz original, auto-actualizador silencioso in-app, garantía de instancia única optimizada y persistencia completa de interfaz:
+- **Pestañas de System Prompt (*Voz Original* vs *Inteligente*)**: Selector en formato pill M3 Expressive para alternar entre transcripción inteligente procesada por IA o transcripción literal (*Voz original*) sin refinar ni modificar palabras del usuario.
+- **Auto-Migración Reactiva al Ingresar API Key**: Al pegar o escribir una clave API por primera vez, la interfaz migra automáticamente de *Voz original* a *Inteligente* respetando las preferencias posteriores del usuario.
+- **Auto-Actualización In-App Silenciosa (Fricción Cero)**: Comprobación background al iniciar la app. Al pulsar *"Actualizar ahora"*, descarga el paquete ejecutable en segundo plano mostrando el progreso real en MB/porcentaje y ofrece el botón *"Instalar y Reiniciar 🚀"* para actualizar en caliente de forma totalmente pasiva y silenciosa.
+- **Single-Instance Lock con Socket Listener Ping & Bypass Dev**: El sistema de instancia única previene duplicados en producción enfocando la ventana activa al relanzar la app, reconociendo el flag `-Dlyraflow.dev=true` para permitir desarrollo y pruebas simultáneas.
+- **Persistencia de Dimensiones y Estado de Ventana (Sección 5)**: Memoria transparente de ancho, alto y estado de maximizado entre sesiones para restaurar exactamente la geometría elegida por el usuario.
+- **Catálogo Oficial GPT-5.6 (OpenAI / Compatible)**: Actualización de modelos predeterminados a la serie GPT-5.6 (`gpt-5.6-luna`, `gpt-5.6-terra`, `gpt-5.6-sol`, `gpt-audio-5.6`) con migración automática de claves y nombres antiguos guardados en preferencias.
+- **Importación Directa por Arrastre (Drag & Drop)**: Soporte completo para arrastrar archivos de audio (`.wav`, `.mp3`, `.m4a`, `.ogg`) directamente sobre la ventana principal para iniciar la transcripción instantánea.
+- **Pestaña de Historial Temporal & Retención Configurable**: Persistencia local en memoria/SQLite con vista dedicada de dictados recientes, borrado individual, copia en 1 clic y selector de retención (24 horas, 7 días, 30 días o ilimitado).
+- **Integración con Feedback Center**: Botón en modal "Acerca de" con enlace directo a GitHub Issues para reporte transparente de errores y sugerencias.
 
 ## [1.0.9] - 2026-07-27
 
@@ -94,4 +99,4 @@ El atajo predeterminado es `Ctrl + Espacio`. Puede grabarse otra combinación de
 - **Logging**: Mejorado el sistema de logs con perfiles de rendimiento detallados.
 
 ---
-*LyraFlow v1.0.9 - Elevando la productividad vocal.*
+*LyraFlow v1.1.0 — Transcripción sin fricción, a la velocidad de tu voz.*

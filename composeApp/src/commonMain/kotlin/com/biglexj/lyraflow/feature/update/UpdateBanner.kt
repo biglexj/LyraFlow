@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -35,6 +36,12 @@ private fun sanitizeMarkdown(text: String): String =
 @Composable
 fun UpdateBanner(
     release: UpdateRelease,
+    downloadProgress: Float? = null,
+    downloadMb: String? = null,
+    totalMb: String? = null,
+    isReadyToInstall: Boolean = false,
+    onStartDownload: (() -> Unit)? = null,
+    onInstallAndRestart: (() -> Unit)? = null,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -58,16 +65,32 @@ fun UpdateBanner(
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
-                    text = "🚀 ¡Nueva actualización disponible: v${release.version}!",
+                    text = when {
+                        isReadyToInstall -> "🎉 ¡Actualización v${release.version} lista para instalar!"
+                        downloadProgress != null -> "📥 Descargando actualización v${release.version}..."
+                        else -> "🚀 ¡Nueva actualización disponible: v${release.version}!"
+                    },
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                 )
                 Text(
-                    text = bodyText,
+                    text = when {
+                        isReadyToInstall -> "La descarga ha finalizado exitosamente. Haz clic en 'Instalar y Reiniciar' para actualizar en caliente sin perder tus ajustes."
+                        downloadProgress != null && downloadMb != null -> "Progreso: $downloadMb MB / $totalMb MB (${(downloadProgress * 100).toInt()}%)"
+                        else -> bodyText
+                    },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
+                )
+            }
+
+            if (downloadProgress != null) {
+                LinearProgressIndicator(
+                    progress = { downloadProgress },
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.primary,
                 )
             }
 
@@ -76,20 +99,44 @@ fun UpdateBanner(
                 horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                OutlinedButton(
-                    onClick = onDismiss,
-                    modifier = Modifier.padding(end = 8.dp),
-                ) {
-                    Text("Ahora no")
+                if (downloadProgress == null && !isReadyToInstall) {
+                    OutlinedButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.padding(end = 8.dp),
+                    ) {
+                        Text("Ahora no")
+                    }
                 }
-                Button(
-                    onClick = {
-                        val targetUrl = release.downloadUrl.ifBlank { release.releasePageUrl }
-                        uriHandler.openUri(targetUrl)
-                        onDismiss()
-                    },
-                ) {
-                    Text("Actualizar ahora")
+
+                when {
+                    isReadyToInstall && onInstallAndRestart != null -> {
+                        Button(onClick = onInstallAndRestart) {
+                            Text("Instalar y Reiniciar 🚀")
+                        }
+                    }
+                    downloadProgress != null -> {
+                        Text(
+                            text = "Descargando en segundo plano...",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                    onStartDownload != null -> {
+                        Button(onClick = onStartDownload) {
+                            Text("Actualizar ahora")
+                        }
+                    }
+                    else -> {
+                        Button(
+                            onClick = {
+                                val targetUrl = release.downloadUrl.ifBlank { release.releasePageUrl }
+                                uriHandler.openUri(targetUrl)
+                                onDismiss()
+                            },
+                        ) {
+                            Text("Actualizar ahora")
+                        }
+                    }
                 }
             }
         }

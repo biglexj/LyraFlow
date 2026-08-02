@@ -5,11 +5,14 @@
 
 ---
 
-## 1. 🔒 Garantía de Instancia Única (Single Instance Lock)
-Para prevenir duplicación de procesos y la proliferación de iconos duplicados en la bandeja del sistema (system tray) al relanzar la aplicación:
+## 1. 🔒 Garantía de Instancia Única (Single Instance Lock) & Bypass en Desarrollo [CRÍTICO]
+Para prevenir duplicación de procesos y la proliferación de iconos duplicados en la bandeja del sistema (system tray) al relanzar la aplicación en producción:
 
 - **Mecanismo Obligatorio**: La aplicación DEBE adquirir un socket de bucle local (`ServerSocket(127.0.0.1:PORT)`) o un bloqueo exclusivo de archivo (`FileLock`) al iniciar el proceso principal.
-- **Comportamiento ante relanzamiento**: Si una segunda instancia intenta iniciar, detectará la falla al adquirir el bloqueo e **inmediatamente traerá al frente la ventana de la primera instancia activa** (o la desminimizará de la bandeja) y **finalizará la nueva instancia con código 0**.
+- **Bypass en Modo Desarrollo (`isDev`) [OBLIGATORIO Y CRÍTICO]**: El Single-Instance Lock **NUNCA DEBE bloquear ni cerrar la aplicación cuando se ejecuta desde el entorno de desarrollo** (`./gradlew :composeApp:run`, IDE IntelliJ/VSCode o cuando la propiedad del sistema `-D{app}.dev=true` / `idea.active` está presente).
+  - La aplicación DEBE detectar el flag `isDev` (por ejemplo, `System.getProperty("lyraflow.dev") == "true"` inyectado en los `jvmArgs` de Gradle en `build.gradle.kts`) y **retornar `true` sin bloquear ni finalizar con `exitProcess(0)`**.
+  - Esto garantiza que el desarrollador pueda compilar, probar e interactuar con la versión en desarrollo sin que la versión instalada en Windows cierre o interfiera con la app dev.
+- **Comportamiento en Producción**: Si una segunda instancia del ejecutable distribuido (`.exe` / `.msi`) intenta iniciar en producción, detectará la falla al adquirir el bloqueo e **inmediatamente traerá al frente la ventana de la primera instancia activa** (o la desminimizará de la bandeja) y **finalizará la nueva instancia con código 0**.
 - **Limpieza de Recursos**: Liberar el socket/bloqueo de forma segura durante el desecho de la aplicación (`DisposableEffect` / `onCloseRequested`).
 
 ---

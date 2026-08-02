@@ -335,7 +335,7 @@ private fun ModelField(value: String, enabled: Boolean = true, onValueChange: (S
         onValueChange = onValueChange,
         modifier = Modifier.fillMaxWidth().widthIn(max = 680.dp),
         label = { Text("Identificador del modelo") },
-        placeholder = { Text("Ejemplo: gemini-3.6-flash") },
+        placeholder = { Text("Ejemplo: gpt-5.6-sol") },
         singleLine = true,
         shape = MaterialTheme.shapes.medium,
     )

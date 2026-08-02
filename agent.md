@@ -57,6 +57,15 @@ The agent must keep documentation clean and updated according to the following g
 ### 3. RELEASE_MESSAGE.md
 - Usar un formato conciso, limpio y con emojis para anunciar el lanzamiento a usuarios o canales de chat.
 
+### 4. Release Workflow — Script Oficial `build-release.ps1` [CRÍTICO]
+- **SIEMPRE usar el script oficial** para lanzar versiones. Nunca hacer commits, tags, ni releases a mano ni con `gh release create` directo:
+  ```powershell
+  .\build-release.ps1 -Version "X.Y.Z"
+  ```
+- El script ejecuta en orden: verificar preflight, compilar, firmar, copiar EXE/MSI/MSIX, commit atómico, tag, push y `gh release create` con los binarios adjuntos.
+- **Título de la Release (CRÍTICO)**: El título debe ser únicamente `{AppName} vX.Y.Z` (ej. `LyraFlow v1.1.1`). **Prohibido** añadir subtítulos, guiones largos o descripciones en el título. El detalle va en el body (`RELEASE_MESSAGE.md`).
+- **Verificación previa de versión**: Antes de lanzar, consultar la última release en GitHub (`gh release list -R biglexj/{repo} -L 1`) para confirmar que la nueva versión es estrictamente superior.
+
 ## Official Support, Donation & About Rules [CRÍTICO]
 Toda aplicación del ecosistema (Compose Multiplatform, Web, Android, Desktop, etc.) DEBE incluir una sección o insignia de "Acerca de la Aplicación" con su correspondiente modal/diálogo informativo y botones de apoyo oficial adaptados al lenguaje de interfaz del proyecto:
 - **Badge / Enlace "Acerca de"**: Ubicado en el pie de página o barra lateral/configuración de la interfaz. Al pulsar, despliega información de versión, autoría (`biglexj`), licencia y un mensaje de agradecimiento al usuario.

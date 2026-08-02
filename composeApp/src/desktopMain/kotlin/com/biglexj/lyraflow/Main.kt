@@ -41,26 +41,73 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import java.awt.event.WindowFocusListener
 
-private fun tryAcquireSingleInstanceLock(port: Int = 49281): java.net.ServerSocket? {
-    return try {
-        java.net.ServerSocket(port, 1, java.net.InetAddress.getByName("127.0.0.1"))
-    } catch (_: Exception) {
-        null
+private const val SINGLE_INSTANCE_PORT = 49281
+
+private class SingleInstanceLock(
+    private val port: Int = SINGLE_INSTANCE_PORT,
+) {
+    private var serverSocket: java.net.ServerSocket? = null
+
+    fun tryAcquire(onFocusRequested: () -> Unit): Boolean {
+        return try {
+            val socket = java.net.ServerSocket(port, 50, java.net.InetAddress.getByName("127.0.0.1"))
+            serverSocket = socket
+            Thread {
+                while (!socket.isClosed) {
+                    try {
+                        val client = socket.accept()
+                        client.close()
+                        onFocusRequested()
+                    } catch (_: Exception) {
+                        break
+                    }
+                }
+            }.apply {
+                isDaemon = true
+                name = "LyraFlow-SingleInstanceListener"
+                start()
+            }
+            true
+        } catch (_: Exception) {
+            notifyPrimaryInstance()
+            false
+        }
+    }
+
+    private fun notifyPrimaryInstance() {
+        try {
+            java.net.Socket("127.0.0.1", port).use { socket ->
+                socket.getOutputStream().write("FOCUS\n".toByteArray())
+                socket.getOutputStream().flush()
+            }
+        } catch (_: Exception) {}
+    }
+
+    fun release() {
+        try {
+            serverSocket?.close()
+        } catch (_: Exception) {}
     }
 }
 
-fun main(args: Array<String>) = application {
-    val singleInstanceSocket = remember { tryAcquireSingleInstanceLock(49281) }
-    if (singleInstanceSocket == null) {
-        // Otra instancia de LyraFlow ya está ejecutándose. Salir para evitar tray icons duplicados.
-        return@application
+fun main(args: Array<String>) {
+    val lock = SingleInstanceLock()
+    var bringToFrontCallback: (() -> Unit)? = null
+
+    val isPrimary = lock.tryAcquire {
+        bringToFrontCallback?.invoke()
     }
 
-    DisposableEffect(Unit) {
-        onDispose {
-            try { singleInstanceSocket.close() } catch (_: Exception) {}
-        }
+    if (!isPrimary) {
+        kotlin.system.exitProcess(0)
     }
+
+    application {
+        DisposableEffect(Unit) {
+            onDispose {
+                lock.release()
+            }
+        }
 
     val preferencesStore = remember { DesktopPreferencesStore() }
     val apiKeyStore = remember { DesktopApiKeyStore() }
@@ -187,6 +234,15 @@ fun main(args: Array<String>) = application {
         ),
     ) {
         DisposableEffect(window) {
+            bringToFrontCallback = {
+                windowVisible = true
+                scope.launch(Dispatchers.Main) {
+                    window.isMinimized = false
+                    window.toFront()
+                    window.requestFocus()
+                }
+            }
+
             val focusListener = object : WindowFocusListener {
                 override fun windowGainedFocus(event: java.awt.event.WindowEvent) = Unit
                 override fun windowLostFocus(event: java.awt.event.WindowEvent) = injector.rememberForegroundTarget()
@@ -323,6 +379,7 @@ fun main(args: Array<String>) = application {
             ),
         )
     }
+}
 }
 
 private fun environmentApiKey(provider: AiProvider): String =

@@ -181,6 +181,11 @@ fun SettingsScreen(
                     enabled = hasApiKey,
                     onValueChange = { onPreferencesChange(preferences.copy(endpoint = it)) },
                 )
+                Text(
+                    text = "ℹ️ Nota: Integración experimental con proveedores OpenAI-compatible / pendiente de comprobación completa con todos los endpoints. Si encuentras algún problema con un servidor específico, por favor reporta el inconveniente en GitHub o en nuestro canal de Feedback.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
         SettingsSection("${provider.label} API", "La clave se conserva cifrada para tu usuario de Windows.") {

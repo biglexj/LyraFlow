@@ -105,6 +105,14 @@ fun AboutDialog(
                     }
 
                     OutlinedButton(
+                        onClick = { uriHandler.openUri("https://github.com/biglexj/LyraFlow/issues") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = MaterialTheme.shapes.medium,
+                    ) {
+                        Text("Enviar Feedback / Reportar Error 💬")
+                    }
+
+                    OutlinedButton(
                         onClick = { uriHandler.openUri("https://github.com/biglexj") },
                         modifier = Modifier.fillMaxWidth(),
                         shape = MaterialTheme.shapes.medium,

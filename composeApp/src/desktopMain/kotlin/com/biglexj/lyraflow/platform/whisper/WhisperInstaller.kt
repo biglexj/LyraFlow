@@ -20,22 +20,32 @@ import kotlinx.serialization.json.jsonPrimitive
 
 class WhisperInstaller {
     private val client = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.ALWAYS).build()
+    private var activeModelPreference: WhisperModel? = null
     private val mutableState = MutableStateFlow(currentState())
     val state: StateFlow<WhisperSetupState> = mutableState
 
     suspend fun install(model: WhisperModel) {
         if (mutableState.value.downloading) return
+        activeModelPreference = model
         withContext(Dispatchers.IO) {
             runCatching {
                 Files.createDirectories(WhisperPaths.root)
-                val archive = WhisperPaths.root.resolve("whisper-bin-x64.zip.part")
-                download(latestWindowsAsset(), archive, 0f, .35f, "Descargando Whisper")
-                extract(archive, WhisperPaths.root.resolve("runtime"))
-                Files.deleteIfExists(archive)
-                download(modelUrl(model), WhisperPaths.model(model), .35f, 1f, "Descargando modelo ${model.label}")
+                val exec = WhisperPaths.executable()
+                if (exec == null) {
+                    val archive = WhisperPaths.root.resolve("whisper-bin-x64.zip.part")
+                    download(latestWindowsAsset(), archive, 0f, .35f, "Descargando Whisper")
+                    extract(archive, WhisperPaths.root.resolve("runtime"))
+                    Files.deleteIfExists(archive)
+                }
+
+                val modelPath = WhisperPaths.model(model)
+                if (!Files.isRegularFile(modelPath)) {
+                    val startProgress = if (exec == null) .35f else 0f
+                    download(modelUrl(model), modelPath, startProgress, 1f, "Descargando modelo ${model.label}")
+                }
                 checkNotNull(WhisperPaths.executable()) { "El paquete no incluyó whisper-cli.exe" }
             }.onSuccess {
-                mutableState.value = currentState()
+                mutableState.value = currentState(model)
             }.onFailure {
                 mutableState.value = WhisperSetupState("Error: ${it.message ?: "no se pudo instalar"}")
             }
@@ -90,10 +100,13 @@ class WhisperInstaller {
         }
     }
 
-    private fun currentState(): WhisperSetupState {
-        val installedModel = WhisperModel.entries.firstOrNull { Files.isRegularFile(WhisperPaths.model(it)) }
-        return if (WhisperPaths.executable() != null && installedModel != null) {
-            WhisperSetupState("Whisper ${installedModel.label} listo", available = true, model = installedModel)
+    private fun currentState(preferredModel: WhisperModel? = activeModelPreference): WhisperSetupState {
+        val activeModel = when {
+            preferredModel != null && Files.isRegularFile(WhisperPaths.model(preferredModel)) -> preferredModel
+            else -> WhisperModel.entries.firstOrNull { Files.isRegularFile(WhisperPaths.model(it)) }
+        }
+        return if (WhisperPaths.executable() != null && activeModel != null) {
+            WhisperSetupState("Whisper ${activeModel.label} listo", available = true, model = activeModel)
         } else WhisperSetupState("Clic para instalar Whisper local")
     }
 

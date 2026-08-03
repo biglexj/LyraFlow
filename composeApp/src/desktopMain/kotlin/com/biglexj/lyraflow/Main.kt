@@ -142,18 +142,20 @@ fun main(args: Array<String>) {
     val startsMinimized = args.any { it.equals("--minimized", ignoreCase = true) }
     var windowVisible by remember { mutableStateOf(!startsMinimized || !isSystemTraySupported()) }
     val historyRepository = remember { InMemoryTranscriptionHistoryRepository() }
-    val coordinator = remember(historyRepository) {
+    val coordinator = remember(historyRepository, whisperStatus.available, whisperProvider) {
         DictationCoordinator(
             transcriber = MultimodalTranscriptionProvider(
                 client = createPlatformHttpClient(),
                 apiKey = { apiKey },
                 configuration = { preferences.providerConfiguration },
             ),
+            fallbackTranscriber = { if (whisperStatus.available) whisperProvider else null },
             historyRepository = historyRepository,
             isHistoryEnabled = { preferences.historyRetention != HistoryRetentionPeriod.Disabled },
         )
     }
     val state by coordinator.state.collectAsState()
+    val geminiQuotaExhausted by coordinator.geminiQuotaExhausted.collectAsState()
     val recording = remember { mutableStateOf(false) }
 
     LaunchedEffect(state, recordingTelemetry.level) {
@@ -381,6 +383,7 @@ fun main(args: Array<String>) {
                 updateApiKey = {
                     apiKey = it
                     apiKeyStore.save(preferences.provider, it)
+                    coordinator.resetQuotaExhausted()
                 },
                 installWhisper = { model -> scope.launch { whisperInstaller.install(model) } },
                 retry = {
@@ -401,6 +404,8 @@ fun main(args: Array<String>) {
                         }
                     }
                 },
+                geminiQuotaExhausted = geminiQuotaExhausted,
+                resetQuotaExhausted = coordinator::resetQuotaExhausted,
             ),
         )
     }

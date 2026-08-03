@@ -16,6 +16,8 @@ import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlin.time.TimeSource
 
+import com.biglexj.lyraflow.domain.transcription.QuotaExhaustedException
+
 class GeminiTranscriptionProvider(
     private val client: HttpClient,
     private val apiKey: () -> String,
@@ -38,12 +40,14 @@ class GeminiTranscriptionProvider(
             setBody(createBody(request))
         }
 
-        check(response.status.isSuccess()) {
-            if (response.status.value == 429) {
+        if (response.status.value == 429) {
+            throw QuotaExhaustedException(
                 "⚠️ Has alcanzado el límite de uso o cuota de la API de Gemini. Espera un momento o cambia la API Key / modelo."
-            } else {
-                "Gemini respondió HTTP ${response.status.value}."
-            }
+            )
+        }
+
+        check(response.status.isSuccess()) {
+            "Gemini respondió HTTP ${response.status.value}."
         }
 
         val text = response.body<GeminiResponse>()

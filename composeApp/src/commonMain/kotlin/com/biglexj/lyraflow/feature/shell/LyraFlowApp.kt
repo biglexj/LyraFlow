@@ -36,9 +36,12 @@ import com.biglexj.lyraflow.core.config.next
 import com.biglexj.lyraflow.core.audio.RecordingTelemetry
 import com.biglexj.lyraflow.core.network.createPlatformHttpClient
 import com.biglexj.lyraflow.core.theme.LyraFlowTheme
+import com.biglexj.lyraflow.core.update.AutoDownloader
+import com.biglexj.lyraflow.core.update.openInstaller
 import com.biglexj.lyraflow.core.update.UpdateChecker
 import com.biglexj.lyraflow.core.update.UpdateRelease
 import com.biglexj.lyraflow.core.update.UpdateService
+import com.biglexj.lyraflow.feature.update.UpdateModalDialog
 import com.biglexj.lyraflow.domain.dictation.DictationState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -62,6 +65,8 @@ data class ShellActions(
     val installWhisper: (WhisperModel) -> Unit,
     val retry: () -> Unit = {},
     val retryWhisper: () -> Unit = {},
+    val geminiQuotaExhausted: Boolean = false,
+    val resetQuotaExhausted: () -> Unit = {},
 )
 
 @Composable
@@ -78,24 +83,60 @@ fun LyraFlowApp(
         var destination by remember { mutableStateOf(AppDestination.Home) }
         var showAboutDialog by remember { mutableStateOf(false) }
         var availableUpdate by remember { mutableStateOf<UpdateRelease?>(null) }
+        var showUpdateModal by remember { mutableStateOf(false) }
+        var isCheckingUpdates by remember { mutableStateOf(false) }
         var upToDate by remember { mutableStateOf(false) }
+        var downloadProgress by remember { mutableStateOf<Float?>(null) }
+        var downloadMb by remember { mutableStateOf<String?>(null) }
+        var totalMb by remember { mutableStateOf<String?>(null) }
+        var isReadyToInstall by remember { mutableStateOf(false) }
+        var downloadedFilePath by remember { mutableStateOf<String?>(null) }
+
         val scope = rememberCoroutineScope()
         val updateService = remember { UpdateService(createPlatformHttpClient()) }
+        val autoDownloader = remember { AutoDownloader(createPlatformHttpClient()) }
+
+        val startDownload: (UpdateRelease) -> Unit = { release ->
+            downloadProgress = 0f
+            downloadMb = "0.0"
+            totalMb = "..."
+            isReadyToInstall = false
+            scope.launch {
+                runCatching {
+                    val path = autoDownloader.downloadUpdate(
+                        downloadUrl = release.downloadUrl.ifBlank { release.releasePageUrl },
+                        targetFileName = "LyraFlow-v${release.version}-installer.msi",
+                        onProgress = { p ->
+                            downloadProgress = p.progress
+                            downloadMb = (p.downloadedBytes / (1024.0 * 1024.0)).let { "%.1f".format(it) }
+                            totalMb = (p.totalBytes / (1024.0 * 1024.0)).let { "%.1f".format(it) }
+                        },
+                    )
+                    downloadedFilePath = path
+                    isReadyToInstall = true
+                    downloadProgress = null
+                }.onFailure {
+                    downloadProgress = null
+                }
+            }
+        }
 
         // Verificación silenciosa al iniciar: no muestra ningún mensaje si todo está al día.
         val checkSilent: suspend () -> Unit = {
             val remoteRelease = updateService.checkLatestRelease()
-            if (remoteRelease != null && UpdateChecker.isNewerVersion("1.1.2", remoteRelease.version)) {
+            if (remoteRelease != null && UpdateChecker.isNewerVersion("1.1.3", remoteRelease.version)) {
                 availableUpdate = remoteRelease
             }
         }
 
-        // Verificación manual: muestra el mensaje de "al día" si no hay actualización.
+        // Verificación manual: actualiza el estado manteniendo el modal de Acerca de abierto.
         val checkForUpdates: () -> Unit = {
             upToDate = false
+            isCheckingUpdates = true
             scope.launch {
                 val remoteRelease = updateService.checkLatestRelease()
-                if (remoteRelease != null && UpdateChecker.isNewerVersion("1.1.2", remoteRelease.version)) {
+                isCheckingUpdates = false
+                if (remoteRelease != null && UpdateChecker.isNewerVersion("1.1.3", remoteRelease.version)) {
                     availableUpdate = remoteRelease
                     upToDate = false
                 } else {
@@ -118,7 +159,7 @@ fun LyraFlowApp(
             historyRepository.purgeExpired(configuration.preferences.historyRetention.hours)
         }
 
-        // Auto-ocultar el toast de "al día" tras 4 segundos.
+        // Auto-ocultar el toast/mensaje de "al día" tras 4 segundos.
         LaunchedEffect(upToDate) {
             if (upToDate) {
                 delay(4_000)
@@ -130,6 +171,28 @@ fun LyraFlowApp(
             AboutDialog(
                 onDismiss = { showAboutDialog = false },
                 onCheckForUpdates = checkForUpdates,
+                isCheckingUpdates = isCheckingUpdates,
+                upToDateStatus = upToDate,
+                availableUpdate = availableUpdate,
+                onOpenUpdateModal = { showUpdateModal = true },
+            )
+        }
+
+        if (showUpdateModal && availableUpdate != null) {
+            val rel = availableUpdate!!
+            UpdateModalDialog(
+                release = rel,
+                downloadProgress = downloadProgress,
+                downloadMb = downloadMb,
+                totalMb = totalMb,
+                isReadyToInstall = isReadyToInstall,
+                onStartDownload = { startDownload(rel) },
+                onInstallAndRestart = {
+                    downloadedFilePath?.let { openInstaller(it) }
+                },
+                onDismiss = {
+                    showUpdateModal = false
+                },
             )
         }
 
@@ -194,31 +257,6 @@ fun LyraFlowApp(
                         }
                     }
                 }
-
-                // Toast global de "al día" — visible sobre cualquier pantalla.
-                AnimatedVisibility(
-                    visible = upToDate,
-                    modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .padding(top = 16.dp),
-                    enter = fadeIn() + slideInVertically { -it },
-                    exit = fadeOut() + slideOutVertically { -it },
-                ) {
-                    Card(
-                        shape = MaterialTheme.shapes.medium,
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                        ),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
-                    ) {
-                        Text(
-                            text = "✅ Estás en la última versión de LyraFlow.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
-                        )
-                    }
-                }
             }
         }
     }
@@ -260,6 +298,8 @@ private fun ScreenContent(
                     onInstallWhisper = actions.installWhisper,
                     onRetry = actions.retry,
                     onRetryWhisper = actions.retryWhisper,
+                    geminiQuotaExhausted = actions.geminiQuotaExhausted,
+                    onResetQuotaExhausted = actions.resetQuotaExhausted,
                 )
                 AppDestination.History -> HistoryScreen(
                     entries = historyEntries,

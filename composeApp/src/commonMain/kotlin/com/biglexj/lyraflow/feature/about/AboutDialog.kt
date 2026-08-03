@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -22,11 +23,16 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.biglexj.lyraflow.core.update.UpdateRelease
 
 @Composable
 fun AboutDialog(
     onDismiss: () -> Unit,
     onCheckForUpdates: () -> Unit = {},
+    isCheckingUpdates: Boolean = false,
+    upToDateStatus: Boolean = false,
+    availableUpdate: UpdateRelease? = null,
+    onOpenUpdateModal: () -> Unit = {},
 ) {
     val uriHandler = LocalUriHandler.current
 
@@ -49,7 +55,7 @@ fun AboutDialog(
                     color = MaterialTheme.colorScheme.primaryContainer,
                 ) {
                     Text(
-                        text = "v1.1.2 • MIT License",
+                        text = "v1.1.3 • MIT License",
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
@@ -120,6 +126,85 @@ fun AboutDialog(
                         Text("Perfil de GitHub")
                     }
                 }
+
+                // Zona de Estado de Actualización en la parte inferior del modal
+                when {
+                    isCheckingUpdates -> {
+                        Surface(
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            shape = MaterialTheme.shapes.small,
+                            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(10.dp),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    strokeWidth = 2.dp,
+                                    color = MaterialTheme.colorScheme.primary,
+                                )
+                                Text(
+                                    "  Buscando actualizaciones...",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    }
+                    availableUpdate != null -> {
+                        Surface(
+                            color = MaterialTheme.colorScheme.primaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                            shape = MaterialTheme.shapes.medium,
+                            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                    Text(
+                                        "🚀 ¡Nueva v${availableUpdate.version} disponible!",
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.Bold,
+                                    )
+                                    Text(
+                                        "Haz clic para ver las mejoras e instalar.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f),
+                                    )
+                                }
+                                Button(
+                                    onClick = {
+                                        onDismiss()
+                                        onOpenUpdateModal()
+                                    },
+                                    shape = MaterialTheme.shapes.small,
+                                ) {
+                                    Text("Ver")
+                                }
+                            }
+                        }
+                    }
+                    upToDateStatus -> {
+                        Surface(
+                            color = MaterialTheme.colorScheme.secondaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                            shape = MaterialTheme.shapes.small,
+                            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                        ) {
+                            Text(
+                                text = "✅ Estás en la última versión de LyraFlow (v1.1.3).",
+                                style = MaterialTheme.typography.bodySmall,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.padding(10.dp),
+                            )
+                        }
+                    }
+                }
             }
         },
         confirmButton = {
@@ -128,10 +213,8 @@ fun AboutDialog(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 TextButton(
-                    onClick = {
-                        onCheckForUpdates()
-                        onDismiss()
-                    },
+                    onClick = onCheckForUpdates,
+                    enabled = !isCheckingUpdates,
                 ) {
                     Text("🔄 Buscar actualizaciones")
                 }

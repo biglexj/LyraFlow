@@ -1,12 +1,22 @@
 # 🎙️✨ LyraFlow — Historial de Versiones
 
-📌 **Versión actual: `1.1.2` · Versión mínima requerida: `1.0.0`**
+📌 **Versión actual: `1.1.3` · Versión mínima requerida: `1.0.0`**
 
 > [!IMPORTANT]
 > **Regla del .9 para Versionado:**
 > - Nunca se debe pasar de una versión de parche `.9` (ej. de `1.0.9` no se pasa a `1.0.10`). Al alcanzar el límite del parche `.9`, se incrementa el número menor/secundario (ej. pasando a `1.1.0`).
 > - De igual manera, al alcanzar el límite de la versión menor `1.9.9` (o ante hitos de arquitectura significativos posteriores a `1.9.x`), se debe saltar obligatoriamente al siguiente número mayor completo, pasando a **`2.0.0`**. No se permiten números como `1.9.10` o `1.10.x`.
 > - **Nombres de Dulces para Versiones Mayores:** Cada versión mayor debe nombrarse con un nombre de dulce o postre al estilo de las versiones clásicas de Android en orden alfabético. El nombre debe reflejarse coordinadamente en el `README.md`, en este archivo y, cuando corresponda, en el `package.json` del frontend.
+
+## [1.1.3] - 2026-08-03
+
+LyraFlow v1.1.3 introduce la conmutación autónoma por agotamiento de cuota, sistema de reintentos inteligentes y el motor canónico de auto-actualización in-app:
+- **Fallback Inteligente de 3 Intentos**: Reintento automático transparente en Gemini ante fallos temporales de red/timeout; si el segundo intento con Gemini falla, conmuta automáticamente a **Whisper local** como 3er intento de respaldo.
+- **Transcripción Autónoma por Cuota Agotada (HTTP 429)**: Al detectar `QuotaExhaustedException`, conmuta inmediatamente a Whisper local y opera de forma autónoma hasta renovar la clave API.
+- **Selector Interactivo de Variantes Whisper**: Gestión y descarga entre los 5 modelos de Whisper local (`Tiny`, `Base`, `Small`, `Medium`, `Large`) con distintivo de modelo activo.
+- **Auto-Actualización Canónica (`UpdateModalDialog`)**: Modal adaptativo al 80% de ancho con notas sanitizadas, barra de progreso de descarga en tiempo real en MB/% y auto-instalación/reinicio.
+- **Experiencia Continua en "Acerca de"**: Comprobación síncrona dentro del modal de "Acerca de" sin cierre de ventana.
+- **Inmunidad a Deadlocks GPU/Skiko**: Compatibilidad explícita de renderizado gráfica en Windows (`-Dskiko.renderApi=SOFTWARE_COMPAT`).
 
 ## [1.1.2] - 2026-08-02
 

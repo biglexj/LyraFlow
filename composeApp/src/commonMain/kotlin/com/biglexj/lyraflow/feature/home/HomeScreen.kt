@@ -52,6 +52,8 @@ fun HomeScreen(
     onInstallWhisper: (WhisperModel) -> Unit,
     onRetry: () -> Unit = {},
     onRetryWhisper: () -> Unit = {},
+    geminiQuotaExhausted: Boolean = false,
+    onResetQuotaExhausted: () -> Unit = {},
 ) {
     var showApiKeyDialog by remember { mutableStateOf(false) }
     var showModelDialog by remember { mutableStateOf(false) }
@@ -63,6 +65,7 @@ fun HomeScreen(
             onDismiss = { showApiKeyDialog = false },
             onSave = {
                 onApiKeyChange(it)
+                onResetQuotaExhausted()
                 showApiKeyDialog = false
             },
         )
@@ -80,6 +83,7 @@ fun HomeScreen(
     }
     if (showWhisperModelDialog) {
         WhisperModelDialog(
+            currentModel = whisperStatus.model,
             onDismiss = { showWhisperModelDialog = false },
             onInstall = {
                 onInstallWhisper(it)
@@ -87,6 +91,7 @@ fun HomeScreen(
             },
         )
     }
+
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(28.dp),
         verticalArrangement = Arrangement.spacedBy(22.dp),
@@ -94,6 +99,38 @@ fun HomeScreen(
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text("Tu voz, ya bien escrita", style = MaterialTheme.typography.headlineLarge)
             Text(platform, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        if (geminiQuotaExhausted) {
+            Surface(
+                color = MaterialTheme.colorScheme.errorContainer,
+                contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                shape = MaterialTheme.shapes.medium,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    LyraIcon(LyraIconType.Settings, Modifier.size(24.dp))
+                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(
+                            "⚠️ Cuota de Gemini Agotada",
+                            style = MaterialTheme.typography.titleMedium,
+                        )
+                        Text(
+                            "Transcripción autónoma con Whisper local activa. Las siguientes peticiones se procesarán localmente.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.85f),
+                        )
+                    }
+                    TextButton(
+                        onClick = { showApiKeyDialog = true },
+                    ) {
+                        Text("Actualizar Key")
+                    }
+                }
+            }
         }
         DictationHero(state, configuration, recordingTelemetry, onRecord)
         ResultCard(
@@ -125,36 +162,60 @@ fun HomeScreen(
                 available = whisperStatus.available,
                 modifier = Modifier.weight(1f),
                 progress = whisperStatus.progress,
-                onClick = if (!whisperStatus.available && !whisperStatus.downloading) { { showWhisperModelDialog = true } } else null,
+                onClick = if (!whisperStatus.downloading) { { showWhisperModelDialog = true } } else null,
             )
         }
     }
 }
 
 @Composable
-private fun WhisperModelDialog(onDismiss: () -> Unit, onInstall: (WhisperModel) -> Unit) {
-    var selected by remember { mutableStateOf(WhisperModel.Base) }
+private fun WhisperModelDialog(
+    currentModel: WhisperModel?,
+    onDismiss: () -> Unit,
+    onInstall: (WhisperModel) -> Unit,
+) {
+    var selected by remember { mutableStateOf(currentModel ?: WhisperModel.Base) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Elige el modelo de Whisper") },
+        title = { Text("Modelo de Whisper local") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Puedes instalar otro modelo más adelante si lo necesitas.")
+                Text("Elige la variante de Whisper que procesará tus dictados offline:")
                 WhisperModel.entries.forEach { model ->
+                    val isActive = model == currentModel
                     Surface(
                         onClick = { selected = model },
                         shape = MaterialTheme.shapes.medium,
                         color = if (selected == model) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .45f),
                     ) {
                         Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            Text(model.label, style = MaterialTheme.typography.titleMedium)
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                                Text(model.label, style = MaterialTheme.typography.titleMedium)
+                                if (isActive) {
+                                    Surface(
+                                        color = MaterialTheme.colorScheme.primary,
+                                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                                        shape = MaterialTheme.shapes.extraSmall,
+                                    ) {
+                                        Text(
+                                            "Activo",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                        )
+                                    }
+                                }
+                            }
                             Text(model.description, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }
             }
         },
-        confirmButton = { TextButton(onClick = { onInstall(selected) }) { Text("Instalar") } },
+        confirmButton = {
+            TextButton(onClick = { onInstall(selected) }) {
+                Text(if (selected == currentModel) "Aceptar" else "Seleccionar / Instalar")
+            }
+        },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } },
     )
 }

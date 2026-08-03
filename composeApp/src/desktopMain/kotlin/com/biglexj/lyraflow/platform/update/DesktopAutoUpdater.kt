@@ -73,10 +73,29 @@ class DesktopAutoUpdater {
     fun executeSilentInstallation(file: File, onExitApp: () -> Unit) {
         try {
             val path = file.absolutePath
+            val currentExe = ProcessHandle.current().info().command().orElse("")
+            val defaultInstalledExe = File(System.getenv("LOCALAPPDATA") ?: "", "LyraFlow\\LyraFlow.exe").absolutePath
+
+            val targetExePath = when {
+                currentExe.endsWith("LyraFlow.exe", ignoreCase = true) -> currentExe
+                File(defaultInstalledExe).exists() -> defaultInstalledExe
+                else -> currentExe
+            }
+
+            val isInstalledExe = targetExePath.endsWith("LyraFlow.exe", ignoreCase = true)
+
             val command = if (path.endsWith(".msi", ignoreCase = true)) {
-                listOf("msiexec.exe", "/i", path, "/passive", "/norestart")
+                if (isInstalledExe) {
+                    listOf("cmd.exe", "/c", "taskkill /f /im LyraFlow.exe 2>nul & start /wait msiexec.exe /i \"$path\" /passive /norestart && start \"\" \"$targetExePath\"")
+                } else {
+                    listOf("msiexec.exe", "/i", path, "/passive", "/norestart")
+                }
             } else {
-                listOf(path, "/passive")
+                if (isInstalledExe) {
+                    listOf("cmd.exe", "/c", "taskkill /f /im LyraFlow.exe 2>nul & start /wait \"\" \"$path\" /passive && start \"\" \"$targetExePath\"")
+                } else {
+                    listOf(path, "/passive")
+                }
             }
 
             ProcessBuilder(command).start()

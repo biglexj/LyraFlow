@@ -1,12 +1,19 @@
 # 🎙️✨ LyraFlow — Historial de Versiones
 
-📌 **Versión actual: `1.1.1` · Versión mínima requerida: `1.0.0`**
+📌 **Versión actual: `1.1.2` · Versión mínima requerida: `1.0.0`**
 
 > [!IMPORTANT]
 > **Regla del .9 para Versionado:**
 > - Nunca se debe pasar de una versión de parche `.9` (ej. de `1.0.9` no se pasa a `1.0.10`). Al alcanzar el límite del parche `.9`, se incrementa el número menor/secundario (ej. pasando a `1.1.0`).
 > - De igual manera, al alcanzar el límite de la versión menor `1.9.9` (o ante hitos de arquitectura significativos posteriores a `1.9.x`), se debe saltar obligatoriamente al siguiente número mayor completo, pasando a **`2.0.0`**. No se permiten números como `1.9.10` o `1.10.x`.
 > - **Nombres de Dulces para Versiones Mayores:** Cada versión mayor debe nombrarse con un nombre de dulce o postre al estilo de las versiones clásicas de Android en orden alfabético. El nombre debe reflejarse coordinadamente en el `README.md`, en este archivo y, cuando corresponda, en el `package.json` del frontend.
+
+## [1.1.2] - 2026-08-02
+
+LyraFlow v1.1.2 optimiza el motor de auto-actualización silencioso con cierre forzado de instancias activas y auto-reinicio sin fricción:
+- **Cierre Silencioso de Instancia Previa**: El instalador finaliza limpiamente cualquier proceso activo `LyraFlow.exe` antes de proceder con la actualización pasiva, previniendo bloqueos de archivos en uso.
+- **Auto-Reinicio Automático de Ejecutable**: Cadena de ejecución en segundo plano que espera el término del instalador para volver a abrir automáticamente la aplicación recién actualizada.
+- **Sincronización de Plantillas Maestras**: Actualización de límites de tamaño de archivo (800-1200 líneas) e integración con los estándares del ecosistema `biglexj`.
 
 ## [1.1.1] - 2026-08-02
 

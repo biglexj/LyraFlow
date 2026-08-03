@@ -48,4 +48,4 @@ LyraFlow/                           # Raíz del repositorio
 
 ## Regla de Crecimiento de Archivos
 
-Si un archivo supera las **400 líneas**, el agente DEBE proponer su división en sub-componentes antes de continuar añadiendo código. Los archivos de más de **600 líneas** son **deuda técnica activa** y deben registrarse en el ROADMAP como tarea de refactorización pendiente.
+Como buena práctica, se debe **evitar normalmente que un archivo supere las 800 - 900 líneas**. El límite máximo permitido es de **1000 a 1200 líneas** (pudiendo llegar excepcionalmente hasta **1220 líneas**). Los archivos que superen las **1200 - 1220 líneas** son **deuda técnica activa** y el agente DEBE proponer su división en sub-componentes y registrarlo en el ROADMAP como tarea de refactorización pendiente.

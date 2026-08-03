@@ -57,3 +57,15 @@ Toda aplicación de escritorio DEBE recordar automáticamente su tamaño (ancho,
 - **Restauración al Iniciar**: Al arrancar la aplicación, se leen los valores guardados en la configuración local de usuario (`window_state`). Si el usuario previamente maximizó la ventana o cambió su tamaño, la app **DEBE abrirse exactamente con las mismas dimensiones y estado de maximizado que tenía antes de cerrarse**.
 - **Guardado Continuo o al Cerrar**: Al cambiar las dimensiones de la ventana, al maximizar/restaurar o al ejecutar `onCloseRequested`, la aplicación guarda las propiedades de `WindowState` de forma transparente.
 - **Prohibición**: Queda strictly prohibido forzar que la ventana se reinicie siempre en un tamaño fijo predeterminado o en modo flotante sin recordar si el usuario la maximizó o personalizó en su sesión previa.
+
+---
+
+## 6. 🎨 Personalización y Localización del Instalador de Escritorio (Custom Installer & Branding) [PLANIFICADO]
+Toda aplicación distribuida en Windows (.exe / .msi) DEBE personalizar los recursos del instalador nativo en lugar de mantener las pantallas, textos o licencias genéricas del generador por defecto:
+
+- **Localización al Español**: La interfaz del instalador debe estar configurada en español (`es-PE` / `es-ES`), evitando pantallas de bienvenida, botones o descripciones genéricas en inglés.
+- **Branding e Identidad Visual**:
+  - Banner e imágenes del instalador con el logotipo oficial del proyecto y la paleta de colores del sistema de diseño.
+  - Icono personalizado tanto en el instalador ejecutable como en el panel de desinstalación de Windows (*Programas y características* / *Aplicaciones instaladas*).
+  - Nombre de la organización estandarizado (`biglexj`), derechos de autor (`Copyright (c) 2026 Biglex J`) y enlaces de soporte oficial (`https://github.com/biglexj`).
+- **Comportamiento Silencioso / Pasivo**: Garantizar que los instaladores ejecutable y MSI soporten los modos `/passive` y `/qn` sin errores para permitir la actualización in-app sin fricción.

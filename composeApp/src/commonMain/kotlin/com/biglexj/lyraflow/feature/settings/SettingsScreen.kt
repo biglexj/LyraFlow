@@ -31,11 +31,15 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import com.biglexj.lyraflow.core.config.AppConfiguration
 import com.biglexj.lyraflow.core.config.AppPreferences
+import com.biglexj.lyraflow.core.config.AppVersion
 import com.biglexj.lyraflow.core.config.HistoryRetentionPeriod
 import com.biglexj.lyraflow.core.config.SystemPromptMode
 import com.biglexj.lyraflow.core.config.ThemeMode
+import com.biglexj.lyraflow.core.config.WhisperLanguage
 import com.biglexj.lyraflow.core.model.AiProvider
 
 @Composable
@@ -247,6 +251,32 @@ fun SettingsScreen(
                 onPreferencesChange(preferences.copy(shortcut = shortcut))
             }
         }
+        @OptIn(ExperimentalLayoutApi::class)
+        SettingsSection(
+            "Idioma de Whisper local",
+            "Selecciona el idioma de transcripción para el motor offline de Whisper. Por defecto, 'Automático' detecta el idioma del sistema operativo.",
+        ) {
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                WhisperLanguage.entries.forEach { lang ->
+                    FilterChip(
+                        selected = preferences.whisperLanguage == lang,
+                        onClick = { onPreferencesChange(preferences.copy(whisperLanguage = lang)) },
+                        label = { Text(lang.label) },
+                    )
+                }
+            }
+        }
+        SettingsSection("Funciones Experimentales", "Características avanzadas en fase de prueba.") {
+            SettingSwitch(
+                title = "Whisper + Refinamiento por LLM (Experimental)",
+                supporting = "Utiliza Whisper local para transcribir audio a texto y luego procesa el resultado con un modelo LLM de texto para corregir formato y sintaxis.",
+                checked = preferences.whisperLlmRefinementExperimental,
+                onCheckedChange = { onPreferencesChange(preferences.copy(whisperLlmRefinementExperimental = it)) },
+            )
+        }
         SettingsSection("Después de transcribir", "Controla qué sucede cuando el texto está listo.") {
             SettingSwitch(
                 title = "Insertar automáticamente",
@@ -270,7 +300,7 @@ fun SettingsScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text("LyraFlow v1.0.9", style = MaterialTheme.typography.titleMedium)
+                    Text("LyraFlow v${AppVersion.CURRENT}", style = MaterialTheme.typography.titleMedium)
                     Text("Creado por biglexj (2026) • Licencia MIT", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

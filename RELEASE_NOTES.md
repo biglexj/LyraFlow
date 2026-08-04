@@ -1,12 +1,19 @@
 # 🎙️✨ LyraFlow — Historial de Versiones
 
-📌 **Versión actual: `1.1.3` · Versión mínima requerida: `1.0.0`**
+📌 **Versión actual: `1.1.4` · Versión mínima requerida: `1.0.0`**
 
 > [!IMPORTANT]
 > **Regla del .9 para Versionado:**
 > - Nunca se debe pasar de una versión de parche `.9` (ej. de `1.0.9` no se pasa a `1.0.10`). Al alcanzar el límite del parche `.9`, se incrementa el número menor/secundario (ej. pasando a `1.1.0`).
 > - De igual manera, al alcanzar el límite de la versión menor `1.9.9` (o ante hitos de arquitectura significativos posteriores a `1.9.x`), se debe saltar obligatoriamente al siguiente número mayor completo, pasando a **`2.0.0`**. No se permiten números como `1.9.10` o `1.10.x`.
 > - **Nombres de Dulces para Versiones Mayores:** Cada versión mayor debe nombrarse con un nombre de dulce o postre al estilo de las versiones clásicas de Android en orden alfabético. El nombre debe reflejarse coordinadamente en el `README.md`, en este archivo y, cuando corresponda, en el `package.json` del frontend.
+
+## [1.1.4] - 2026-08-04
+
+LyraFlow v1.1.4 optimiza la invocación nativa de Whisper local, incorpora la desactivación independiente de proveedores y refina la simetría de los diálogos M3 Expressive:
+- **Calibración Nativa de Whisper Local (`-l es`, `-t`, `-nt`, `-np`, `--prompt`)**: Erradicación completa de traducciones no deseadas al inglés y congelamientos por silencios mediante forzado de idioma español, supresión de marcas de tiempo, multithreading adaptativo a la CPU (2-8 hilos) y prompt contextual inicial.
+- **Desactivación Independiente de Proveedores (Nube / Whisper)**: Posibilidad de activar/desactivar Gemini o Whisper local desde los diálogos de modelo y la pantalla de ajustes para forzar dictado 100% offline directo sin llamar a APIs externas.
+- **Simetría y Diseño M3 Expressive en Diálogos**: Rediseño limpio de los botones en `ModelSelectorDialog` y `WhisperModelDialog` con alineación del botón de activación/desactivación a la izquierda en rojo y alternancia dinámica entre `Cerrar` e `Instalar` a la derecha.
 
 ## [1.1.3] - 2026-08-03
 

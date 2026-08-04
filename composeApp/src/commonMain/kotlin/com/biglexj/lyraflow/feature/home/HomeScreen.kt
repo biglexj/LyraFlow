@@ -1,5 +1,6 @@
 package com.biglexj.lyraflow.feature.home
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -10,11 +11,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -74,20 +77,37 @@ fun HomeScreen(
         ModelSelectorDialog(
             provider = configuration.preferences.provider,
             selectedModel = configuration.preferences.model,
+            isEnabled = configuration.preferences.isProviderEnabled,
             onDismiss = { showModelDialog = false },
             onSelect = { model ->
-                onPreferencesChange(configuration.preferences.copy(model = model))
+                onPreferencesChange(configuration.preferences.copy(model = model, isProviderEnabled = true))
                 showModelDialog = false
+            },
+            onToggleEnabled = {
+                onPreferencesChange(
+                    configuration.preferences.copy(isProviderEnabled = !configuration.preferences.isProviderEnabled)
+                )
             },
         )
     }
     if (showWhisperModelDialog) {
         WhisperModelDialog(
             currentModel = whisperStatus.model,
+            currentLanguage = configuration.preferences.whisperLanguage,
+            isWhisperEnabled = configuration.preferences.isWhisperEnabled,
             onDismiss = { showWhisperModelDialog = false },
             onInstall = {
+                onPreferencesChange(configuration.preferences.copy(isWhisperEnabled = true))
                 onInstallWhisper(it)
                 showWhisperModelDialog = false
+            },
+            onLanguageSelect = { lang ->
+                onPreferencesChange(configuration.preferences.copy(whisperLanguage = lang))
+            },
+            onToggleEnabled = {
+                onPreferencesChange(
+                    configuration.preferences.copy(isWhisperEnabled = !configuration.preferences.isWhisperEnabled)
+                )
             },
         )
     }
@@ -143,10 +163,17 @@ fun HomeScreen(
             whisperAvailable = whisperStatus.available,
         )
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            val isProviderActive = configuration.preferences.isProviderEnabled
+            val providerTitle = if (isProviderActive) configuration.preferences.provider.label else "${configuration.preferences.provider.label} (Desactivado)"
+            val providerDetail = when {
+                !isProviderActive -> "Dictado por nube desactivado"
+                configuration.sessionApiKey.isBlank() -> "Añade tu API key en Ajustes"
+                else -> configuration.preferences.model
+            }
             StatusCard(
-                title = configuration.preferences.provider.label,
-                detail = if (configuration.sessionApiKey.isNotBlank()) configuration.preferences.model else "Añade tu API key en Ajustes",
-                available = configuration.sessionApiKey.isNotBlank(),
+                title = providerTitle,
+                detail = providerDetail,
+                available = isProviderActive && configuration.sessionApiKey.isNotBlank(),
                 modifier = Modifier.weight(1f),
                 onClick = {
                     if (configuration.sessionApiKey.isBlank()) {
@@ -156,10 +183,14 @@ fun HomeScreen(
                     }
                 },
             )
+
+            val isWhisperActive = configuration.preferences.isWhisperEnabled
+            val whisperTitle = if (isWhisperActive) "Whisper local" else "Whisper local (Desactivado)"
+            val whisperDetail = if (!isWhisperActive) "Dictado offline desactivado" else whisperStatus.detail
             StatusCard(
-                title = "Whisper local",
-                detail = whisperStatus.detail,
-                available = whisperStatus.available,
+                title = whisperTitle,
+                detail = whisperDetail,
+                available = isWhisperActive && whisperStatus.available,
                 modifier = Modifier.weight(1f),
                 progress = whisperStatus.progress,
                 onClick = if (!whisperStatus.downloading) { { showWhisperModelDialog = true } } else null,
@@ -171,18 +202,38 @@ fun HomeScreen(
 @Composable
 private fun WhisperModelDialog(
     currentModel: WhisperModel?,
+    currentLanguage: com.biglexj.lyraflow.core.config.WhisperLanguage = com.biglexj.lyraflow.core.config.WhisperLanguage.Auto,
+    isWhisperEnabled: Boolean = true,
     onDismiss: () -> Unit,
     onInstall: (WhisperModel) -> Unit,
+    onLanguageSelect: (com.biglexj.lyraflow.core.config.WhisperLanguage) -> Unit = {},
+    onToggleEnabled: (() -> Unit)? = null,
 ) {
     var selected by remember { mutableStateOf(currentModel ?: WhisperModel.Base) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Modelo de Whisper local") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("Idioma de transcripción:", style = MaterialTheme.typography.titleSmall)
+                    Row(
+                        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        com.biglexj.lyraflow.core.config.WhisperLanguage.entries.forEach { lang ->
+                            FilterChip(
+                                selected = currentLanguage == lang,
+                                onClick = { onLanguageSelect(lang) },
+                                label = { Text(lang.label, style = MaterialTheme.typography.labelMedium) },
+                            )
+                        }
+                    }
+                }
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                 Text("Elige la variante de Whisper que procesará tus dictados offline:")
                 WhisperModel.entries.forEach { model ->
-                    val isActive = model == currentModel
+                    val isActive = isWhisperEnabled && model == currentModel
                     Surface(
                         onClick = { selected = model },
                         shape = MaterialTheme.shapes.medium,
@@ -211,12 +262,35 @@ private fun WhisperModelDialog(
                 }
             }
         },
+        dismissButton = if (onToggleEnabled != null) {
+            {
+                TextButton(
+                    onClick = {
+                        onToggleEnabled()
+                        onDismiss()
+                    },
+                ) {
+                    Text(
+                        text = if (isWhisperEnabled) "Desactivar Whisper" else "Activar Whisper",
+                        color = if (isWhisperEnabled) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                    )
+                }
+            }
+        } else null,
         confirmButton = {
-            TextButton(onClick = { onInstall(selected) }) {
-                Text(if (selected == currentModel) "Aceptar" else "Seleccionar / Instalar")
+            val isSame = selected == currentModel
+            TextButton(
+                onClick = {
+                    if (!isSame) {
+                        onInstall(selected)
+                    } else {
+                        onDismiss()
+                    }
+                },
+            ) {
+                Text(if (isSame) "Cerrar" else "Instalar")
             }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } },
     )
 }
 

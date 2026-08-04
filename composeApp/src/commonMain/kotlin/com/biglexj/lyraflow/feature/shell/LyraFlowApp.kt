@@ -124,7 +124,7 @@ fun LyraFlowApp(
         // Verificación silenciosa al iniciar: no muestra ningún mensaje si todo está al día.
         val checkSilent: suspend () -> Unit = {
             val remoteRelease = updateService.checkLatestRelease()
-            if (remoteRelease != null && UpdateChecker.isNewerVersion("1.1.3", remoteRelease.version)) {
+            if (remoteRelease != null && UpdateChecker.isNewerVersion(com.biglexj.lyraflow.core.config.AppVersion.CURRENT, remoteRelease.version)) {
                 availableUpdate = remoteRelease
             }
         }
@@ -136,7 +136,7 @@ fun LyraFlowApp(
             scope.launch {
                 val remoteRelease = updateService.checkLatestRelease()
                 isCheckingUpdates = false
-                if (remoteRelease != null && UpdateChecker.isNewerVersion("1.1.3", remoteRelease.version)) {
+                if (remoteRelease != null && UpdateChecker.isNewerVersion(com.biglexj.lyraflow.core.config.AppVersion.CURRENT, remoteRelease.version)) {
                     availableUpdate = remoteRelease
                     upToDate = false
                 } else {

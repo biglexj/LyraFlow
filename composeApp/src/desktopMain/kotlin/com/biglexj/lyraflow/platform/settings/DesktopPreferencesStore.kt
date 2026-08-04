@@ -45,6 +45,10 @@ class DesktopPreferencesStore(
         return AppPreferences(
             themeMode = enumValue(node.get(THEME, ThemeMode.System.name), ThemeMode.System),
             provider = provider,
+            isProviderEnabled = node.getBoolean(PROVIDER_ENABLED, true),
+            isWhisperEnabled = node.getBoolean(WHISPER_ENABLED, true),
+            whisperLanguage = enumValue(node.get(WHISPER_LANGUAGE, com.biglexj.lyraflow.core.config.WhisperLanguage.Auto.name), com.biglexj.lyraflow.core.config.WhisperLanguage.Auto),
+            whisperLlmRefinementExperimental = node.getBoolean(WHISPER_LLM_REFINEMENT_EXPERIMENTAL, false),
             model = loadModel(),
             endpoint = node.get(ENDPOINT, provider.defaultEndpoint).ifBlank { provider.defaultEndpoint },
             autoInject = node.getBoolean(AUTO_INJECT, true),
@@ -58,6 +62,10 @@ class DesktopPreferencesStore(
     override fun save(preferences: AppPreferences) {
         node.put(THEME, preferences.themeMode.name)
         node.put(PROVIDER, preferences.provider.name)
+        node.putBoolean(PROVIDER_ENABLED, preferences.isProviderEnabled)
+        node.putBoolean(WHISPER_ENABLED, preferences.isWhisperEnabled)
+        node.put(WHISPER_LANGUAGE, preferences.whisperLanguage.name)
+        node.putBoolean(WHISPER_LLM_REFINEMENT_EXPERIMENTAL, preferences.whisperLlmRefinementExperimental)
         node.put(MODEL, preferences.providerConfiguration.model)
         node.put(ENDPOINT, preferences.providerConfiguration.endpoint)
         node.putBoolean(AUTO_INJECT, preferences.autoInject)
@@ -102,6 +110,10 @@ class DesktopPreferencesStore(
     private companion object {
         const val THEME = "theme"
         const val PROVIDER = "aiProvider"
+        const val PROVIDER_ENABLED = "providerEnabled"
+        const val WHISPER_ENABLED = "whisperEnabled"
+        const val WHISPER_LANGUAGE = "whisperLanguage"
+        const val WHISPER_LLM_REFINEMENT_EXPERIMENTAL = "whisperLlmRefinementExperimental"
         const val MODEL = "aiModel"
         const val LEGACY_MODEL = "geminiModel"
         const val ENDPOINT = "aiEndpoint"

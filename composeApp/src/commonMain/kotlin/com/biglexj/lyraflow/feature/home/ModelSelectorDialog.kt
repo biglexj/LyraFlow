@@ -21,8 +21,10 @@ import com.biglexj.lyraflow.core.model.AiProvider
 fun ModelSelectorDialog(
     provider: AiProvider,
     selectedModel: String,
+    isEnabled: Boolean = true,
     onDismiss: () -> Unit,
     onSelect: (String) -> Unit,
+    onToggleEnabled: (() -> Unit)? = null,
 ) {
     val models = buildList {
         add(selectedModel)
@@ -41,13 +43,30 @@ fun ModelSelectorDialog(
                 models.forEach { model ->
                     ModelOption(
                         model = model,
-                        selected = model == selectedModel,
+                        selected = isEnabled && model == selectedModel,
                         onSelect = { onSelect(model) },
                     )
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Cerrar") } },
+        dismissButton = if (onToggleEnabled != null) {
+            {
+                TextButton(
+                    onClick = {
+                        onToggleEnabled()
+                        onDismiss()
+                    },
+                ) {
+                    Text(
+                        text = if (isEnabled) "Desactivar ${provider.label}" else "Activar ${provider.label}",
+                        color = if (isEnabled) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                    )
+                }
+            }
+        } else null,
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("Cerrar") }
+        },
     )
 }
 

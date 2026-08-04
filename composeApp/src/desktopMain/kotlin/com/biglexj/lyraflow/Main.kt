@@ -22,6 +22,8 @@ import com.biglexj.lyraflow.core.audio.RecordingTelemetry
 import com.biglexj.lyraflow.core.model.AiProvider
 import com.biglexj.lyraflow.core.network.createPlatformHttpClient
 import com.biglexj.lyraflow.data.provider.MultimodalTranscriptionProvider
+import com.biglexj.lyraflow.data.provider.DisabledTranscriptionProvider
+import com.biglexj.lyraflow.domain.transcription.TranscriptionProvider
 import com.biglexj.lyraflow.data.history.InMemoryTranscriptionHistoryRepository
 import com.biglexj.lyraflow.domain.dictation.DictationCoordinator
 import com.biglexj.lyraflow.domain.dictation.DictationState
@@ -135,21 +137,52 @@ fun main(args: Array<String>) {
     val statusOverlay = remember { LyraFlowStatusOverlay() }
     val whisperInstaller = remember { WhisperInstaller() }
     val whisperStatus by whisperInstaller.state.collectAsState()
-    val whisperProvider = remember(whisperStatus.model) {
-        WhisperTranscriptionProvider { whisperStatus.model }
+    val whisperProvider = remember(whisperStatus.model, preferences.whisperLanguage, preferences.whisperLlmRefinementExperimental, apiKey, preferences.model) {
+        val base = WhisperTranscriptionProvider(
+            currentModel = { whisperStatus.model },
+            whisperLanguage = { preferences.whisperLanguage },
+        )
+        com.biglexj.lyraflow.platform.whisper.WhisperLlmRefinerProvider(
+            baseWhisperProvider = base,
+            client = createPlatformHttpClient(),
+            apiKey = { apiKey },
+            model = { preferences.model },
+            isRefinementEnabled = { preferences.whisperLlmRefinementExperimental },
+        )
     }
     var shortcut by remember { mutableStateOf(GlobalShortcutFactory.create()) }
     val startsMinimized = args.any { it.equals("--minimized", ignoreCase = true) }
     var windowVisible by remember { mutableStateOf(!startsMinimized || !isSystemTraySupported()) }
+
     val historyRepository = remember { InMemoryTranscriptionHistoryRepository() }
-    val coordinator = remember(historyRepository, whisperStatus.available, whisperProvider) {
+    val coordinator = remember(
+        historyRepository,
+        whisperStatus.available,
+        whisperProvider,
+        preferences.isProviderEnabled,
+        preferences.isWhisperEnabled,
+    ) {
+        val cloudTranscriber = MultimodalTranscriptionProvider(
+            client = createPlatformHttpClient(),
+            apiKey = { apiKey },
+            configuration = { preferences.providerConfiguration },
+        )
+        val primary: TranscriptionProvider = when {
+            preferences.isProviderEnabled -> cloudTranscriber
+            preferences.isWhisperEnabled && whisperStatus.available -> whisperProvider
+            preferences.isWhisperEnabled -> DisabledTranscriptionProvider("⚠️ Whisper local está activado pero el modelo aún no se ha instalado.")
+            else -> DisabledTranscriptionProvider("⚠️ Tanto el dictado en la nube como Whisper local están desactivados.")
+        }
+        val fallback: () -> TranscriptionProvider? = {
+            if (preferences.isProviderEnabled && preferences.isWhisperEnabled && whisperStatus.available) {
+                whisperProvider
+            } else {
+                null
+            }
+        }
         DictationCoordinator(
-            transcriber = MultimodalTranscriptionProvider(
-                client = createPlatformHttpClient(),
-                apiKey = { apiKey },
-                configuration = { preferences.providerConfiguration },
-            ),
-            fallbackTranscriber = { if (whisperStatus.available) whisperProvider else null },
+            transcriber = primary,
+            fallbackTranscriber = fallback,
             historyRepository = historyRepository,
             isHistoryEnabled = { preferences.historyRetention != HistoryRetentionPeriod.Disabled },
         )

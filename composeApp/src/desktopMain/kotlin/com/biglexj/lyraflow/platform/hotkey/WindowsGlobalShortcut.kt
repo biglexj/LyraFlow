@@ -13,7 +13,7 @@ class WindowsGlobalShortcut : GlobalShortcut {
     private var worker: Thread? = null
     @Volatile private var threadId: Int = 0
 
-    override var status: String = "Windows: pendiente"
+    override var status: String = "Pendiente"
         private set
 
     override fun start(shortcut: KeyboardShortcut, onActivated: () -> Unit) {
@@ -24,11 +24,11 @@ class WindowsGlobalShortcut : GlobalShortcut {
                 flags or modifier.windowsFlag
             }
             if (!User32.INSTANCE.RegisterHotKey(null, hotkeyId, modifiers, shortcut.key.windowsCode)) {
-                status = "Windows: ${shortcut.label} no está disponible"
+                status = "${shortcut.label} no está disponible"
                 return@thread
             }
 
-            status = "Windows: ${shortcut.label} activo"
+            status = "${shortcut.label} activo"
             val message = WinUser.MSG()
             while (User32.INSTANCE.GetMessage(message, null, 0, 0) > 0) {
                 if (message.message == WinUser.WM_HOTKEY && message.wParam.toInt() == hotkeyId) {

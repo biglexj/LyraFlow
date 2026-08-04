@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -23,6 +24,7 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.biglexj.lyraflow.core.config.AppVersion
 import com.biglexj.lyraflow.core.update.UpdateRelease
 
 @Composable
@@ -55,7 +57,7 @@ fun AboutDialog(
                     color = MaterialTheme.colorScheme.primaryContainer,
                 ) {
                     Text(
-                        text = "v1.1.3 • MIT License",
+                        text = "v${AppVersion.CURRENT} • MIT License",
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
@@ -84,80 +86,53 @@ fun AboutDialog(
                 Text(
                     text = "Si esta herramienta agiliza tu flujo de trabajo diario, considera apoyar su desarrollo continuo.",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                     textAlign = TextAlign.Center,
                 )
-
                 Spacer(Modifier.height(4.dp))
-
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(
                         onClick = { uriHandler.openUri("https://www.biglexj.com/donaciones") },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = MaterialTheme.shapes.medium,
+                        modifier = Modifier.fillMaxWidth().height(44.dp),
                     ) {
                         Text("Donaciones Oficiales (Yape / Plin / Web)")
                     }
-
                     OutlinedButton(
                         onClick = { uriHandler.openUri("https://buymeacoffee.com/biglexj") },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = MaterialTheme.shapes.medium,
+                        modifier = Modifier.fillMaxWidth().height(44.dp),
                     ) {
                         Text("Buy Me a Coffee ☕")
                     }
-
                     OutlinedButton(
                         onClick = { uriHandler.openUri("https://github.com/biglexj/LyraFlow/issues") },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = MaterialTheme.shapes.medium,
+                        modifier = Modifier.fillMaxWidth().height(44.dp),
                     ) {
                         Text("Enviar Feedback / Reportar Error 💬")
                     }
-
                     OutlinedButton(
                         onClick = { uriHandler.openUri("https://github.com/biglexj") },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = MaterialTheme.shapes.medium,
+                        modifier = Modifier.fillMaxWidth().height(44.dp),
                     ) {
                         Text("Perfil de GitHub")
                     }
                 }
-
-                // Zona de Estado de Actualización en la parte inferior del modal
                 when {
                     isCheckingUpdates -> {
-                        Surface(
-                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                            shape = MaterialTheme.shapes.small,
+                        Row(
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
                         ) {
-                            Row(
-                                modifier = Modifier.padding(10.dp),
-                                horizontalArrangement = Arrangement.Center,
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(16.dp),
-                                    strokeWidth = 2.dp,
-                                    color = MaterialTheme.colorScheme.primary,
-                                )
-                                Text(
-                                    "  Buscando actualizaciones...",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
+                            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Comprobando actualizaciones...", style = MaterialTheme.typography.bodySmall)
                         }
                     }
                     availableUpdate != null -> {
                         Surface(
                             color = MaterialTheme.colorScheme.primaryContainer,
                             contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                            shape = MaterialTheme.shapes.medium,
+                            shape = MaterialTheme.shapes.small,
                             modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
                         ) {
                             Row(
@@ -197,7 +172,7 @@ fun AboutDialog(
                             modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
                         ) {
                             Text(
-                                text = "✅ Estás en la última versión de LyraFlow (v1.1.3).",
+                                text = "✅ Estás en la última versión de LyraFlow (v${AppVersion.CURRENT}).",
                                 style = MaterialTheme.typography.bodySmall,
                                 textAlign = TextAlign.Center,
                                 modifier = Modifier.padding(10.dp),

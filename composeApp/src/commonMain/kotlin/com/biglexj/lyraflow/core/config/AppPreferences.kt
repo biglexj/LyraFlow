@@ -32,6 +32,10 @@ enum class HistoryRetentionPeriod(val hours: Long, val label: String) {
 data class AppPreferences(
     val themeMode: ThemeMode = ThemeMode.System,
     val provider: AiProvider = AiProvider.Gemini,
+    val isProviderEnabled: Boolean = true,
+    val isWhisperEnabled: Boolean = true,
+    val whisperLanguage: WhisperLanguage = WhisperLanguage.Auto,
+    val whisperLlmRefinementExperimental: Boolean = false,
     val model: String = AiProvider.Gemini.defaultModel,
     val endpoint: String = AiProvider.Gemini.defaultEndpoint,
     val autoInject: Boolean = true,

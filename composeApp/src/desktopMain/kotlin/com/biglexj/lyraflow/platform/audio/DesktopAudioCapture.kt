@@ -3,6 +3,7 @@ package com.biglexj.lyraflow.platform.audio
 import java.io.ByteArrayOutputStream
 import javax.sound.sampled.AudioFormat
 import javax.sound.sampled.AudioSystem
+import javax.sound.sampled.DataLine
 import javax.sound.sampled.TargetDataLine
 import kotlin.concurrent.thread
 import kotlin.math.sqrt
@@ -16,7 +17,7 @@ class DesktopAudioCapture {
     @Synchronized
     fun start(onTelemetry: (level: Float, durationMillis: Long) -> Unit = { _, _ -> }) {
         check(line == null) { "La captura ya está activa." }
-        val nextLine = AudioSystem.getTargetDataLine(format)
+        val nextLine = openBestTargetDataLine(format)
         val nextBuffer = ByteArrayOutputStream()
         nextLine.open(format)
         nextLine.start()
@@ -28,7 +29,9 @@ class DesktopAudioCapture {
             while (!Thread.currentThread().isInterrupted) {
                 val read = nextLine.read(chunk, 0, chunk.size)
                 if (read > 0) {
-                    nextBuffer.write(chunk, 0, read)
+                    synchronized(nextBuffer) {
+                        nextBuffer.write(chunk, 0, read)
+                    }
                     onTelemetry(
                         audioLevel(chunk, read),
                         nextBuffer.size().toLong() * 1_000L / BYTES_PER_SECOND,
@@ -42,15 +45,44 @@ class DesktopAudioCapture {
     fun stop(): ByteArray {
         val currentLine = line ?: return byteArrayOf()
         currentLine.stop()
-        currentLine.close()
         worker?.interrupt()
-        worker?.join(500)
+        worker?.join(300)
+
+        val targetBuffer = buffer
+        if (targetBuffer != null) {
+            val available = currentLine.available()
+            if (available > 0) {
+                val remaining = ByteArray(available)
+                val read = currentLine.read(remaining, 0, available)
+                if (read > 0) {
+                    synchronized(targetBuffer) {
+                        targetBuffer.write(remaining, 0, read)
+                    }
+                }
+            }
+        }
+        currentLine.close()
 
         val pcm = buffer?.toByteArray() ?: byteArrayOf()
         line = null
         worker = null
         buffer = null
         return WavEncoder.encodePcm16Mono(pcm)
+    }
+
+    private fun openBestTargetDataLine(audioFormat: AudioFormat): TargetDataLine {
+        val info = DataLine.Info(TargetDataLine::class.java, audioFormat)
+        for (mixerInfo in AudioSystem.getMixerInfo()) {
+            val name = mixerInfo.name.lowercase()
+            if (name.contains("primary") || name.contains("micrófono") || name.contains("microphone") || name.contains("captura") || name.contains("input")) {
+                val mixer = AudioSystem.getMixer(mixerInfo)
+                if (mixer.isLineSupported(info)) {
+                    val lineResult = runCatching { mixer.getLine(info) as TargetDataLine }.getOrNull()
+                    if (lineResult != null) return lineResult
+                }
+            }
+        }
+        return AudioSystem.getTargetDataLine(audioFormat)
     }
 
     private fun audioLevel(bytes: ByteArray, length: Int): Float {

@@ -319,7 +319,7 @@ Hito: primera versión Kotlin utilizable diariamente en Windows.
 - Adaptadores Linux.
 - Inyección X11.
 - DEB/RPM y matriz de release.
-- Pruebas en Ubuntu y una segunda distribución.
+- Pruebas en ubuntu y una segunda distribución.
 
 ### Fase 4 — Wayland: 5–15 días
 

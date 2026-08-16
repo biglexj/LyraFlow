@@ -53,6 +53,8 @@ fun HomeScreen(
     onApiKeyChange: (String) -> Unit,
     onPreferencesChange: (AppPreferences) -> Unit,
     onInstallWhisper: (WhisperModel) -> Unit,
+    isScanningModels: Boolean = false,
+    onScanModels: () -> Unit = {},
     onRetry: () -> Unit = {},
     onRetryWhisper: () -> Unit = {},
     geminiQuotaExhausted: Boolean = false,
@@ -74,10 +76,14 @@ fun HomeScreen(
         )
     }
     if (showModelDialog) {
+        val provider = configuration.preferences.provider
         ModelSelectorDialog(
-            provider = configuration.preferences.provider,
+            provider = provider,
             selectedModel = configuration.preferences.model,
+            availableModels = configuration.preferences.availableModels(provider),
             isEnabled = configuration.preferences.isProviderEnabled,
+            isScanning = isScanningModels,
+            onScanModels = if (configuration.sessionApiKey.isNotBlank()) onScanModels else null,
             onDismiss = { showModelDialog = false },
             onSelect = { model ->
                 onPreferencesChange(configuration.preferences.copy(model = model, isProviderEnabled = true))
@@ -318,7 +324,7 @@ private fun DictationHero(
                 when {
                     listening -> "Habla con naturalidad. LyraFlow se encarga del resto."
                     processing -> "Procesando el audio y organizando tus ideas…"
-                    else -> "Pulsa ${configuration.preferences.shortcut.label} o arrastra tu audio aquí."
+                    else -> "Pulsa ${configuration.preferences.shortcut.label} o arrastra un archivo de audio o imagen aquí."
                 },
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,

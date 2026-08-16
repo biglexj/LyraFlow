@@ -23,6 +23,7 @@ class DictationCoordinator(
 
     private val mutableGeminiQuotaExhausted = MutableStateFlow(false)
     val geminiQuotaExhausted: StateFlow<Boolean> = mutableGeminiQuotaExhausted.asStateFlow()
+    private var quotaExhaustedTimeMark: kotlin.time.TimeMark? = null
 
     private var lastRequest: TranscriptionRequest? = null
 
@@ -36,6 +37,7 @@ class DictationCoordinator(
 
     fun resetQuotaExhausted() {
         mutableGeminiQuotaExhausted.value = false
+        quotaExhaustedTimeMark = null
     }
 
     suspend fun process(request: TranscriptionRequest) {
@@ -45,20 +47,29 @@ class DictationCoordinator(
 
     suspend fun retry(alternativeTranscriber: TranscriptionProvider? = null) {
         val request = lastRequest ?: return
+        // Al reintentar manualmente, intentar restaurar la cuota si han transcurrido segundos
+        resetQuotaExhausted()
         processInternal(request, alternativeTranscriber ?: transcriber)
     }
 
     private suspend fun processInternal(request: TranscriptionRequest, provider: TranscriptionProvider) {
         val fallback = fallbackTranscriber()
 
-        // Caso 2: Gemini ya fue detectado con cuota agotada previamente
+        // Auto-restaurar estado de cuota de Gemini tras 60 segundos de cooldown
+        val timeMark = quotaExhaustedTimeMark
+        if (mutableGeminiQuotaExhausted.value && timeMark != null && timeMark.elapsedNow().inWholeSeconds >= 60) {
+            mutableGeminiQuotaExhausted.value = false
+            quotaExhaustedTimeMark = null
+        }
+
+        // Caso 2: Gemini ya fue detectado con cuota agotada previamente dentro de la ventana de enfriamiento
         if (mutableGeminiQuotaExhausted.value) {
             if (fallback != null) {
                 transcribeWithFallback(request, fallback, isAutonomous = true)
                 return
             } else {
                 mutableState.value = DictationState.Failed(
-                    "⚠️ Cuota de Gemini agotada. Configura una nueva API Key o instala Whisper local para continuar dictando."
+                    "⚠️ Cuota de Gemini agotada temporalmente (espera 1 minuto o instala Whisper local)."
                 )
                 return
             }
@@ -85,6 +96,7 @@ class DictationCoordinator(
             } catch (error: QuotaExhaustedException) {
                 // Caso 2: Gemini falla por cuotas en el intento actual
                 mutableGeminiQuotaExhausted.value = true
+                quotaExhaustedTimeMark = kotlin.time.TimeSource.Monotonic.markNow()
                 if (fallback != null) {
                     transcribeWithFallback(request, fallback, isAutonomous = false)
                     return

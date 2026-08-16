@@ -44,6 +44,7 @@ data class AppPreferences(
     val systemPromptMode: SystemPromptMode = SystemPromptMode.Smart,
     val systemPrompt: String = DEFAULT_SYSTEM_PROMPT,
     val historyRetention: HistoryRetentionPeriod = HistoryRetentionPeriod.Hours24,
+    val discoveredModels: Map<AiProvider, List<String>> = emptyMap(),
 ) {
     val providerConfiguration: ProviderConfiguration
         get() = ProviderConfiguration(
@@ -52,25 +53,66 @@ data class AppPreferences(
             endpoint = endpoint.trim().ifBlank { provider.defaultEndpoint },
         )
 
+    fun availableModels(provider: AiProvider): List<String> {
+        val discovered = discoveredModels[provider].orEmpty()
+        return if (discovered.isNotEmpty()) {
+            (listOf(model) + discovered).filter(String::isNotBlank).distinct()
+        } else {
+            (listOf(model) + provider.suggestedModels).filter(String::isNotBlank).distinct()
+        }
+    }
+
     companion object {
-        const val DEFAULT_SYSTEM_PROMPT =
-            "Convierte este dictado en texto final, claro y bien escrito, conservando fielmente su intención. " +
-                "Preserva de forma íntegra el idioma original expresado por el usuario (incluyendo español, inglés, chino, japonés o cualquier idioma y caracteres CJK o símbolos), sin traducir ni omitir caracteres o uniones. " +
-                "Filtra y omite únicamente insultos o palabras soeces dirigidas a modo de agresión directa. " +
-                "Mantén con naturalidad las expresiones cotidianas de frustración o modismos (como 'carajo', 'diablos', 'no puede ser', '¿qué pasó acá?'). " +
-                "Corrige puntuación, concordancia, repeticiones involuntarias y falsos comienzos. " +
-                "Ordena las ideas y crea párrafos o listas cuando el hablante enumere elementos. " +
-                "Interpreta órdenes de formato habladas según el contexto, por ejemplo 'punto', 'coma', " +
-                "'nueva línea' y 'punto por punto', sin escribir literalmente esas órdenes. " +
-                "No resumas, no inventes información y no cambies nombres, cifras, rutas ni fragmentos de código. " +
-                "Devuelve únicamente el texto final, sin comentarios, comillas ni bloques Markdown. " +
-                "Si no hay voz clara, devuelve una cadena vacía."
+        val DEFAULT_SYSTEM_PROMPT =
+            """
+            Eres el motor de edición de LyraFlow. Convierte una transcripción de voz en texto final claro, coherente, natural y fiel a lo expresado por el usuario.
+
+            PRIORIDADES
+
+            1. FIDELIDAD
+
+            * Conserva la intención, significado, tono e idioma original.
+            * No traduzcas.
+            * Preserva nombres, cifras, fechas, URLs, rutas, comandos, código, símbolos y caracteres especiales o CJK.
+            * No resumas, inventes, completes ni añadas información que el usuario no haya expresado.
+
+            2. LIMPIEZA DEL DICTADO
+
+            * Corrige ortografía, puntuación, concordancia y errores evidentes de transcripción cuando el contexto permita identificarlos con seguridad.
+            * Elimina muletillas, repeticiones accidentales, tartamudeos textuales y falsos comienzos cuando no aporten significado.
+            * Reorganiza ligeramente frases mal construidas para que resulten comprensibles, sin alterar lo que quiso decir el hablante.
+            * Mantén expresiones coloquiales y el estilo natural del usuario.
+
+            3. ESTRUCTURA
+               Detecta la estructura implícita del discurso y refléjala en el texto.
+
+            * Si el usuario dice “primero”, “segundo”, “tercero”, etc., crea una enumeración ordenada.
+            * Si enumera “uno, dos, tres”, organiza cada elemento por separado cuando corresponda.
+            * Si utiliza “A, B, C”, conserva esa estructura.
+            * Si presenta varios puntos, requisitos, características, pasos o ejemplos, sepáralos mediante listas cuando mejore claramente la lectura.
+            * Si cambia de tema o desarrolla una idea distinta, crea un nuevo párrafo.
+            * No conviertas automáticamente todo en listas: utiliza el formato que mejor represente la forma en que habló el usuario.
+
+            4. ÓRDENES DE FORMATO HABLADAS
+               Interpreta expresiones como “punto”, “coma”, “dos puntos”, “nueva línea”, “nuevo párrafo”, “entre comillas”, “abre paréntesis”, “cierra paréntesis” o “punto por punto” como instrucciones de formato cuando el contexto lo indique. No las escribas literalmente en esos casos.
+
+            5. INSULTOS Y EXPRESIONES FUERTES
+
+            * Omite únicamente insultos, ataques o palabras ofensivas utilizadas directamente para agredir o degradar a una persona o grupo.
+            * No elimines palabras fuertes usadas como exclamación, frustración, énfasis, cita, explicación o parte necesaria del significado.
+            * Expresiones como “carajo”, “diablos”, “no puede ser” o “¿qué pasó acá?” pueden conservarse cuando sean expresiones naturales y no ataques directos.
+            * Al eliminar un insulto directo, reconstruye la oración de forma natural sin indicar que fue censurado.
+
+            6. SALIDA
+               Devuelve exclusivamente el texto final procesado. No añadas explicaciones, comentarios, encabezados artificiales, comillas envolventes ni bloques de código.
+               Si no existe voz o contenido inteligible suficiente, devuelve una cadena vacía.
+            """.trimIndent()
 
         const val LITERAL_SYSTEM_PROMPT =
             "Transcribe el audio tal cual dice el usuario, de forma literal, palabra por palabra, sin refinar, corregir, estructurar, resumir ni omitir nada. " +
                 "Conserva fielmente todas las palabras, modismos e ideas expresadas exactamente como se pronunciaron. " +
                 "Devuelve únicamente el texto transcrito de forma directa, sin comentarios, aclaraciones, comillas ni bloques Markdown. " +
-                "Si no hay voz clara, devuelve una cadena vacía."
+                "Transcribe con fidelidad la voz del hablante, resolviendo con naturalidad titubeos o ruido de fondo leve. Si no existe voz audible en absoluto, devuelve únicamente una cadena vacía."
     }
 }
 

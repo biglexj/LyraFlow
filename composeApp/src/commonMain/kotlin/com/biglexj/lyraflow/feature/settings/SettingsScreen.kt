@@ -11,9 +11,13 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
@@ -21,6 +25,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -42,11 +47,14 @@ import com.biglexj.lyraflow.core.config.ThemeMode
 import com.biglexj.lyraflow.core.config.WhisperLanguage
 import com.biglexj.lyraflow.core.model.AiProvider
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SettingsScreen(
     configuration: AppConfiguration,
     onPreferencesChange: (AppPreferences) -> Unit,
     onApiKeyChange: (String) -> Unit,
+    isScanningModels: Boolean = false,
+    onScanModels: () -> Unit = {},
     onOpenAbout: () -> Unit = {},
     onCheckForUpdates: () -> Unit = {},
 ) {
@@ -155,24 +163,122 @@ fun SettingsScreen(
             }
         }
         SettingsSection("Modelo multimodal", "Escribe cualquier identificador de modelo que acepte audio y texto.") {
-            ModelField(
-                value = preferences.model,
-                enabled = hasApiKey,
-                onValueChange = { onPreferencesChange(preferences.copy(model = it)) },
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                provider.suggestedModels.forEach { model ->
-                    FilterChip(
-                        selected = preferences.model == model,
-                        enabled = hasApiKey,
-                        onClick = { onPreferencesChange(preferences.copy(model = model)) },
-                        label = { Text(model) },
-                    )
+            val availableModels = preferences.availableModels(provider)
+            val discoveredForProvider = preferences.discoveredModels[provider].orEmpty()
+            var selectedModelInput by remember(preferences.model) { mutableStateOf(preferences.model) }
+            var showDiscoveredList by remember { mutableStateOf(false) }
+            var saveFeedback by remember { mutableStateOf<String?>(null) }
+
+            LaunchedEffect(saveFeedback) {
+                if (saveFeedback != null) {
+                    kotlinx.coroutines.delay(3000)
+                    saveFeedback = null
                 }
             }
+
+            ModelField(
+                value = selectedModelInput,
+                enabled = hasApiKey,
+                onValueChange = { selectedModelInput = it },
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Button(
+                        onClick = {
+                            val target = selectedModelInput.trim().ifBlank { provider.defaultModel }
+                            selectedModelInput = target
+                            onPreferencesChange(preferences.copy(model = target))
+                            showDiscoveredList = false
+                            saveFeedback = "Modelo guardado: $target"
+                        },
+                        enabled = hasApiKey && selectedModelInput.isNotBlank(),
+                    ) {
+                        Text("💾 Guardar modelo")
+                    }
+
+                    if (discoveredForProvider.isNotEmpty() || availableModels.isNotEmpty()) {
+                        OutlinedButton(
+                            onClick = { showDiscoveredList = !showDiscoveredList },
+                            enabled = hasApiKey,
+                        ) {
+                            Text(
+                                if (showDiscoveredList) {
+                                    "Ocultar modelos (${if (discoveredForProvider.isNotEmpty()) discoveredForProvider.size else availableModels.size})"
+                                } else {
+                                    "Ver modelos (${if (discoveredForProvider.isNotEmpty()) discoveredForProvider.size else availableModels.size})"
+                                }
+                            )
+                        }
+                    }
+                }
+
+                TextButton(
+                    onClick = {
+                        showDiscoveredList = true
+                        onScanModels()
+                    },
+                    enabled = hasApiKey && !isScanningModels,
+                ) {
+                    if (isScanningModels) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                        )
+                        Text("  Escaneando…")
+                    } else {
+                        Text("🔄 Escanear modelos de ${provider.label}")
+                    }
+                }
+            }
+
+            if (saveFeedback != null) {
+                Text(
+                    text = "✅ $saveFeedback",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+
+            androidx.compose.animation.AnimatedVisibility(visible = showDiscoveredList && hasApiKey) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = if (discoveredForProvider.isNotEmpty()) {
+                            "Modelos detectados (${discoveredForProvider.size}) — Pulsa uno para seleccionarlo y luego 'Guardar modelo':"
+                        } else {
+                            "Modelos sugeridos base — Pulsa uno para seleccionarlo y luego 'Guardar modelo':"
+                        },
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        availableModels.forEach { model ->
+                            FilterChip(
+                                selected = selectedModelInput == model,
+                                enabled = hasApiKey,
+                                onClick = {
+                                    selectedModelInput = model
+                                },
+                                label = { Text(model) },
+                            )
+                        }
+                    }
+                }
+            }
+
             if (!hasApiKey) {
                 Text(
-                    text = "🔒 Se requiere API Key: Ingresa tu clave en la sección '${provider.label} API' abajo para desbloquear la selección de modelos.",
+                    text = "🔒 Se requiere API Key: Ingresa tu clave en la sección '${provider.label} API' abajo para desbloquear el escaneo y la selección de modelos.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary,
                 )

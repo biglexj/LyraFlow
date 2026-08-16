@@ -4,10 +4,16 @@ import com.biglexj.lyraflow.core.config.SystemPromptMode
 import com.biglexj.lyraflow.core.model.AiProvider
 import java.util.UUID
 import java.util.prefs.Preferences
+import kotlin.test.assertNotNull
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class DesktopPreferencesStoreTest {
+    @Test
+    fun verifiesIconResourceExists() {
+        val resource = this::class.java.classLoader.getResource("Square44x44Logo.png")
+        assertNotNull(resource, "Square44x44Logo.png should be available on classpath")
+    }
     @Test
     fun migratesTheLegacyGeminiModelNamesToTheCurrentCatalog() {
         val node = Preferences.userRoot().node("com/biglexj/lyraflow/test/${UUID.randomUUID()}")
@@ -75,6 +81,33 @@ class DesktopPreferencesStoreTest {
 
             assertEquals(SystemPromptMode.Literal, restored.systemPromptMode)
             assertEquals(com.biglexj.lyraflow.core.config.AppPreferences.LITERAL_SYSTEM_PROMPT, restored.systemPrompt)
+        } finally {
+            node.removeNode()
+        }
+    }
+
+    @Test
+    fun persistsDiscoveredModelsPerProvider() {
+        val node = Preferences.userRoot().node("com/biglexj/lyraflow/test/${UUID.randomUUID()}")
+        try {
+            val original = com.biglexj.lyraflow.core.config.AppPreferences(
+                discoveredModels = mapOf(
+                    AiProvider.Gemini to listOf("gemini-3.7-flash", "gemini-3.5-flash"),
+                    AiProvider.OpenAiCompatible to listOf("gpt-4o", "gpt-4o-mini"),
+                ),
+            )
+            DesktopPreferencesStore(node).save(original)
+
+            val restored = DesktopPreferencesStore(node).load()
+
+            assertEquals(
+                listOf("gemini-3.7-flash", "gemini-3.5-flash"),
+                restored.discoveredModels[AiProvider.Gemini],
+            )
+            assertEquals(
+                listOf("gpt-4o", "gpt-4o-mini"),
+                restored.discoveredModels[AiProvider.OpenAiCompatible],
+            )
         } finally {
             node.removeNode()
         }

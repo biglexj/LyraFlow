@@ -1,12 +1,20 @@
 # 🎙️✨ LyraFlow — Historial de Versiones
 
-📌 **Versión actual: `1.1.4` · Versión mínima requerida: `1.0.0`**
+📌 **Versión actual: `1.1.5` · Versión mínima requerida: `1.0.0`**
 
 > [!IMPORTANT]
 > **Regla del .9 para Versionado:**
 > - Nunca se debe pasar de una versión de parche `.9` (ej. de `1.0.9` no se pasa a `1.0.10`). Al alcanzar el límite del parche `.9`, se incrementa el número menor/secundario (ej. pasando a `1.1.0`).
 > - De igual manera, al alcanzar el límite de la versión menor `1.9.9` (o ante hitos de arquitectura significativos posteriores a `1.9.x`), se debe saltar obligatoriamente al siguiente número mayor completo, pasando a **`2.0.0`**. No se permiten números como `1.9.10` o `1.10.x`.
 > - **Nombres de Dulces para Versiones Mayores:** Cada versión mayor debe nombrarse con un nombre de dulce o postre al estilo de las versiones clásicas de Android en orden alfabético. El nombre debe reflejarse coordinadamente en el `README.md`, en este archivo y, cuando corresponda, en el `package.json` del frontend.
+
+## [1.1.5] - 2026-08-16
+
+LyraFlow v1.1.5 incorpora el escaneo dinámico de modelos de IA con guardado explícito, reconocimiento multimodal de imágenes por arrastre, garantía estandarizada de instancia única y optimización del ciclo de vida en desarrollo:
+- **Descubrimiento Dinámico de Modelos & Botón 'Guardar modelo'**: Consulta y filtrado automático de modelos multimodales desde las APIs oficiales de Gemini y OpenAI con persistencia en caché local, preservación estricta de la selección del usuario (como Gemini 3.7) y botón dedicado **Guardar modelo** con colapso inteligente de la lista detectada para una interfaz limpia y despejada.
+- **Reconocimiento Multimodal de Imágenes por Arrastre (Drag & Drop)**: Capacidad para arrastrar archivos visuales (`.png`, `.jpg`, `.jpeg`, `.webp`, `.bmp`, `.gif`) y de audio directamente a la aplicación para extraer texto visible mediante OCR inteligente y análisis multimodal.
+- **Garantía Estandarizada de Instancia Única (Single-Instance Lock)**: Restauración y enfoque automático de la ventana en ejecución al volver a iniciar la aplicación desde el menú Inicio o accesos directos, evitando la duplicación de procesos y colisiones de recursos.
+- **Optimización de Ciclo de Vida & Auto-Recuperación de Cuota**: Desbloqueo automático tras 60 segundos de enfriamiento al alcanzar límites temporales por minuto (HTTP 429), vaciado exhaustivo del búfer de captura PCM y arranque instantáneo en modo desarrollo con inicialización perezosa de pares nativos AWT y carga segura de icono.
 
 ## [1.1.4] - 2026-08-04
 

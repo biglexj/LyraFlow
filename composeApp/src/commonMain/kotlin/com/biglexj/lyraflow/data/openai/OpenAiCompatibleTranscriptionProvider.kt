@@ -118,7 +118,7 @@ class OpenAiCompatibleTranscriptionProvider(
                 "'nueva línea' y 'punto por punto', sin escribir literalmente esas órdenes. " +
                 "No resumas, no inventes información y no cambies nombres, cifras, rutas ni fragmentos de código. " +
                 "Devuelve únicamente el texto final, sin comentarios, comillas ni bloques Markdown. " +
-                "Si no hay voz clara, devuelve una cadena vacía."
+                "Transcribe con fidelidad la voz del hablante, resolviendo con naturalidad titubeos o ruido de fondo leve. Si no existe voz audible en absoluto, devuelve únicamente una cadena vacía."
     }
 }
 

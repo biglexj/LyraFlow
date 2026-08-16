@@ -87,11 +87,27 @@ android {
 compose.desktop {
     application {
         mainClass = "com.biglexj.lyraflow.MainKt"
-        jvmArgs += listOf(
-            "--enable-native-access=ALL-UNNAMED",
-            "-Dlyraflow.dev=true",
-            "-Dskiko.renderApi=SOFTWARE_COMPAT",
-        )
+        jvmArgs("-Dlyraflow.dev=true")
+        val validJpackageJdk = run {
+            val envJavaHome = System.getenv("JAVA_HOME")
+            if (!envJavaHome.isNullOrBlank() && File(envJavaHome, "bin/jpackage.exe").exists()) return@run envJavaHome
+            val sysJavaHome = System.getProperty("java.home")
+            if (!sysJavaHome.isNullOrBlank() && File(sysJavaHome, "bin/jpackage.exe").exists()) return@run sysJavaHome
+
+            val candidates = listOf(
+                File("C:/Program Files/Microsoft/jdk-17.0.19.10-hotspot"),
+                File("C:/Program Files/Eclipse Adoptium/jdk-25.0.3.9-hotspot"),
+            )
+            candidates.firstOrNull { File(it, "bin/jpackage.exe").exists() }?.absolutePath
+                ?: listOf(File("C:/Program Files/Microsoft"), File("C:/Program Files/Eclipse Adoptium"), File("C:/Program Files/Java")).asSequence()
+                    .filter { it.isDirectory }
+                    .flatMap { it.listFiles()?.asSequence() ?: emptySequence() }
+                    .firstOrNull { File(it, "bin/jpackage.exe").exists() }
+                    ?.absolutePath
+        }
+        validJpackageJdk?.let {
+            javaHome = it
+        }
         nativeDistributions {
             modules("java.net.http")
             targetFormats(
@@ -124,4 +140,8 @@ compose.desktop {
             }
         }
     }
+}
+
+tasks.withType<JavaExec>().configureEach {
+    systemProperty("lyraflow.dev", "true")
 }

@@ -22,8 +22,8 @@ class DesktopPreferencesStore(
 ) : PreferencesStore {
 
     fun loadWindowState(): WindowStatePreferences = WindowStatePreferences(
-        widthDp = node.getInt(WINDOW_WIDTH, 1210),
-        heightDp = node.getInt(WINDOW_HEIGHT, 870),
+        widthDp = node.getInt(WINDOW_WIDTH, 1210).coerceIn(600, 3840),
+        heightDp = node.getInt(WINDOW_HEIGHT, 870).coerceIn(400, 2160),
         isMaximized = node.getBoolean(WINDOW_MAXIMIZED, false),
     )
 
@@ -56,6 +56,7 @@ class DesktopPreferencesStore(
             shortcut = loadShortcut(),
             systemPromptMode = promptMode,
             systemPrompt = node.get(SYSTEM_PROMPT, fallbackPrompt),
+            discoveredModels = loadDiscoveredModels(),
         )
     }
 
@@ -74,7 +75,19 @@ class DesktopPreferencesStore(
         node.put(HOTKEY_KEY, preferences.shortcut.key.name)
         node.put(SYSTEM_PROMPT_MODE, preferences.systemPromptMode.name)
         node.put(SYSTEM_PROMPT, preferences.systemPrompt)
+        preferences.discoveredModels.forEach { (prov, models) ->
+            node.put(discoveredModelsKey(prov), models.joinToString("\n"))
+        }
         node.flush()
+    }
+
+    private fun loadDiscoveredModels(): Map<AiProvider, List<String>> {
+        return AiProvider.entries.associateWith { prov ->
+            node.get(discoveredModelsKey(prov), "")
+                .split('\n')
+                .map(String::trim)
+                .filter(String::isNotEmpty)
+        }.filterValues { it.isNotEmpty() }
     }
 
     private fun loadShortcut(): KeyboardShortcut {
@@ -126,5 +139,8 @@ class DesktopPreferencesStore(
         const val WINDOW_WIDTH = "windowWidth"
         const val WINDOW_HEIGHT = "windowHeight"
         const val WINDOW_MAXIMIZED = "windowMaximized"
+        const val DISCOVERED_MODELS_PREFIX = "discoveredModels."
+
+        fun discoveredModelsKey(provider: AiProvider): String = "$DISCOVERED_MODELS_PREFIX${provider.name}"
     }
 }

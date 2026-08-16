@@ -17,13 +17,13 @@ enum class AiProvider(
     Gemini(
         label = "Gemini",
         description = "API nativa de Google con entrada de audio multimodal.",
-        defaultModel = "gemini-3.6-flash",
+        defaultModel = "gemini-3.5-flash",
         defaultEndpoint = "https://generativelanguage.googleapis.com/v1beta",
         apiKeyEnvironmentVariable = "GEMINI_API_KEY",
         suggestedModels = listOf(
-            "gemini-3.6-flash",
-            "gemini-3.5-flash-lite",
-            "gemini-3.1-pro-preview",
+            "gemini-3.5-flash",
+            "gemini-2.5-flash",
+            "gemini-2.5-pro",
         ),
     ),
     OpenAiCompatible(

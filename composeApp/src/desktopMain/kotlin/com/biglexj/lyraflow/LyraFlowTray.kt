@@ -11,10 +11,7 @@ class LyraFlowTray(
     private val onExit: () -> Unit,
 ) : AutoCloseable {
     private val systemTray = SystemTray.getSystemTray()
-    private val menu = TrayMenuWindow(
-        onOpen = { requestOpen(onOpen) },
-        onExit = { requestExit(onExit) },
-    )
+    private var menu: TrayMenuWindow? = null
     private val trayIcon = TrayIcon(loadIcon(), "LyraFlow")
 
     init {
@@ -24,10 +21,14 @@ class LyraFlowTray(
             override fun mouseReleased(e: MouseEvent) {
                 when {
                     e.isPopupTrigger || e.button == MouseEvent.BUTTON3 -> {
-                        if (menu.isVisible) {
-                            menu.hideMenu()
-                        } else if (!menu.wasRecentlyHidden()) {
-                            menu.showAt(e)
+                        val m = menu ?: TrayMenuWindow(
+                            onOpen = { requestOpen(onOpen) },
+                            onExit = { requestExit(onExit) },
+                        ).also { menu = it }
+                        if (m.isVisible) {
+                            m.hideMenu()
+                        } else if (!m.wasRecentlyHidden()) {
+                            m.showAt(e)
                         }
                     }
                 }
@@ -37,17 +38,18 @@ class LyraFlowTray(
     }
 
     internal fun requestOpen(action: () -> Unit) {
-        menu.hideMenu()
+        menu?.hideMenu()
         action()
     }
 
     internal fun requestExit(action: () -> Unit) {
-        menu.hideMenu()
+        menu?.hideMenu()
         action()
     }
 
     override fun close() {
-        menu.close()
+        menu?.close()
+        menu = null
         systemTray.remove(trayIcon)
     }
 

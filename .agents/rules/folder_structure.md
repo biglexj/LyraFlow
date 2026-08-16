@@ -12,18 +12,33 @@ trigger: always_on
 ```
 LyraFlow/                           # Raíz del repositorio
 ├── .agents/rules/                  # Reglas del agente (base.md, folder_structure.md, ...)
-├── Core/                           # Lógica central del sistema
-├── Services/                       # Servicios de negocio y comunicación
-├── UI/                             # Vistas e interfaces organizadas por features
-├── Docs/                           # Documentación técnica y guías del proyecto
+├── frontend/                       # Código fuente del frontend (si aplica)
+│   └── src/
+│       ├── features/               # Lógica de negocio organizada por dominios (PascalCase)
+│       │   └── [DominioFeature]/   # Cada dominio con sus componentes, islands y servicios
+│       ├── pages/                  # Rutas skinny (kebab-case), solo SEO e importaciones
+│       ├── shared/                 # Componentes transversales usados en 2+ features
+│       │   └── components/         # Átomos UI compartidos
+│       └── theme/                  # Tokens de diseño, colores, tipografías
+│   └── composeApp/                 # En Compose Multiplatform (adaptar semántica)
+├── backend/                        # Código fuente del backend (si aplica)
+├── Docs/                           # Documentación técnica y guías del proyecto (LyraFlow usa Docs con D mayúscula en vez de docs)
+├── process/                        # Planificación, tareas, validación y aprobación
+│   ├── active/                     # Procesos actualmente en ejecución
+│   ├── completed/                  # Procesos validados y aprobados, por año
+│   ├── archive/                    # Procesos cancelados o cerrados incompletos
+│   └── templates/                  # Moldes locales para crear procesos
 ├── scratch/                        # Scripts utilitarios de mantenimiento (solo raíz)
 ├── test/                           # Scripts de prueba temporales (ignorado en .gitignore)
 ├── agent.md                        # Instrucciones principales del agente (raíz)
-├── ROADMAP.md                      # Plan de trabajo y prioridades
+├── ROADMAP.md                      # Pendientes, prioridades e historial del producto
 ├── RELEASE_NOTES.md                # Historial de cambios por versión
 ├── RELEASE_MESSAGE.md              # Mensaje de anuncio del último lanzamiento
 └── README.md                       # Documentación pública del proyecto
 ```
+
+> [!NOTE]
+> Adaptar el árbol anterior al stack tecnológico del proyecto. Mantener la misma **semántica de carpetas**: `features/` para lógica de negocio, `shared/` para código transversal, `pages/` para rutas, `Docs/` para documentación.
 
 ## Reglas de Nomenclatura [CRÍTICO]
 
@@ -31,21 +46,31 @@ LyraFlow/                           # Raíz del repositorio
 |---|---|---|
 | Carpetas de feature | `PascalCase` o `camelCase` según stack | `MusicFeature/`, `music/` |
 | Archivos de componente | `PascalCase` + sufijo de tipo | `HomeScreen.kt`, `ResultCard.kt` |
-| Archivos de modelo / data classes | `PascalCase` | `TranscriptionRequest`, `AppPreferences` |
+| Archivos de ruta/página | `kebab-case` en minúscula | `music-player.kt` |
+| Modelos / Data classes | `PascalCase` | `TranscriptionRequest`, `AppPreferences` |
 | Constantes | `SCREAMING_SNAKE_CASE` | `DEFAULT_SYSTEM_PROMPT` |
 | Variables / funciones | `camelCase` | `processDictation()`, `systemPromptMode` |
 
 ## Reglas Estructurales Obligatorias
 
 ### ✅ PERMITIDO
+- Crear sub-componentes dentro de la carpeta de su feature.
+- Crear componentes en `shared/` solo si son usados por **2 o más** features distintas.
 - Usar `test/` en la raíz para scripts temporales de prueba.
 - Usar `scratch/` en la raíz para scripts de mantenimiento, organizados en subcategorías.
 
 ### ❌ PROHIBIDO — VIOLACIONES COMUNES A EVITAR
-- **Nunca** crear carpetas `scratch/` dentro de carpetas de código fuente (`src/`, `composeApp/`).
-- **Nunca** colocar archivos de lógica de negocio directamente en la raíz sin una estructura semántica.
-- **Nunca** duplicar componentes: si ya existe en componentes compartidos, importarlo; no copiarlo.
+- **Nunca** crear carpetas `scratch/` dentro de `frontend/`, `backend/` o carpetas de código fuente.
+- **Nunca** colocar archivos de lógica de negocio directamente en la raíz de `src/` o `composeApp/` sin una carpeta de feature.
+- **Nunca** duplicar componentes: si ya existe en `shared/`, importarlo; no copiarlo.
+- **Nunca** añadir archivos de modelo/tipo directamente dentro de carpetas de UI.
+- **Nunca** crear carpetas con nombres genéricos (`utils/`, `helpers/`, `misc/`) en la raíz del proyecto sin una categoría clara.
+- **Nunca** dejar archivos de código sueltos en la raíz de la lógica sin pertenecer a una carpeta semántica.
 
 ## Regla de Crecimiento de Archivos
 
 Como buena práctica, se debe **evitar normalmente que un archivo supere las 800 - 900 líneas**. El límite máximo permitido es de **1000 a 1200 líneas** (pudiendo llegar excepcionalmente hasta **1220 líneas**). Los archivos que superen las **1200 - 1220 líneas** son **deuda técnica activa** y el agente DEBE proponer su división en sub-componentes y registrarlo en el ROADMAP como tarea de refactorización pendiente.
+
+- **Límite Preferido**: Evitar exceder de 800 a 900 líneas por archivo.
+- **Límite Máximo Absoluto**: 1000 a 1200 líneas (máximo 1220 líneas excepcionales).
+- **Componentes y Screens**: Si un archivo supera las 1200 líneas, extraer sub-componentes en su carpeta de feature.

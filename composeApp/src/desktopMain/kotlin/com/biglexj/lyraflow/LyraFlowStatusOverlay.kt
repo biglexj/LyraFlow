@@ -24,6 +24,7 @@ class LyraFlowStatusOverlay : JWindow() {
         background = Color(0, 0, 0, 0)
         isAlwaysOnTop = true
         focusableWindowState = false
+        isAutoRequestFocus = false
         size = Dimension(68, 30)
         contentPane = display
         addComponentListener(object : ComponentAdapter() {

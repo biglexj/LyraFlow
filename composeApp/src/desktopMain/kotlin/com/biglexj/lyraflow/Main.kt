@@ -23,6 +23,7 @@ import com.biglexj.lyraflow.core.model.AiProvider
 import com.biglexj.lyraflow.core.network.createPlatformHttpClient
 import com.biglexj.lyraflow.data.provider.MultimodalTranscriptionProvider
 import com.biglexj.lyraflow.data.provider.DisabledTranscriptionProvider
+import com.biglexj.lyraflow.data.scanner.ModelDiscoveryService
 import com.biglexj.lyraflow.domain.transcription.TranscriptionProvider
 import com.biglexj.lyraflow.data.history.InMemoryTranscriptionHistoryRepository
 import com.biglexj.lyraflow.domain.dictation.DictationCoordinator
@@ -56,6 +57,7 @@ private class SingleInstanceLock(
     fun tryAcquire(onFocusRequested: () -> Unit): Boolean {
         // En entorno de desarrollo (ej. ./gradlew :composeApp:run o IDE), no bloquear la ejecución del dev server
         if (isDev) {
+            println("[SingleInstanceLock] Modo desarrollo activo. Ejecutando en paralelo con la app instalada.")
             return true
         }
 
@@ -103,7 +105,12 @@ private class SingleInstanceLock(
 fun main(args: Array<String>) {
     val isDev = System.getProperty("lyraflow.dev") == "true" ||
         System.getProperty("idea.active") != null ||
-        System.getProperty("sun.java.command", "").contains("composeApp")
+        System.getProperty("sun.java.command")?.let { cmd ->
+            cmd.contains("MainKt", ignoreCase = true) ||
+            cmd.contains("Gradle", ignoreCase = true) ||
+            cmd.contains("composeApp", ignoreCase = true) ||
+            cmd.contains("idea", ignoreCase = true)
+        } == true
 
     val lock = SingleInstanceLock(isDev = isDev)
     var bringToFrontCallback: (() -> Unit)? = null
@@ -123,326 +130,420 @@ fun main(args: Array<String>) {
             }
         }
 
-    val preferencesStore = remember { DesktopPreferencesStore() }
-    val apiKeyStore = remember { DesktopApiKeyStore() }
-    val autoStart = remember { WindowsAutoStart() }
-    var preferences by remember { mutableStateOf(preferencesStore.load()) }
-    var apiKey by remember {
-        mutableStateOf(apiKeyStore.load(preferences.provider).ifBlank { environmentApiKey(preferences.provider) })
-    }
-    var recordingTelemetry by remember { mutableStateOf(RecordingTelemetry()) }
-    val scope = remember { CoroutineScope(SupervisorJob() + Dispatchers.Main) }
-    val audio = remember { DesktopAudioCapture() }
-    val injector = remember { DesktopTextInjector() }
-    val statusOverlay = remember { LyraFlowStatusOverlay() }
-    val whisperInstaller = remember { WhisperInstaller() }
-    val whisperStatus by whisperInstaller.state.collectAsState()
-    val whisperProvider = remember(whisperStatus.model, preferences.whisperLanguage, preferences.whisperLlmRefinementExperimental, apiKey, preferences.model) {
-        val base = WhisperTranscriptionProvider(
-            currentModel = { whisperStatus.model },
-            whisperLanguage = { preferences.whisperLanguage },
-        )
-        com.biglexj.lyraflow.platform.whisper.WhisperLlmRefinerProvider(
-            baseWhisperProvider = base,
-            client = createPlatformHttpClient(),
-            apiKey = { apiKey },
-            model = { preferences.model },
-            isRefinementEnabled = { preferences.whisperLlmRefinementExperimental },
-        )
-    }
-    var shortcut by remember { mutableStateOf(GlobalShortcutFactory.create()) }
-    val startsMinimized = args.any { it.equals("--minimized", ignoreCase = true) }
-    var windowVisible by remember { mutableStateOf(!startsMinimized || !isSystemTraySupported()) }
-
-    val historyRepository = remember { InMemoryTranscriptionHistoryRepository() }
-    val coordinator = remember(
-        historyRepository,
-        whisperStatus.available,
-        whisperProvider,
-        preferences.isProviderEnabled,
-        preferences.isWhisperEnabled,
-    ) {
-        val cloudTranscriber = MultimodalTranscriptionProvider(
-            client = createPlatformHttpClient(),
-            apiKey = { apiKey },
-            configuration = { preferences.providerConfiguration },
-        )
-        val primary: TranscriptionProvider = when {
-            preferences.isProviderEnabled -> cloudTranscriber
-            preferences.isWhisperEnabled && whisperStatus.available -> whisperProvider
-            preferences.isWhisperEnabled -> DisabledTranscriptionProvider("⚠️ Whisper local está activado pero el modelo aún no se ha instalado.")
-            else -> DisabledTranscriptionProvider("⚠️ Tanto el dictado en la nube como Whisper local están desactivados.")
+        val preferencesStore = remember { DesktopPreferencesStore() }
+        val apiKeyStore = remember { DesktopApiKeyStore() }
+        val autoStart = remember { WindowsAutoStart() }
+        var preferences by remember { mutableStateOf(preferencesStore.load()) }
+        var apiKey by remember {
+            mutableStateOf(apiKeyStore.load(preferences.provider).ifBlank { environmentApiKey(preferences.provider) })
         }
-        val fallback: () -> TranscriptionProvider? = {
-            if (preferences.isProviderEnabled && preferences.isWhisperEnabled && whisperStatus.available) {
-                whisperProvider
+        var recordingTelemetry by remember { mutableStateOf(RecordingTelemetry()) }
+        val scope = remember { CoroutineScope(SupervisorJob() + Dispatchers.Main) }
+        val audio = remember { DesktopAudioCapture() }
+        val injector = remember { DesktopTextInjector() }
+        val statusOverlay = remember { LyraFlowStatusOverlay() }
+        val modelDiscoveryService = remember { ModelDiscoveryService(createPlatformHttpClient()) }
+        var isScanningModels by remember { mutableStateOf(false) }
+        val whisperInstaller = remember { WhisperInstaller() }
+        val whisperStatus by whisperInstaller.state.collectAsState()
+        val whisperProvider = remember(whisperStatus.model, preferences.whisperLanguage, preferences.whisperLlmRefinementExperimental, apiKey, preferences.model) {
+            val base = WhisperTranscriptionProvider(
+                currentModel = { whisperStatus.model },
+                whisperLanguage = { preferences.whisperLanguage },
+            )
+            com.biglexj.lyraflow.platform.whisper.WhisperLlmRefinerProvider(
+                baseWhisperProvider = base,
+                client = createPlatformHttpClient(),
+                apiKey = { apiKey },
+                model = { preferences.model },
+                isRefinementEnabled = { preferences.whisperLlmRefinementExperimental },
+            )
+        }
+        var shortcut by remember { mutableStateOf(GlobalShortcutFactory.create()) }
+        val startsMinimized = args.any { it.equals("--minimized", ignoreCase = true) }
+        var windowVisible by remember { mutableStateOf(!startsMinimized) }
+
+        val historyRepository = remember { InMemoryTranscriptionHistoryRepository() }
+        val coordinator = remember(
+            historyRepository,
+            whisperStatus.available,
+            whisperProvider,
+            preferences.isProviderEnabled,
+            preferences.isWhisperEnabled,
+        ) {
+            val cloudTranscriber = MultimodalTranscriptionProvider(
+                client = createPlatformHttpClient(),
+                apiKey = { apiKey },
+                configuration = { preferences.providerConfiguration },
+            )
+            val primary: TranscriptionProvider = when {
+                preferences.isProviderEnabled -> cloudTranscriber
+                preferences.isWhisperEnabled && whisperStatus.available -> whisperProvider
+                preferences.isWhisperEnabled -> DisabledTranscriptionProvider("⚠️ Whisper local está activado pero el modelo aún no se ha instalado.")
+                else -> DisabledTranscriptionProvider("⚠️ Tanto el dictado en la nube como Whisper local están desactivados.")
+            }
+            val fallback: () -> TranscriptionProvider? = {
+                if (preferences.isProviderEnabled && preferences.isWhisperEnabled && whisperStatus.available) {
+                    whisperProvider
+                } else {
+                    null
+                }
+            }
+            DictationCoordinator(
+                transcriber = primary,
+                fallbackTranscriber = fallback,
+                historyRepository = historyRepository,
+                isHistoryEnabled = { preferences.historyRetention != HistoryRetentionPeriod.Disabled },
+            )
+        }
+        val state by coordinator.state.collectAsState()
+        val geminiQuotaExhausted by coordinator.geminiQuotaExhausted.collectAsState()
+        val recording = remember { mutableStateOf(false) }
+
+        LaunchedEffect(state, recordingTelemetry.level) {
+            statusOverlay.update(state, recordingTelemetry.level)
+        }
+
+        LaunchedEffect(preferences.launchAtStartup) {
+            autoStart.setEnabled(preferences.launchAtStartup)
+        }
+
+        fun toggleRecording() {
+            if (coordinator.state.value is DictationState.Transcribing) {
+                return
+            }
+            if (!recording.value) {
+                recordingTelemetry = RecordingTelemetry()
+                injector.rememberForegroundTarget()
+                runCatching {
+                    audio.start { level, durationMillis ->
+                        scope.launch { recordingTelemetry = RecordingTelemetry(level, durationMillis) }
+                    }
+                }
+                    .onSuccess {
+                        recording.value = true
+                        coordinator.markListening()
+                    }
+            } else {
+                recording.value = false
+                val wav = audio.stop()
+                scope.launch {
+                    coordinator.process(
+                        TranscriptionRequest(
+                            audio = wav,
+                            model = preferences.model,
+                            systemPrompt = preferences.systemPrompt,
+                        ),
+                    )
+                    if (preferences.autoInject) {
+                        val text = (coordinator.state.value as? DictationState.Completed)?.refinedText.orEmpty()
+                        injector.inject(text)
+                    }
+                }
+            }
+        }
+
+        remember {
+            shortcut.start(preferences.shortcut) { scope.launch { toggleRecording() } }
+            true
+        }
+
+        fun scanModels(autoSelectBest: Boolean = false, keyOverride: String? = null) {
+            val currentKey = keyOverride ?: apiKey
+            if (currentKey.isBlank() || isScanningModels) return
+            scope.launch {
+                isScanningModels = true
+                runCatching {
+                    val discovered = modelDiscoveryService.discoverModels(
+                        provider = preferences.provider,
+                        apiKey = currentKey,
+                        endpoint = preferences.endpoint,
+                    )
+                    val modelIds = discovered.map { it.id }
+                    if (modelIds.isNotEmpty()) {
+                        val updatedMap = preferences.discoveredModels.toMutableMap()
+                        updatedMap[preferences.provider] = modelIds
+                        val newModel = if (autoSelectBest || preferences.model.isBlank()) {
+                            modelIds.first()
+                        } else {
+                            preferences.model
+                        }
+                        val updatedPrefs = preferences.copy(
+                            discoveredModels = updatedMap,
+                            model = newModel,
+                        )
+                        preferences = updatedPrefs
+                        preferencesStore.save(updatedPrefs)
+                    }
+                }
+                isScanningModels = false
+            }
+        }
+
+        val savedWindowState = remember { preferencesStore.loadWindowState() }
+        val initialPlacement = if (savedWindowState.isMaximized) WindowPlacement.Maximized else WindowPlacement.Floating
+        val windowState = rememberWindowState(
+            placement = initialPlacement,
+            position = WindowPosition(Alignment.Center),
+            width = savedWindowState.widthDp.dp,
+            height = savedWindowState.heightDp.dp,
+        )
+
+        fun saveCurrentWindowState() {
+            val isMaximized = windowState.placement == WindowPlacement.Maximized
+            val widthDp = if (isMaximized) savedWindowState.widthDp else windowState.size.width.value.toInt().coerceAtLeast(600)
+            val heightDp = if (isMaximized) savedWindowState.heightDp else windowState.size.height.value.toInt().coerceAtLeast(400)
+            preferencesStore.saveWindowState(widthDp = widthDp, heightDp = heightDp, isMaximized = isMaximized)
+        }
+
+        fun exitLyraFlow() {
+            saveCurrentWindowState()
+            if (recording.value) {
+                recording.value = false
+                runCatching { audio.stop() }
+            }
+            shortcut.close()
+            statusOverlay.dispose()
+            scope.cancel()
+            exitApplication()
+        }
+
+        val tray = remember {
+            if (isSystemTraySupported()) {
+                LyraFlowTray(
+                    onOpen = { windowVisible = true },
+                    onExit = ::exitLyraFlow,
+                )
             } else {
                 null
             }
         }
-        DictationCoordinator(
-            transcriber = primary,
-            fallbackTranscriber = fallback,
-            historyRepository = historyRepository,
-            isHistoryEnabled = { preferences.historyRetention != HistoryRetentionPeriod.Disabled },
-        )
-    }
-    val state by coordinator.state.collectAsState()
-    val geminiQuotaExhausted by coordinator.geminiQuotaExhausted.collectAsState()
-    val recording = remember { mutableStateOf(false) }
-
-    LaunchedEffect(state, recordingTelemetry.level) {
-        statusOverlay.update(state, recordingTelemetry.level)
-    }
-
-    LaunchedEffect(preferences.launchAtStartup) {
-        autoStart.setEnabled(preferences.launchAtStartup)
-    }
-
-    fun toggleRecording() {
-        if (coordinator.state.value is DictationState.Transcribing) {
-            return
+        DisposableEffect(tray) {
+            onDispose {
+                tray?.close()
+                statusOverlay.dispose()
+            }
         }
-        if (!recording.value) {
-            recordingTelemetry = RecordingTelemetry()
-            injector.rememberForegroundTarget()
+
+        val appIcon = remember {
             runCatching {
-                audio.start { level, durationMillis ->
-                    scope.launch { recordingTelemetry = RecordingTelemetry(level, durationMillis) }
+                val stream = Thread.currentThread().contextClassLoader.getResourceAsStream("Square44x44Logo.png")
+                    ?: LyraFlowTray::class.java.classLoader.getResourceAsStream("Square44x44Logo.png")
+                stream?.use { androidx.compose.ui.res.loadImageBitmap(it) }?.let { androidx.compose.ui.graphics.painter.BitmapPainter(it) }
+            }.getOrNull()
+        }
+
+        Window(
+            onCloseRequest = {
+                saveCurrentWindowState()
+                if (tray != null) windowVisible = false else exitLyraFlow()
+            },
+            visible = windowVisible,
+            title = if (isDev) "LyraFlow [Dev]" else "LyraFlow",
+            icon = appIcon,
+            state = windowState,
+        ) {
+            DisposableEffect(window) {
+                runCatching {
+                    val stream = Thread.currentThread().contextClassLoader.getResourceAsStream("Square44x44Logo.png")
+                        ?: LyraFlowTray::class.java.classLoader.getResourceAsStream("Square44x44Logo.png")
+                    stream?.use { javax.imageio.ImageIO.read(it) }?.let { window.iconImage = it }
                 }
-            }
-                .onSuccess {
-                    recording.value = true
-                    coordinator.markListening()
-                }
-        } else {
-            recording.value = false
-            val wav = audio.stop()
-            scope.launch {
-                coordinator.process(
-                    TranscriptionRequest(
-                        audio = wav,
-                        model = preferences.model,
-                        systemPrompt = preferences.systemPrompt,
-                    ),
-                )
-                if (preferences.autoInject) {
-                    val text = (coordinator.state.value as? DictationState.Completed)?.refinedText.orEmpty()
-                    injector.inject(text)
-                }
-            }
-        }
-    }
 
-    remember {
-        shortcut.start(preferences.shortcut) { scope.launch { toggleRecording() } }
-        true
-    }
-
-    val savedWindowState = remember { preferencesStore.loadWindowState() }
-    val windowState = rememberWindowState(
-        placement = if (savedWindowState.isMaximized) WindowPlacement.Maximized else WindowPlacement.Floating,
-        size = DpSize(savedWindowState.widthDp.dp, savedWindowState.heightDp.dp),
-        position = WindowPosition(Alignment.Center),
-    )
-
-    fun saveCurrentWindowState() {
-        val isMaximized = windowState.placement == WindowPlacement.Maximized
-        val widthDp = if (isMaximized) savedWindowState.widthDp else windowState.size.width.value.toInt().coerceAtLeast(600)
-        val heightDp = if (isMaximized) savedWindowState.heightDp else windowState.size.height.value.toInt().coerceAtLeast(400)
-        preferencesStore.saveWindowState(widthDp = widthDp, heightDp = heightDp, isMaximized = isMaximized)
-    }
-
-    fun exitLyraFlow() {
-        saveCurrentWindowState()
-        if (recording.value) {
-            recording.value = false
-            runCatching { audio.stop() }
-        }
-        shortcut.close()
-        statusOverlay.dispose()
-        scope.cancel()
-        exitApplication()
-    }
-
-    val tray = remember {
-        if (isSystemTraySupported()) {
-            LyraFlowTray(
-                onOpen = { windowVisible = true },
-                onExit = ::exitLyraFlow,
-            )
-        } else {
-            null
-        }
-    }
-    DisposableEffect(tray) {
-        onDispose {
-            tray?.close()
-            statusOverlay.dispose()
-        }
-    }
-
-    Window(
-        onCloseRequest = {
-            saveCurrentWindowState()
-            if (tray != null) windowVisible = false else exitLyraFlow()
-        },
-        visible = windowVisible,
-        title = "LyraFlow",
-        icon = painterResource("Square44x44Logo.png"),
-        state = windowState,
-    ) {
-        DisposableEffect(window) {
-            bringToFrontCallback = {
-                windowVisible = true
-                scope.launch(Dispatchers.Main) {
+                fun forceNativeForeground() {
                     window.isMinimized = false
                     window.toFront()
                     window.requestFocus()
-                }
-            }
-
-            val focusListener = object : WindowFocusListener {
-                override fun windowGainedFocus(event: java.awt.event.WindowEvent) = Unit
-                override fun windowLostFocus(event: java.awt.event.WindowEvent) = injector.rememberForegroundTarget()
-            }
-            window.addWindowFocusListener(focusListener)
-
-            val dropTargetListener = object : java.awt.dnd.DropTargetListener {
-                override fun dragEnter(dtde: java.awt.dnd.DropTargetDragEvent) {
-                    dtde.acceptDrag(java.awt.dnd.DnDConstants.ACTION_COPY)
+                    runCatching {
+                        val hwnd = com.sun.jna.platform.win32.WinDef.HWND(com.sun.jna.Native.getWindowPointer(window))
+                        com.sun.jna.platform.win32.User32.INSTANCE.SetForegroundWindow(hwnd)
+                    }
                 }
 
-                override fun dragOver(dtde: java.awt.dnd.DropTargetDragEvent) {
-                    dtde.acceptDrag(java.awt.dnd.DnDConstants.ACTION_COPY)
+                if (isDev) {
+                    java.awt.EventQueue.invokeLater {
+                        forceNativeForeground()
+                    }
+                }
+                bringToFrontCallback = {
+                    windowVisible = true
+                    scope.launch(Dispatchers.Main) {
+                        forceNativeForeground()
+                    }
                 }
 
-                override fun dropActionChanged(dtde: java.awt.dnd.DropTargetDragEvent) {
-                    dtde.acceptDrag(java.awt.dnd.DnDConstants.ACTION_COPY)
+                val focusListener = object : WindowFocusListener {
+                    override fun windowGainedFocus(event: java.awt.event.WindowEvent) = Unit
+                    override fun windowLostFocus(event: java.awt.event.WindowEvent) = injector.rememberForegroundTarget()
                 }
+                window.addWindowFocusListener(focusListener)
 
-                override fun dragExit(dte: java.awt.dnd.DropTargetEvent) = Unit
+                val dropTargetListener = object : java.awt.dnd.DropTargetListener {
+                    override fun dragEnter(dtde: java.awt.dnd.DropTargetDragEvent) {
+                        dtde.acceptDrag(java.awt.dnd.DnDConstants.ACTION_COPY)
+                    }
 
-                override fun drop(evt: java.awt.dnd.DropTargetDropEvent) {
+                    override fun dragOver(dtde: java.awt.dnd.DropTargetDragEvent) {
+                        dtde.acceptDrag(java.awt.dnd.DnDConstants.ACTION_COPY)
+                    }
+
+                    override fun dropActionChanged(dtde: java.awt.dnd.DropTargetDragEvent) {
+                        dtde.acceptDrag(java.awt.dnd.DnDConstants.ACTION_COPY)
+                    }
+
+                    override fun dragExit(dte: java.awt.dnd.DropTargetEvent) = Unit
+
+                    override fun drop(evt: java.awt.dnd.DropTargetDropEvent) {
+                        try {
+                            evt.acceptDrop(java.awt.dnd.DnDConstants.ACTION_COPY)
+                            val droppedFiles = evt.transferable.getTransferData(java.awt.datatransfer.DataFlavor.javaFileListFlavor) as? List<*>
+                            val targetFile = droppedFiles?.firstOrNull() as? java.io.File
+                            if (targetFile != null && targetFile.exists()) {
+                                val name = targetFile.name.lowercase()
+                                val isAudio = name.endsWith(".wav") || name.endsWith(".mp3") || name.endsWith(".m4a") ||
+                                    name.endsWith(".ogg") || name.endsWith(".flac") || name.endsWith(".aac") || name.endsWith(".wma")
+                                val isImage = name.endsWith(".png") || name.endsWith(".jpg") || name.endsWith(".jpeg") ||
+                                    name.endsWith(".webp") || name.endsWith(".bmp") || name.endsWith(".gif")
+
+                                if (isAudio || isImage) {
+                                    val bytes = targetFile.readBytes()
+                                    val mimeType = when {
+                                        name.endsWith(".png") -> "image/png"
+                                        name.endsWith(".jpg") || name.endsWith(".jpeg") -> "image/jpeg"
+                                        name.endsWith(".webp") -> "image/webp"
+                                        name.endsWith(".bmp") -> "image/bmp"
+                                        name.endsWith(".gif") -> "image/gif"
+                                        name.endsWith(".mp3") -> "audio/mp3"
+                                        name.endsWith(".m4a") -> "audio/m4a"
+                                        name.endsWith(".ogg") -> "audio/ogg"
+                                        name.endsWith(".flac") -> "audio/flac"
+                                        else -> "audio/wav"
+                                    }
+                                    val prompt = if (isImage) {
+                                        "Extrae y transcribe fielmente todo el texto visible en esta imagen (reconocimiento OCR), o describe con claridad y precisión el contenido si no contiene texto visible. Devuelve únicamente el resultado final limpio, estructurado y sin comentarios adicionales."
+                                    } else {
+                                        preferences.systemPrompt
+                                    }
+
+                                    scope.launch {
+                                        coordinator.process(
+                                            TranscriptionRequest(
+                                                audio = bytes,
+                                                mimeType = mimeType,
+                                                model = preferences.model,
+                                                systemPrompt = prompt,
+                                            ),
+                                        )
+                                        if (preferences.autoInject) {
+                                            val text = (coordinator.state.value as? DictationState.Completed)?.refinedText.orEmpty()
+                                            injector.inject(text)
+                                        }
+                                    }
+                                }
+                            }
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+                    }
+                }
+                fun registerDropTargetRecursively(component: java.awt.Component) {
                     try {
-                        evt.acceptDrop(java.awt.dnd.DnDConstants.ACTION_COPY)
-                        val droppedFiles = evt.transferable.getTransferData(java.awt.datatransfer.DataFlavor.javaFileListFlavor) as? List<*>
-                        val audioFile = droppedFiles?.firstOrNull() as? java.io.File
-                        if (audioFile != null && audioFile.exists()) {
-                            val bytes = audioFile.readBytes()
-                            scope.launch {
-                                coordinator.process(
-                                    TranscriptionRequest(
-                                        audio = bytes,
-                                        model = preferences.model,
-                                        systemPrompt = preferences.systemPrompt,
-                                    ),
-                                )
-                                if (preferences.autoInject) {
-                                    val text = (coordinator.state.value as? DictationState.Completed)?.refinedText.orEmpty()
-                                    injector.inject(text)
+                        component.dropTarget = java.awt.dnd.DropTarget(component, dropTargetListener)
+                    } catch (_: Throwable) {}
+
+                    if (component is java.awt.Container) {
+                        component.addContainerListener(object : java.awt.event.ContainerAdapter() {
+                            override fun componentAdded(e: java.awt.event.ContainerEvent) {
+                                registerDropTargetRecursively(e.child)
+                            }
+                        })
+                        component.components.forEach { child ->
+                            registerDropTargetRecursively(child)
+                        }
+                    }
+                }
+
+                registerDropTargetRecursively(window)
+
+                onDispose {
+                    saveCurrentWindowState()
+                    window.removeWindowFocusListener(focusListener)
+                }
+            }
+            LyraFlowApp(
+                platform = "${System.getProperty("os.name")} · ${shortcut.status}",
+                state = state,
+                configuration = AppConfiguration(
+                    preferences = preferences,
+                    sessionApiKey = apiKey,
+                ),
+                recordingTelemetry = recordingTelemetry,
+                whisperStatus = whisperStatus,
+                historyRepository = historyRepository,
+                actions = ShellActions(
+                    toggleRecording = ::toggleRecording,
+                    injectLastResult = {
+                        val text = (state as? DictationState.Completed)?.refinedText.orEmpty()
+                        injector.inject(text)
+                    },
+                    reset = coordinator::reset,
+                    updatePreferences = { updated ->
+                        val shortcutChanged = preferences.shortcut != updated.shortcut
+                        val providerChanged = preferences.provider != updated.provider
+                        if (providerChanged) {
+                            apiKey = apiKeyStore.load(updated.provider).ifBlank { environmentApiKey(updated.provider) }
+                            if (apiKey.isNotBlank() && updated.discoveredModels[updated.provider].isNullOrEmpty()) {
+                                scanModels(autoSelectBest = false)
+                            }
+                        }
+                        preferences = updated
+                        preferencesStore.save(updated)
+                        autoStart.setEnabled(updated.launchAtStartup)
+                        if (shortcutChanged) {
+                            shortcut.close()
+                            shortcut = GlobalShortcutFactory.create().also { replacement ->
+                                replacement.start(updated.shortcut) {
+                                    scope.launch { toggleRecording() }
                                 }
                             }
                         }
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
-                }
-            }
-            fun registerDropTargetRecursively(component: java.awt.Component) {
-                try {
-                    component.dropTarget = java.awt.dnd.DropTarget(component, dropTargetListener)
-                } catch (_: Throwable) {}
-
-                if (component is java.awt.Container) {
-                    component.addContainerListener(object : java.awt.event.ContainerAdapter() {
-                        override fun componentAdded(e: java.awt.event.ContainerEvent) {
-                            registerDropTargetRecursively(e.child)
+                    },
+                    updateApiKey = {
+                        val wasEmpty = apiKey.isBlank()
+                        apiKey = it
+                        apiKeyStore.save(preferences.provider, it)
+                        coordinator.resetQuotaExhausted()
+                        if (it.isNotBlank()) {
+                            scanModels(autoSelectBest = wasEmpty, keyOverride = it)
                         }
-                    })
-                    component.components.forEach { child ->
-                        registerDropTargetRecursively(child)
-                    }
-                }
-            }
-
-            registerDropTargetRecursively(window)
-
-            onDispose {
-                saveCurrentWindowState()
-                window.removeWindowFocusListener(focusListener)
-            }
-        }
-        LaunchedEffect(windowVisible) {
-            if (windowVisible) {
-                window.toFront()
-                window.requestFocus()
-            }
-        }
-        LyraFlowApp(
-            platform = "${System.getProperty("os.name")} · ${shortcut.status}",
-            state = state,
-            configuration = AppConfiguration(
-                preferences = preferences,
-                sessionApiKey = apiKey,
-            ),
-            recordingTelemetry = recordingTelemetry,
-            whisperStatus = whisperStatus,
-            historyRepository = historyRepository,
-            actions = ShellActions(
-                toggleRecording = ::toggleRecording,
-                injectLastResult = {
-                    val text = (state as? DictationState.Completed)?.refinedText.orEmpty()
-                    injector.inject(text)
-                },
-                reset = coordinator::reset,
-                updatePreferences = { updated ->
-                    val shortcutChanged = preferences.shortcut != updated.shortcut
-                    if (preferences.provider != updated.provider) {
-                        apiKey = apiKeyStore.load(updated.provider).ifBlank { environmentApiKey(updated.provider) }
-                    }
-                    preferences = updated
-                    preferencesStore.save(updated)
-                    autoStart.setEnabled(updated.launchAtStartup)
-                    if (shortcutChanged) {
-                        shortcut.close()
-                        shortcut = GlobalShortcutFactory.create().also { replacement ->
-                            replacement.start(updated.shortcut) {
-                                scope.launch { toggleRecording() }
+                    },
+                    installWhisper = { model -> scope.launch { whisperInstaller.install(model) } },
+                    scanModels = { scanModels(autoSelectBest = false) },
+                    isScanningModels = isScanningModels,
+                    retry = {
+                        scope.launch {
+                            coordinator.retry()
+                            if (preferences.autoInject) {
+                                val text = (coordinator.state.value as? DictationState.Completed)?.refinedText.orEmpty()
+                                injector.inject(text)
                             }
                         }
-                    }
-                },
-                updateApiKey = {
-                    apiKey = it
-                    apiKeyStore.save(preferences.provider, it)
-                    coordinator.resetQuotaExhausted()
-                },
-                installWhisper = { model -> scope.launch { whisperInstaller.install(model) } },
-                retry = {
-                    scope.launch {
-                        coordinator.retry()
-                        if (preferences.autoInject) {
-                            val text = (coordinator.state.value as? DictationState.Completed)?.refinedText.orEmpty()
-                            injector.inject(text)
+                    },
+                    retryWhisper = {
+                        scope.launch {
+                            coordinator.retry(whisperProvider)
+                            if (preferences.autoInject) {
+                                val text = (coordinator.state.value as? DictationState.Completed)?.refinedText.orEmpty()
+                                injector.inject(text)
+                            }
                         }
-                    }
-                },
-                retryWhisper = {
-                    scope.launch {
-                        coordinator.retry(whisperProvider)
-                        if (preferences.autoInject) {
-                            val text = (coordinator.state.value as? DictationState.Completed)?.refinedText.orEmpty()
-                            injector.inject(text)
-                        }
-                    }
-                },
-                geminiQuotaExhausted = geminiQuotaExhausted,
-                resetQuotaExhausted = coordinator::resetQuotaExhausted,
-            ),
-        )
+                    },
+                    geminiQuotaExhausted = geminiQuotaExhausted,
+                    resetQuotaExhausted = coordinator::resetQuotaExhausted,
+                ),
+            )
+        }
     }
-}
 }
 
 private fun environmentApiKey(provider: AiProvider): String =

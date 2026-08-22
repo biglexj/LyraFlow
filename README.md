@@ -2,6 +2,16 @@
 
 LyraFlow es una aplicación de dictado inteligente construida con Kotlin Multiplatform y Compose Multiplatform. Captura tu voz mediante un atajo global, la convierte en texto contextualizado y la inserta en la aplicación activa.
 
+## 📸 Capturas de Pantalla
+
+| Inicio claro | Inicio oscuro |
+| :---: | :---: |
+| ![Inicio claro](screenshots/home_light.png) | ![Inicio oscuro](screenshots/home_dark.png) |
+
+| Ajustes | Modelo Whisper local |
+| :---: | :---: |
+| ![Ajustes](screenshots/settings.png) | ![Modelo Whisper local](screenshots/home_whisper_model.png) |
+
 ## Funciones actuales
 
 - Atajo global `Ctrl + Espacio` en Windows, personalizable con combinaciones de 2 o 3 teclas.

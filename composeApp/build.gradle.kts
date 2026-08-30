@@ -87,7 +87,6 @@ android {
 compose.desktop {
     application {
         mainClass = "com.biglexj.lyraflow.MainKt"
-        jvmArgs("-Dlyraflow.dev=true")
         val validJpackageJdk = run {
             val envJavaHome = System.getenv("JAVA_HOME")
             if (!envJavaHome.isNullOrBlank() && File(envJavaHome, "bin/jpackage.exe").exists()) return@run envJavaHome
@@ -122,7 +121,7 @@ compose.desktop {
             description = "Dictado inteligente multiplataforma"
 
             windows {
-                iconFile.set(rootProject.file("Icon/app_icon.ico"))
+                iconFile.set(project.file("src/desktopMain/resources/app_icon.ico"))
                 msiPackageVersion = appVersion
                 exePackageVersion = appVersion
                 upgradeUuid = "55ee1e98-1bd5-4d89-990f-27756b85820c"
@@ -143,5 +142,7 @@ compose.desktop {
 }
 
 tasks.withType<JavaExec>().configureEach {
-    systemProperty("lyraflow.dev", "true")
+    if (name == "run") {
+        systemProperty("lyraflow.channel", "dev")
+    }
 }

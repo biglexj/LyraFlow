@@ -5,21 +5,30 @@
 
 ---
 
-## 1. 🔒 Garantía de Instancia Única (Single Instance Lock) & Condición de Aplicabilidad [CRÍTICO]
+## 1. 🔒 Garantía de Instancia Única (Single Instance Lock) & Reactivación [CRÍTICO]
 
 > [!IMPORTANT]
-> **Condición de Aplicabilidad**: La restricción de instancia única (**Single-Instance Lock**) **APLICA ÚNICAMENTE a aplicaciones que se ejecuten en segundo plano o que mantengan un proceso residente en la bandeja del sistema (System Tray)** (ej. *LunaFetch*, *LyraFlow* con atajos de teclado globales).
-> 
-> **Excepción de Multi-Instancia en Apps Estándar**: Aplicaciones independientes que NO operan en segundo plano ni en la bandeja (ej. *Ely-Tesia* o editores/visualizadores de archivos) **NO DEBEN aplicar el bloqueo de instancia única**. El usuario debe poder abrir múltiples ventanas e instancias independientes de forma simultánea para comparar o trabajar con diferentes archivos a la vez.
+> **Estándar Core**: Conforme a `Core-Docs/features/single-instance/README.md` y `Core-Docs/platforms/windows/single_instance_lock.md`.
+> Toda aplicación de escritorio instalada DEBE reutilizar su instancia viva por defecto cuando el usuario vuelve a iniciarla desde Inicio, el buscador, la barra de tareas, un acceso directo o la bandeja del sistema.
 
-Para prevenir duplicación de procesos e iconos duplicados en la bandeja del sistema (system tray) al relanzar aplicaciones residentes en producción:
+Para prevenir la duplicación de procesos, colisión de recursos o iconos duplicados en la bandeja del sistema (System Tray):
 
-- **Mecanismo Obligatorio (Apps de Segundo Plano / Tray)**: La aplicación DEBE adquirir un socket de bucle local (`ServerSocket(127.0.0.1:PORT)`) o un bloqueo exclusivo de archivo (`FileLock`) al iniciar el proceso principal.
-- **Bypass en Modo Desarrollo (`isDev`) [OBLIGATORIO Y CRÍTICO]**: El Single-Instance Lock **NUNCA DEBE bloquear ni cerrar la aplicación cuando se ejecuta desde el entorno de desarrollo** (`./gradlew :composeApp:run`, IDE IntelliJ/VSCode o cuando la propiedad del sistema `-D{app}.dev=true` / `idea.active` está presente).
-  - La aplicación DEBE detectar el flag `isDev` (por ejemplo, `System.getProperty("lyraflow.dev") == "true"` inyectado en los `jvmArgs` de Gradle en `build.gradle.kts`) y **retornar `true` sin bloquear ni finalizar con `exitProcess(0)`**.
-  - Esto garantiza que el desarrollador pueda compilar, probar e interactuar con la versión en desarrollo sin que la versión instalada en Windows cierre o interfiera con la app dev.
-- **Comportamiento en Producción**: Si una segunda instancia del ejecutable distribuido (`.exe` / `.msi`) intenta iniciar en producción en una app de segundo plano, detectará la falla al adquirir el bloqueo e **inmediatamente traerá al frente la ventana de la primera instancia activa** (o la desminimizará de la bandeja) y **finalizará la nueva instancia con código 0**.
-- **Limpieza de Recursos**: Liberar el socket/bloqueo de forma segura durante el desecho de la aplicación (`DisposableEffect` / `onCloseRequested`).
+- **Aislamiento por Canales**:
+  - Canal de Producción (`stable`): Puerto por defecto `49281`.
+  - Canal de Desarrollo (`dev`): Puerto `49283`.
+  - Ambos canales aplican instancia única de forma predeterminada, permitiendo que una ejecución local en desarrollo coexista con una versión estable instalada sin interferencias.
+- **Despacho IPC de Activación**:
+  - Si una segunda instancia intenta iniciar, detecta el bloqueo ocupado y envía una señal `ACTIVATE` (o los argumentos pasados) a la instancia primaria por IPC local antes de finalizar inmediatamente con código `0` (`exitProcess(0)`).
+  - La instancia secundaria **NUNCA debe inicializar UI, bandeja del sistema, listeners, captura de audio, atajos globales ni servicios en segundo plano**.
+- **Restauración y Foco en la Instancia Primaria**:
+  - La instancia primaria recibe el mensaje en el hilo de interfaz, desminimiza la ventana si estaba minimizada o en bandeja (`windowVisible = true`), y fuerza el foco en primer plano en Windows mediante `ShowWindow(hwnd, SW_RESTORE)` y `SetForegroundWindow(hwnd)`.
+- **Configuración Limpia en Gradle**:
+  - El flag de canal de desarrollo (`lyraflow.channel=dev`) se inyecta exclusivamente en la tarea `run` (`tasks.withType<JavaExec>`).
+  - **Queda estrictamente prohibido** declarar flags de desarrollo en `compose.desktop.application.jvmArgs`, ya que `jpackage` los empaqueta permanentemente en el archivo `.cfg` del launcher de producción.
+- **Bypass Explícito para Pruebas**:
+  - La ejecución simultánea de múltiples instancias en desarrollo solo se permite cuando se declara explícitamente `-Dlyraflow.allowMultipleInstances=true`.
+- **Limpieza de Recursos**:
+  - La instancia primaria libera el socket de bloqueo de forma segura durante el cierre ordenado (`SingleInstanceLock.release()`).
 
 ---
 

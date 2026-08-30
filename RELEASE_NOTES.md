@@ -1,12 +1,18 @@
 # 🎙️✨ LyraFlow — Historial de Versiones
 
-📌 **Versión actual: `1.1.5` · Versión mínima requerida: `1.0.0`**
+📌 **Versión actual: `1.1.6` · Versión mínima requerida: `1.0.0`**
 
 > [!IMPORTANT]
-> **Regla del .9 para Versionado:**
-> - Nunca se debe pasar de una versión de parche `.9` (ej. de `1.0.9` no se pasa a `1.0.10`). Al alcanzar el límite del parche `.9`, se incrementa el número menor/secundario (ej. pasando a `1.1.0`).
-> - De igual manera, al alcanzar el límite de la versión menor `1.9.9` (o ante hitos de arquitectura significativos posteriores a `1.9.x`), se debe saltar obligatoriamente al siguiente número mayor completo, pasando a **`2.0.0`**. No se permiten números como `1.9.10` o `1.10.x`.
-> - **Nombres de Dulces para Versiones Mayores:** Cada versión mayor debe nombrarse con un nombre de dulce o postre al estilo de las versiones clásicas de Android en orden alfabético. El nombre debe reflejarse coordinadamente en el `README.md`, en este archivo y, cuando corresponda, en el `package.json` del frontend.
+> **Estándar SemVer Flexible (Core-Docs v1.7.0):**
+> - Se utiliza SemVer estándar (`MAJOR.MINOR.PATCH`) sin límites artificiales por dígito (segmentos mayores a 9 como `1.1.12` son 100% válidos).
+> - Se incrementa `PATCH`, `MINOR` o `MAJOR` según el alcance real del cambio y compatibilidad, sin saltos forzados de versión basados únicamente en alcanzar un dígito 9.
+> - **Nombres de Dulces para Versiones Mayores:** Cada versión mayor (`MAJOR`, ej. `2.0.0`) debe nombrarse con un nombre de dulce o postre al estilo de las versiones clásicas de Android en orden alfabético.
+
+## [1.1.6] - 2026-08-30
+
+LyraFlow v1.1.6 estandariza la arquitectura de instancia única conforme a las directivas del ecosistema y reorganiza los recursos de identidad gráfica:
+- **Instancia Única y Reactivación según Core-Docs**: Separación de identidades por canal de distribución (`stable` en puerto 49281 y `dev` en puerto 49283), eliminación de heurísticas frágiles en runtime, erradicación de flags de desarrollo en empaquetado de producción, despacho IPC ultrarrápido con salida limpia en código 0 y restauración nativa con foco forzado en Windows (`ShowWindow SW_RESTORE` y `SetForegroundWindow`).
+- **Estandarización de Organización de Activos**: Migración y ordenamiento de recursos gráficos, iconos de identidad y capturas documentales bajo la estructura estándar de activos del ecosistema (`assets/branding/icons/` y `Docs/screenshots/`).
 
 ## [1.1.5] - 2026-08-16
 

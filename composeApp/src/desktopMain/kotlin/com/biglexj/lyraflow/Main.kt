@@ -37,6 +37,7 @@ import com.biglexj.lyraflow.platform.injection.DesktopTextInjector
 import com.biglexj.lyraflow.platform.settings.DesktopPreferencesStore
 import com.biglexj.lyraflow.platform.settings.DesktopApiKeyStore
 import com.biglexj.lyraflow.platform.settings.WindowsAutoStart
+import com.biglexj.lyraflow.platform.SingleInstanceLock
 import com.biglexj.lyraflow.platform.whisper.WhisperInstaller
 import com.biglexj.lyraflow.platform.whisper.WhisperTranscriptionProvider
 import kotlinx.coroutines.CoroutineScope
@@ -46,76 +47,11 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import java.awt.event.WindowFocusListener
 
-private const val SINGLE_INSTANCE_PORT = 49281
-
-private class SingleInstanceLock(
-    private val isDev: Boolean,
-    private val port: Int = SINGLE_INSTANCE_PORT,
-) {
-    private var serverSocket: java.net.ServerSocket? = null
-
-    fun tryAcquire(onFocusRequested: () -> Unit): Boolean {
-        // En entorno de desarrollo (ej. ./gradlew :composeApp:run o IDE), no bloquear la ejecución del dev server
-        if (isDev) {
-            println("[SingleInstanceLock] Modo desarrollo activo. Ejecutando en paralelo con la app instalada.")
-            return true
-        }
-
-        return try {
-            val socket = java.net.ServerSocket(port, 50, java.net.InetAddress.getByName("127.0.0.1"))
-            serverSocket = socket
-            Thread {
-                while (!socket.isClosed) {
-                    try {
-                        val client = socket.accept()
-                        client.close()
-                        onFocusRequested()
-                    } catch (_: Exception) {
-                        break
-                    }
-                }
-            }.apply {
-                isDaemon = true
-                name = "LyraFlow-SingleInstanceListener"
-                start()
-            }
-            true
-        } catch (_: Exception) {
-            notifyPrimaryInstance()
-            false
-        }
-    }
-
-    private fun notifyPrimaryInstance() {
-        try {
-            java.net.Socket("127.0.0.1", port).use { socket ->
-                socket.getOutputStream().write("FOCUS\n".toByteArray())
-                socket.getOutputStream().flush()
-            }
-        } catch (_: Exception) {}
-    }
-
-    fun release() {
-        try {
-            serverSocket?.close()
-        } catch (_: Exception) {}
-    }
-}
-
 fun main(args: Array<String>) {
-    val isDev = System.getProperty("lyraflow.dev") == "true" ||
-        System.getProperty("idea.active") != null ||
-        System.getProperty("sun.java.command")?.let { cmd ->
-            cmd.contains("MainKt", ignoreCase = true) ||
-            cmd.contains("Gradle", ignoreCase = true) ||
-            cmd.contains("composeApp", ignoreCase = true) ||
-            cmd.contains("idea", ignoreCase = true)
-        } == true
-
-    val lock = SingleInstanceLock(isDev = isDev)
+    val isDev = SingleInstanceLock.isDevMode()
     var bringToFrontCallback: (() -> Unit)? = null
 
-    val isPrimary = lock.tryAcquire {
+    val isPrimary = SingleInstanceLock.acquireOrTransfer(args) {
         bringToFrontCallback?.invoke()
     }
 
@@ -126,7 +62,7 @@ fun main(args: Array<String>) {
     application {
         DisposableEffect(Unit) {
             onDispose {
-                lock.release()
+                SingleInstanceLock.release()
             }
         }
 
@@ -298,6 +234,7 @@ fun main(args: Array<String>) {
 
         fun exitLyraFlow() {
             saveCurrentWindowState()
+            SingleInstanceLock.release()
             if (recording.value) {
                 recording.value = false
                 runCatching { audio.stop() }
@@ -311,7 +248,12 @@ fun main(args: Array<String>) {
         val tray = remember {
             if (isSystemTraySupported()) {
                 LyraFlowTray(
-                    onOpen = { windowVisible = true },
+                    onOpen = {
+                        windowVisible = true
+                        scope.launch(Dispatchers.Main) {
+                            bringToFrontCallback?.invoke()
+                        }
+                    },
                     onExit = ::exitLyraFlow,
                 )
             } else {
@@ -356,6 +298,7 @@ fun main(args: Array<String>) {
                     window.requestFocus()
                     runCatching {
                         val hwnd = com.sun.jna.platform.win32.WinDef.HWND(com.sun.jna.Native.getWindowPointer(window))
+                        com.sun.jna.platform.win32.User32.INSTANCE.ShowWindow(hwnd, com.sun.jna.platform.win32.WinUser.SW_RESTORE)
                         com.sun.jna.platform.win32.User32.INSTANCE.SetForegroundWindow(hwnd)
                     }
                 }

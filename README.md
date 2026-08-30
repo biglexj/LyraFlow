@@ -6,11 +6,16 @@ LyraFlow es una aplicación de dictado inteligente construida con Kotlin Multipl
 
 | Inicio claro | Inicio oscuro |
 | :---: | :---: |
-| ![Inicio claro](screenshots/home_light.png) | ![Inicio oscuro](screenshots/home_dark.png) |
+| ![Inicio claro](docs/screenshots/home_light.png) | ![Inicio oscuro](docs/screenshots/home_dark.png) |
 
 | Ajustes | Modelo Whisper local |
 | :---: | :---: |
-| ![Ajustes](screenshots/settings.png) | ![Modelo Whisper local](screenshots/home_whisper_model.png) |
+| ![Ajustes](docs/screenshots/settings.png) | ![Modelo Whisper local](docs/screenshots/home_whisper_model.png) |
+
+## Organización de recursos
+
+El icono canónico de identidad se conserva en [`assets/branding/icons/icon-transparent.png`](assets/branding/icons/icon-transparent.png). Los recursos derivados deben generarse desde esa fuente conforme al [Asset Organization Standard](../Core-Docs/global/architecture/asset-organization-standard.md); las capturas documentales viven en `docs/screenshots/`.
+
 
 ## Funciones actuales
 

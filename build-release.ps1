@@ -34,9 +34,7 @@ if (-not $LocalOnly -and $SkipSigning) {
 $tag = "v$Version"
 $output = Join-Path $root "release"
 $artifactNames = @(
-    "LyraFlow-Windows-$Version.exe",
-    "LyraFlow-Windows-$Version.msi",
-    "LyraFlow-Windows-$Version.msix"
+    "LyraFlow-Windows-$Version.exe"
 )
 
 Write-Host ""
@@ -60,7 +58,6 @@ if ($Version -ne $currentVersion) {
 }
 
 $jdk = Get-FullJdk
-$makeAppx = Get-WindowsSdkTool "makeappx.exe"
 $signTool = if ($SkipSigning) { $null } else { Get-WindowsSdkTool "signtool.exe" }
 $env:JAVA_HOME = $jdk
 
@@ -68,8 +65,7 @@ if (-not $SkipBuild) {
     Write-Host "[2/7] Compilando y ejecutando verificaciones..." -ForegroundColor Yellow
     $tasks = @(
         ":composeApp:createDistributable",
-        ":composeApp:packageExe",
-        ":composeApp:packageMsi"
+        ":composeApp:packageExe"
     )
     if (-not $SkipTests) { $tasks = @(":composeApp:desktopTest") + $tasks }
     $gradleArguments = @("-Dorg.gradle.java.home=$jdk") + $tasks
@@ -78,7 +74,7 @@ if (-not $SkipBuild) {
     Write-Host "[2/7] Build omitido; se usarán binarios existentes." -ForegroundColor DarkYellow
 }
 
-Write-Host "[3/7] Preparando EXE, MSI y MSIX..." -ForegroundColor Yellow
+Write-Host "[3/7] Preparando instalador EXE..." -ForegroundColor Yellow
 New-Item -ItemType Directory -Path $output -Force | Out-Null
 $resolvedRoot = [IO.Path]::GetFullPath($root).TrimEnd('\') + '\'
 $resolvedOutput = [IO.Path]::GetFullPath($output).TrimEnd('\') + '\'
@@ -90,29 +86,20 @@ Get-ChildItem -LiteralPath $output -File -ErrorAction SilentlyContinue | Remove-
 Get-ChildItem -LiteralPath $output -Directory -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force
 
 $exe = Join-Path $output $artifactNames[0]
-$msi = Join-Path $output $artifactNames[1]
-$msix = Join-Path $output $artifactNames[2]
 Copy-Item -LiteralPath (Join-Path $root "composeApp\build\compose\binaries\main\exe\LyraFlow-$Version.exe") -Destination $exe
-Copy-Item -LiteralPath (Join-Path $root "composeApp\build\compose\binaries\main\msi\LyraFlow-$Version.msi") -Destination $msi
-foreach ($artifact in @($exe, $msi)) {
-    (Get-Item -LiteralPath $artifact).IsReadOnly = $false
-}
-& (Join-Path $root "scripts\packaging\New-MsixPackage.ps1") `
-    -ProjectRoot $root -Version $Version -OutputPath $msix -MakeAppxPath $makeAppx
+(Get-Item -LiteralPath $exe).IsReadOnly = $false
 
 Write-Host "[4/7] Firmando y verificando artefactos..." -ForegroundColor Yellow
 if (-not $SkipSigning) {
     $certificate = Join-Path $root "LyraFlow_Dev_Certificate.pfx"
     if (-not (Test-Path -LiteralPath $certificate)) { throw "Falta el certificado de firma local." }
-    foreach ($artifact in @($exe, $msi, $msix)) {
-        Invoke-Checked $signTool @("sign", "/fd", "SHA256", "/f", $certificate, $artifact)
-        Assert-SignedArtifact -Path $artifact -Publisher "CN=biglexj"
-    }
+    Invoke-Checked $signTool @("sign", "/fd", "SHA256", "/f", $certificate, $exe)
+    Assert-SignedArtifact -Path $exe -Publisher "CN=biglexj"
 }
 
 $hashPath = Join-Path $output "SHA256SUMS.txt"
 Get-ChildItem -LiteralPath $output -File |
-    Where-Object Extension -In '.exe', '.msi' |
+    Where-Object Extension -In '.exe' |
     Get-FileHash -Algorithm SHA256 |
     ForEach-Object { "{0}  {1}" -f $_.Hash.ToLowerInvariant(), (Split-Path $_.Path -Leaf) } |
     Set-Content -LiteralPath $hashPath -Encoding UTF8
@@ -142,7 +129,7 @@ try {
 }
 
 Write-Host "[7/7] Creando GitHub Release..." -ForegroundColor Yellow
-$assets = @($exe, $msi, $hashPath)
+$assets = @($exe, $hashPath)
 Invoke-Checked gh (@(
     "release", "create", $tag
 ) + $assets + @(

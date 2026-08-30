@@ -110,10 +110,7 @@ compose.desktop {
         nativeDistributions {
             modules("java.net.http")
             targetFormats(
-                TargetFormat.Msi,
                 TargetFormat.Exe,
-                TargetFormat.Deb,
-                TargetFormat.Rpm,
             )
             packageName = "LyraFlow"
             packageVersion = appVersion
@@ -122,7 +119,6 @@ compose.desktop {
 
             windows {
                 iconFile.set(project.file("src/desktopMain/resources/app_icon.ico"))
-                msiPackageVersion = appVersion
                 exePackageVersion = appVersion
                 upgradeUuid = "55ee1e98-1bd5-4d89-990f-27756b85820c"
                 shortcut = true

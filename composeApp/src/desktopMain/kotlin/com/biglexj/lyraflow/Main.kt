@@ -49,11 +49,8 @@ import java.awt.event.WindowFocusListener
 
 fun main(args: Array<String>) {
     val isDev = SingleInstanceLock.isDevMode()
-    var bringToFrontCallback: (() -> Unit)? = null
 
-    val isPrimary = SingleInstanceLock.acquireOrTransfer(args) {
-        bringToFrontCallback?.invoke()
-    }
+    val isPrimary = SingleInstanceLock.acquireOrTransfer(args)
 
     if (!isPrimary) {
         kotlin.system.exitProcess(0)
@@ -245,14 +242,13 @@ fun main(args: Array<String>) {
             exitApplication()
         }
 
+        var restoreWindowAction by remember { mutableStateOf<(() -> Unit)?>(null) }
+
         val tray = remember {
             if (isSystemTraySupported()) {
                 LyraFlowTray(
                     onOpen = {
-                        windowVisible = true
-                        scope.launch(Dispatchers.Main) {
-                            bringToFrontCallback?.invoke()
-                        }
+                        restoreWindowAction?.invoke() ?: run { windowVisible = true }
                     },
                     onExit = ::exitLyraFlow,
                 )
@@ -303,14 +299,20 @@ fun main(args: Array<String>) {
                     }
                 }
 
-                if (isDev) {
+                val doRestore = {
+                    windowVisible = true
                     java.awt.EventQueue.invokeLater {
                         forceNativeForeground()
                     }
                 }
-                bringToFrontCallback = {
-                    windowVisible = true
-                    scope.launch(Dispatchers.Main) {
+                restoreWindowAction = doRestore
+
+                SingleInstanceLock.registerActivationListener {
+                    doRestore()
+                }
+
+                if (isDev) {
+                    java.awt.EventQueue.invokeLater {
                         forceNativeForeground()
                     }
                 }

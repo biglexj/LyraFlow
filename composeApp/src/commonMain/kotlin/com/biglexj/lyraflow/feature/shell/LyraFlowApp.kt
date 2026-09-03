@@ -87,7 +87,7 @@ fun LyraFlowApp(
         var availableUpdate by remember { mutableStateOf<UpdateRelease?>(null) }
         var showUpdateModal by remember { mutableStateOf(false) }
         var isCheckingUpdates by remember { mutableStateOf(false) }
-        var upToDate by remember { mutableStateOf(false) }
+        var toastMessage by remember { mutableStateOf<String?>(null) }
         var downloadProgress by remember { mutableStateOf<Float?>(null) }
         var downloadMb by remember { mutableStateOf<String?>(null) }
         var totalMb by remember { mutableStateOf<String?>(null) }
@@ -107,7 +107,7 @@ fun LyraFlowApp(
                 runCatching {
                     val path = autoDownloader.downloadUpdate(
                         downloadUrl = release.downloadUrl.ifBlank { release.releasePageUrl },
-                        targetFileName = "LyraFlow-v${release.version}-installer.msi",
+                        targetFileName = "LyraFlow-v${release.version}-installer.exe",
                         onProgress = { p ->
                             downloadProgress = p.progress
                             downloadMb = (p.downloadedBytes / (1024.0 * 1024.0)).let { "%.1f".format(it) }
@@ -119,6 +119,7 @@ fun LyraFlowApp(
                     downloadProgress = null
                 }.onFailure {
                     downloadProgress = null
+                    toastMessage = "❌ Error durante la descarga: ${it.message}"
                 }
             }
         }
@@ -131,18 +132,21 @@ fun LyraFlowApp(
             }
         }
 
-        // Verificación manual: actualiza el estado manteniendo el modal de Acerca de abierto.
+        // Verificación manual: actualiza el estado, cierra "Acerca de" y muestra modal o Toast flotante.
         val checkForUpdates: () -> Unit = {
-            upToDate = false
             isCheckingUpdates = true
             scope.launch {
                 val remoteRelease = updateService.checkLatestRelease()
                 isCheckingUpdates = false
                 if (remoteRelease != null && UpdateChecker.isNewerVersion(com.biglexj.lyraflow.core.config.AppVersion.CURRENT, remoteRelease.version)) {
                     availableUpdate = remoteRelease
-                    upToDate = false
+                    showAboutDialog = false
+                    showUpdateModal = true
+                } else if (remoteRelease != null) {
+                    showAboutDialog = false
+                    toastMessage = "✅ ¡Estás en la última versión de LyraFlow (v${com.biglexj.lyraflow.core.config.AppVersion.CURRENT})!"
                 } else {
-                    upToDate = true
+                    toastMessage = "⚠️ No se pudo comprobar las actualizaciones."
                 }
             }
         }
@@ -161,11 +165,11 @@ fun LyraFlowApp(
             historyRepository.purgeExpired(configuration.preferences.historyRetention.hours)
         }
 
-        // Auto-ocultar el toast/mensaje de "al día" tras 4 segundos.
-        LaunchedEffect(upToDate) {
-            if (upToDate) {
-                delay(4_000)
-                upToDate = false
+        // Auto-ocultar el toast flotante tras 4 segundos (conforme a Core-Docs y auto_updater.md).
+        LaunchedEffect(toastMessage) {
+            if (toastMessage != null) {
+                kotlinx.coroutines.delay(4_000L)
+                toastMessage = null
             }
         }
 
@@ -174,7 +178,7 @@ fun LyraFlowApp(
                 onDismiss = { showAboutDialog = false },
                 onCheckForUpdates = checkForUpdates,
                 isCheckingUpdates = isCheckingUpdates,
-                upToDateStatus = upToDate,
+                upToDateStatus = false,
                 availableUpdate = availableUpdate,
                 onOpenUpdateModal = { showUpdateModal = true },
             )
@@ -256,6 +260,32 @@ fun LyraFlowApp(
                                 visibleDestinations = visibleDestinations,
                                 onOpenAbout = { showAboutDialog = true },
                             ) { destination = it }
+                        }
+                    }
+                }
+
+                // Toast Flotante Centrado Superior (conforme a Core-Docs y auto_updater.md)
+                AnimatedVisibility(
+                    visible = toastMessage != null,
+                    enter = fadeIn() + slideInVertically(initialOffsetY = { -it }),
+                    exit = fadeOut() + slideOutVertically(targetOffsetY = { -it }),
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = 16.dp),
+                ) {
+                    if (toastMessage != null) {
+                        Surface(
+                            shape = androidx.compose.foundation.shape.RoundedCornerShape(50),
+                            color = MaterialTheme.colorScheme.inverseSurface,
+                            contentColor = MaterialTheme.colorScheme.inverseOnSurface,
+                            shadowElevation = 6.dp,
+                        ) {
+                            Text(
+                                text = toastMessage!!,
+                                modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                            )
                         }
                     }
                 }

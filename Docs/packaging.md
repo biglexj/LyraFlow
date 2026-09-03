@@ -1,44 +1,38 @@
-# Empaquetado de LyraFlow
+# Empaquetado y Distribución de LyraFlow
 
-LyraFlow se distribuye desde el proyecto Kotlin Multiplatform. La versión vive en `gradle.properties` y los formatos se configuran en `composeApp/build.gradle.kts`.
+LyraFlow se distribuye en Windows Desktop **exclusivamente mediante instalador ejecutable EXE** (`LyraFlow-Windows-X.Y.Z.exe`). La versión se centraliza en `gradle.properties` y el formato se define en `composeApp/build.gradle.kts` con `TargetFormat.Exe`.
 
-## Build local completo
+## Build local
 
 ```powershell
 .\build-release.ps1 -LocalOnly
 ```
 
-El script usa el JDK completo indicado por `JAVA_HOME`, ejecuta pruebas y genera:
+El script utiliza el JDK completo indicado por `JAVA_HOME`, ejecuta las pruebas unitarias y genera:
 
-- MSI y EXE mediante Compose Desktop.
-- MSIX de aplicación Full Trust mediante Windows SDK.
-- Firma de los tres artefactos con el certificado local configurado.
-- `SHA256SUMS.txt` con las huellas de los artefactos.
+- Instalador EXE (`LyraFlow-Windows-X.Y.Z.exe`) mediante Compose Desktop (`:composeApp:packageExe`).
+- Firma digital del ejecutable con el certificado oficial `CN=biglexj`.
+- `SHA256SUMS.txt` con la huella criptográfica SHA-256 del instalador.
 
-La salida se guarda directamente en `release/`, sin subcarpetas: todos los instaladores y `SHA256SUMS.txt` quedan juntos y fáciles de encontrar. Los paquetes DEB y RPM deben generarse desde Linux mediante las tareas de Compose Desktop.
+La salida se genera de forma limpia en `release/`.
 
-## Publicación automática
+## Publicación oficial en GitHub Releases
 
 ```powershell
 .\build-release.ps1
 ```
 
-La ejecución sin parámetros exige `main` sincronizada con `origin/main`, GitHub CLI autenticado y un tag/release inexistente. Después de construir, firmar y verificar, crea el commit `release: LyraFlow vX.Y.Z`, un tag anotado, hace push atómico de rama y tag y publica EXE, MSI, MSIX y `SHA256SUMS.txt` en GitHub Releases usando `RELEASE_MESSAGE.md`.
+La ejecución exige `main` sincronizada con `origin/main`, GitHub CLI autenticado y una versión superior a la última tag publicada. El proceso:
+1. Compila y verifica el instalador EXE.
+2. Firma y calcula el hash SHA-256.
+3. Crea el commit `release: LyraFlow vX.Y.Z` y tag anotado `vX.Y.Z`.
+4. Realiza push atómico de rama y tag.
+5. Publica la release en GitHub con `LyraFlow-Windows-X.Y.Z.exe` y `SHA256SUMS.txt` adjuntos.
 
-Opciones disponibles:
+Parámetros disponibles:
 
-- `-Version X.Y.Z`: actualiza `versionName` y aumenta `versionCode` cuando cambia la versión.
-- `-ReleaseNotesFile archivo.md`: usa otras notas para GitHub.
-- `-SkipTests`: omite pruebas, pero conserva la compilación.
-- `-SkipBuild`: reutiliza binarios existentes y vuelve a empaquetar.
-- `-SkipSigning`: solo está permitido junto con `-LocalOnly`.
-
-## Build sin firma
-
-```powershell
-.\build-release.ps1 -LocalOnly -SkipSigning
-```
-
-Una publicación oficial nunca admite paquetes sin firma.
-
-El MSIX usa la identidad `biglexj.LyraFlow` y el publicador `CN=biglexj`. Para instalar un paquete firmado con certificado local, Windows debe confiar previamente en la parte pública de ese certificado.
+- `-Version X.Y.Z`: Especifica la versión exacta (avanza `versionCode`).
+- `-ReleaseNotesFile archivo.md`: Archivo de notas (por defecto `RELEASE_MESSAGE.md`).
+- `-SkipTests`: Omite la suite de pruebas unitarias.
+- `-SkipBuild`: Reutiliza el binario existente en `build/`.
+- `-SkipSigning`: Permitido únicamente con `-LocalOnly`.

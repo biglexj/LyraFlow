@@ -35,6 +35,33 @@ class UpdateCheckerTest {
     }
 
     @Test
+    fun testParseUpdateReleasePrioritizesExeOverChecksums() {
+        val jsonWithMultipleAssets = """
+            {
+              "tag_name": "v1.1.6",
+              "html_url": "https://github.com/biglexj/LyraFlow/releases/tag/v1.1.6",
+              "body": "Mejoras de rendimiento.",
+              "assets": [
+                {
+                  "name": "SHA256SUMS.txt",
+                  "browser_download_url": "https://github.com/biglexj/LyraFlow/releases/download/v1.1.6/SHA256SUMS.txt"
+                },
+                {
+                  "name": "LyraFlow-Windows-1.1.6.exe",
+                  "browser_download_url": "https://github.com/biglexj/LyraFlow/releases/download/v1.1.6/LyraFlow-Windows-1.1.6.exe"
+                }
+              ]
+            }
+        """.trimIndent()
+
+        val release = UpdateChecker.parseUpdateRelease(jsonWithMultipleAssets)
+
+        assertNotNull(release)
+        assertEquals("1.1.6", release.version)
+        assertEquals("https://github.com/biglexj/LyraFlow/releases/download/v1.1.6/LyraFlow-Windows-1.1.6.exe", release.downloadUrl)
+    }
+
+    @Test
     fun testParseUpdateReleaseInvalidJsonReturnsNull() {
         val release = UpdateChecker.parseUpdateRelease("{}")
         assertNull(release)

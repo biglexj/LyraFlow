@@ -65,7 +65,7 @@ $env:ANDROID_HOME = Join-Path $env:LOCALAPPDATA "Android\Sdk"
 .\build-release.ps1 -LocalOnly
 ```
 
-Genera y valida EXE, MSI y MSIX firmados sin modificar Git ni GitHub. Para publicar la versión activa desde `main`:
+Genera y valida el instalador EXE firmado sin modificar Git ni GitHub. Para publicar la versión activa desde `main`:
 
 ```powershell
 .\build-release.ps1

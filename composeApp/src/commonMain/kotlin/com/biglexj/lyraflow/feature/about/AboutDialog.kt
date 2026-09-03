@@ -164,21 +164,6 @@ fun AboutDialog(
                             }
                         }
                     }
-                    upToDateStatus -> {
-                        Surface(
-                            color = MaterialTheme.colorScheme.secondaryContainer,
-                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                            shape = MaterialTheme.shapes.small,
-                            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-                        ) {
-                            Text(
-                                text = "✅ Estás en la última versión de LyraFlow (v${AppVersion.CURRENT}).",
-                                style = MaterialTheme.typography.bodySmall,
-                                textAlign = TextAlign.Center,
-                                modifier = Modifier.padding(10.dp),
-                            )
-                        }
-                    }
                 }
             }
         },

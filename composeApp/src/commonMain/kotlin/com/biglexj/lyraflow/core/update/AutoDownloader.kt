@@ -20,7 +20,7 @@ class AutoDownloader(
 ) {
     suspend fun downloadUpdate(
         downloadUrl: String,
-        targetFileName: String = "LyraFlow-Update.msi",
+        targetFileName: String = "LyraFlow-Update.exe",
         onProgress: (DownloadProgress) -> Unit,
     ): String = withContext(Dispatchers.Default) {
         val response = client.get(downloadUrl)

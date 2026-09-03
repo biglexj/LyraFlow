@@ -1,31 +1,31 @@
 package com.biglexj.lyraflow.core.update
 
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+
 object UpdateChecker {
-    private fun extractStringValue(json: String, key: String): String? {
-        val search = "\"$key\":"
-        val keyIndex = json.indexOf(search)
-        if (keyIndex == -1) return null
-        val start = json.indexOf("\"", keyIndex + search.length)
-        if (start == -1) return null
-        val end = json.indexOf("\"", start + 1)
-        if (end == -1) return null
-        return json.substring(start + 1, end)
-    }
+    private val jsonParser = Json { ignoreUnknownKeys = true }
 
     fun parseUpdateRelease(json: String): UpdateRelease? {
-        val tagName = extractStringValue(json, "tag_name") ?: return null
-        val htmlUrl = extractStringValue(json, "html_url") ?: return null
-        val body = extractStringValue(json, "body").orEmpty()
+        val root = runCatching { jsonParser.parseToJsonElement(json).jsonObject }.getOrNull() ?: return null
+        val tagName = root["tag_name"]?.jsonPrimitive?.content ?: return null
+        val htmlUrl = root["html_url"]?.jsonPrimitive?.content ?: return null
+        val body = root["body"]?.jsonPrimitive?.content.orEmpty()
 
-        val downloadKeySearch = "\"browser_download_url\":"
-        val downloadKeyIndex = json.indexOf(downloadKeySearch)
-        val downloadUrl = if (downloadKeyIndex != -1) {
-            val start = json.indexOf("\"", downloadKeyIndex + downloadKeySearch.length)
-            if (start != -1) {
-                val end = json.indexOf("\"", start + 1)
-                if (end != -1) json.substring(start + 1, end) else htmlUrl
-            } else htmlUrl
-        } else htmlUrl
+        val assets = root["assets"]?.jsonArray.orEmpty()
+
+        // Priorizar específicamente el instalador EXE (ej. LyraFlow-Windows-X.Y.Z.exe), evitando colisión con SHA256SUMS.txt
+        val exeAsset = assets.firstOrNull { asset ->
+            val name = asset.jsonObject["name"]?.jsonPrimitive?.content.orEmpty()
+            val url = asset.jsonObject["browser_download_url"]?.jsonPrimitive?.content.orEmpty()
+            name.endsWith(".exe", ignoreCase = true) || url.endsWith(".exe", ignoreCase = true)
+        }
+
+        val downloadUrl = exeAsset?.jsonObject?.get("browser_download_url")?.jsonPrimitive?.content
+            ?: assets.firstOrNull()?.jsonObject?.get("browser_download_url")?.jsonPrimitive?.content
+            ?: htmlUrl
 
         val cleanVersion = tagName.removePrefix("v").trim()
         return UpdateRelease(

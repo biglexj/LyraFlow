@@ -10,9 +10,10 @@
 
 ## [1.1.7] - 2026-09-04
 
-LyraFlow v1.1.7 renueva la identidad visual de la aplicación con un nuevo icono más suave y estilizado, resuelve el fenómeno de bloqueo de ciclo de vida de ventana en Windows 11 y adopta la distribución exclusiva en ejecutables EXE:
+LyraFlow v1.1.7 renueva la identidad visual de la aplicación con un nuevo icono más suave y estilizado, resuelve el fenómeno de bloqueo de ciclo de vida de ventana en Windows 11, personaliza el asistente de instalación con branding oficial y adopta la distribución exclusiva en ejecutables EXE:
 - **Nueva Identidad Visual & Icono Suave**: Rediseño y suavizado del icono oficial de LyraFlow con líneas más armónicas, mejorando la estética y visibilidad en la barra de tareas, la bandeja del sistema (System Tray) y las ventanas flotantes.
 - **Inmunidad al *Render Lifecycle Lock* en Windows 11**: Desacoplamiento e inicialización estrictamente perezosa de `LyraFlowStatusOverlay` tras el montaje de Compose Desktop, garantizando que la ventana principal emerja siempre visible y en primer plano nativo (`User32.SetForegroundWindow`).
+- **Personalización Oficial del Instalador EXE (WiX Branding)**: Integración de recursos visuales de marca en el instalador de Windows (WiX con `ARPPRODUCTICON` para el panel de aplicaciones de Windows, `banner.bmp`, `dialog.bmp` y accesos directos con `LyraFlow.ico`).
 - **Distribución Exclusiva en EXE (Zero-Friction Desktop Update)**: Estandarización a instaladores `.exe` (`LyraFlow-Windows-1.1.7.exe`) para una actualización in-app de un solo clic con reinicio automático transparente.
 - **Canal de Desarrollo & Reactivación IPC Robusta**: Manejo optimizado de sockets de bucle local, reactivación fluida entre instancias y bypass automático en entornos de desarrollo.
 

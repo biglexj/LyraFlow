@@ -141,3 +141,15 @@ tasks.withType<JavaExec>().configureEach {
         systemProperty("lyraflow.channel", "dev")
     }
 }
+
+val pkgWinDir = file("../package/windows")
+tasks.matching { it.name.startsWith("package") }.configureEach {
+    doFirst {
+        val resDir = file("build/compose/tmp/resources")
+        resDir.mkdirs()
+        if (pkgWinDir.exists()) {
+            pkgWinDir.copyRecursively(resDir, overwrite = true)
+        }
+    }
+}
+

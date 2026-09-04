@@ -3,7 +3,6 @@
 Plan de trabajo, objetivos y prioridades del proyecto.
 
 ## 🔴 Pendientes activos
-- [ ] Personalización y Localización del Instalador de Escritorio (`.exe` / `.msi`) según **Sección 6 de Desktop App Standards** (pantallas e interfaz en español `es-PE`/`es-ES`, banner de branding oficial, icono personalizado en panel de programas de Windows).
 - [ ] Validar manualmente endpoints multimodales de terceros configurados por el usuario en Windows.
 - [ ] Añadir adaptadores nativos únicamente cuando un proveedor no exponga audio mediante OpenAI-compatible.
 
@@ -16,7 +15,7 @@ Plan de trabajo, objetivos y prioridades del proyecto.
 *(No hay tareas en esta categoría actualmente)*
 
 ## 🟢 Completado
-- [x] **v1.1.7** (2026-09-04) — Renovación de identidad visual con nuevo icono estilizado y suave, erradicación del *Render Lifecycle Lock* en Windows 11 DWM (lazy status overlay y elevación nativa Win32), distribución exclusiva en ejecutables EXE para auto-actualización in-app de fricción cero y robustecimiento de sockets IPC.
+- [x] **v1.1.7** (2026-09-04) — Renovación de identidad visual con nuevo icono estilizado y suave, erradicación del *Render Lifecycle Lock* en Windows 11 DWM (lazy status overlay y elevación nativa Win32), personalización completa de branding del instalador EXE de Windows (WiX con `ARPPRODUCTICON`, `banner.bmp`, `dialog.bmp`, `LyraFlow.ico`), distribución exclusiva en ejecutables EXE para auto-actualización in-app de fricción cero y robustecimiento de sockets IPC.
 - [x] **v1.1.6** (2026-08-30) — Estandarización de arquitectura de instancia única y reactivación según Docs (aislamiento de canales `stable`/`dev`, eliminación de heurísticas y flags en producción, despacho IPC y restauración de foco en Windows) y reorganización modular de activos según el Asset Organization Standard.
 - [x] **v1.1.5** (2026-08-16) — Escaneo dinámico de modelos multimodales desde APIs oficiales de Gemini y OpenAI con persistencia local en caché, botón 'Guardar modelo' con colapso visual, nuevo prompt maestro de edición estructurada, soporte ampliado de Drag & Drop para imágenes y audio, garantía estandarizada de Single-Instance Lock con restauración de foco en Windows, auto-expiración de cuotas (cooldown 60s), widget flotante de estado persistente y drenaje completo del búfer PCM.
 - [x] **v1.1.4** (2026-08-04) — Calibración nativa de Whisper local (`-l es`, `-nt`, `-np`, `--prompt`), multithreading adaptativo, desactivación independiente de proveedores (Nube / Whisper) y simetría M3 Expressive en diálogos modales.

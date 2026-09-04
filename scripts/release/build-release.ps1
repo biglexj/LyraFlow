@@ -59,6 +59,13 @@ if ($Version -ne $currentVersion) {
         $appVersionContent = $appVersionContent -replace 'const val CURRENT = ".*?"', "const val CURRENT = `"$Version`""
         Set-Content -LiteralPath $appVersionFile -Value $appVersionContent -Encoding UTF8 -NoNewline
     }
+
+    $mainWxs = Join-Path $root "package\windows\main.wxs"
+    if (Test-Path -LiteralPath $mainWxs) {
+        $wxsContent = Get-Content -LiteralPath $mainWxs -Raw -Encoding UTF8
+        $wxsContent = $wxsContent -replace 'Version="[^"]+"', "Version=`"$Version`""
+        Set-Content -LiteralPath $mainWxs -Value $wxsContent -Encoding UTF8 -NoNewline
+    }
     Write-Host "[1/7] Versión actualizada a $Version ($newCode)." -ForegroundColor Yellow
 } else {
     Write-Host "[1/7] Versión centralizada confirmada: $Version." -ForegroundColor Yellow
@@ -75,7 +82,7 @@ if (-not $SkipBuild) {
         ":composeApp:packageExe"
     )
     if (-not $SkipTests) { $tasks = @(":composeApp:desktopTest") + $tasks }
-    $gradleArguments = @("-Dorg.gradle.java.home=$jdk") + $tasks
+    $gradleArguments = @("-Dorg.gradle.java.home=$jdk", "--no-configuration-cache") + $tasks
     Invoke-Checked -Executable (Join-Path $root "gradlew.bat") -ArgumentList $gradleArguments
 } else {
     Write-Host "[2/7] Build omitido; se usarán binarios existentes." -ForegroundColor DarkYellow

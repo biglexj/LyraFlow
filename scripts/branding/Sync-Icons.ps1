@@ -137,5 +137,54 @@ Resize-ImagePng -source $sourceBmp -width 310 -height 150 -outputPath (Join-Path
 Write-Host "✔ composeApp\src\desktopMain\resources\Wide310x150Logo.png generado (310x150 transparente centrado)." -ForegroundColor Green
 $sourceBmp.Dispose()
 
-Write-Host "Todos los iconos fueron sincronizados y estandarizados con transparencia real en desktopMain/resources." -ForegroundColor Green
+# 5. Recursos para el Instalador de Windows (package/windows)
+$pkgWinDir = Join-Path $root "package\windows"
+if (-not (Test-Path -LiteralPath $pkgWinDir)) {
+    New-Item -ItemType Directory -Path $pkgWinDir -Force | Out-Null
+}
 
+# 5.1 Copiar iconos .ico para WiX
+Copy-Item -LiteralPath $composeIco -Destination (Join-Path $pkgWinDir "LyraFlow.ico") -Force
+Copy-Item -LiteralPath $composeIco -Destination (Join-Path $pkgWinDir "icon.ico") -Force
+Write-Host "✔ package\windows\LyraFlow.ico e icon.ico sincronizados." -ForegroundColor Green
+
+# 5.2 Generar banner.bmp (493x58) para el encabezado del instalador
+$bannerBmpPath = Join-Path $pkgWinDir "banner.bmp"
+$bannerBmp = New-Object System.Drawing.Bitmap(493, 58, [System.Drawing.Imaging.PixelFormat]::Format24bppRgb)
+$gBanner = [System.Drawing.Graphics]::FromImage($bannerBmp)
+$gBanner.Clear([System.Drawing.Color]::FromArgb(26, 28, 30))
+$accentPen = New-Object System.Drawing.Pen([System.Drawing.Color]::FromArgb(0, 200, 179), 2)
+$gBanner.DrawLine($accentPen, 0, 57, 493, 57)
+$accentPen.Dispose()
+
+$iconMaster = [System.Drawing.Bitmap]::FromFile($masterIcon)
+$gBanner.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+$gBanner.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::HighQuality
+$gBanner.DrawImage($iconMaster, 439, 8, 42, 42)
+$gBanner.Dispose()
+$bannerBmp.Save($bannerBmpPath, [System.Drawing.Imaging.ImageFormat]::Bmp)
+$bannerBmp.Dispose()
+Write-Host "✔ package\windows\banner.bmp generado (493x58 con branding LyraFlow)." -ForegroundColor Green
+
+# 5.3 Generar dialog.bmp (493x312) para el panel lateral del instalador
+$dialogBmpPath = Join-Path $pkgWinDir "dialog.bmp"
+$dialogBmp = New-Object System.Drawing.Bitmap(493, 312, [System.Drawing.Imaging.PixelFormat]::Format24bppRgb)
+$gDialog = [System.Drawing.Graphics]::FromImage($dialogBmp)
+$gDialog.Clear([System.Drawing.Color]::FromArgb(20, 22, 25))
+$sidebarBrush = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(30, 32, 36))
+$gDialog.FillRectangle($sidebarBrush, 0, 0, 164, 312)
+$sidebarBrush.Dispose()
+$accentPen2 = New-Object System.Drawing.Pen([System.Drawing.Color]::FromArgb(0, 200, 179), 1)
+$gDialog.DrawLine($accentPen2, 164, 0, 164, 312)
+$accentPen2.Dispose()
+
+$gDialog.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+$gDialog.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::HighQuality
+$gDialog.DrawImage($iconMaster, 42, 32, 80, 80)
+$iconMaster.Dispose()
+$gDialog.Dispose()
+$dialogBmp.Save($dialogBmpPath, [System.Drawing.Imaging.ImageFormat]::Bmp)
+$dialogBmp.Dispose()
+Write-Host "✔ package\windows\dialog.bmp generado (493x312 con barra lateral y branding)." -ForegroundColor Green
+
+Write-Host "Todos los iconos y recursos del instalador fueron sincronizados y estandarizados exitosamente." -ForegroundColor Green

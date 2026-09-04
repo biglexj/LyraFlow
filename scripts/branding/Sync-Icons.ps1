@@ -117,24 +117,25 @@ if ($magickCmd) {
     Write-Host "✔ app_icon.ico generado mediante .NET." -ForegroundColor Green
 }
 
-# 4. Iconos en Image/
-$imageDir = Join-Path $root "Image"
-if (-not (Test-Path -LiteralPath $imageDir)) {
-    New-Item -ItemType Directory -Path $imageDir -Force | Out-Null
+# 4. Iconos derivados de interfaz en composeApp/src/desktopMain/resources
+$desktopResources = Join-Path $root "composeApp\src\desktopMain\resources"
+if (-not (Test-Path -LiteralPath $desktopResources)) {
+    New-Item -ItemType Directory -Path $desktopResources -Force | Out-Null
 }
 
 $sourceBmp = [System.Drawing.Bitmap]::FromFile($masterIcon)
-Resize-ImagePng -source $sourceBmp -width 44 -height 44 -outputPath (Join-Path $imageDir "Square44x44Logo.png")
-Write-Host "✔ Image\Square44x44Logo.png generado (44x44 transparente)." -ForegroundColor Green
+Resize-ImagePng -source $sourceBmp -width 44 -height 44 -outputPath (Join-Path $desktopResources "Square44x44Logo.png")
+Write-Host "✔ composeApp\src\desktopMain\resources\Square44x44Logo.png generado (44x44 transparente)." -ForegroundColor Green
 
-Resize-ImagePng -source $sourceBmp -width 150 -height 150 -outputPath (Join-Path $imageDir "Square150x150Logo.png")
-Write-Host "✔ Image\Square150x150Logo.png generado (150x150 transparente)." -ForegroundColor Green
+Resize-ImagePng -source $sourceBmp -width 150 -height 150 -outputPath (Join-Path $desktopResources "Square150x150Logo.png")
+Write-Host "✔ composeApp\src\desktopMain\resources\Square150x150Logo.png generado (150x150 transparente)." -ForegroundColor Green
 
-Resize-ImagePng -source $sourceBmp -width 50 -height 50 -outputPath (Join-Path $imageDir "StoreLogo.png")
-Write-Host "✔ Image\StoreLogo.png generado (50x50 transparente)." -ForegroundColor Green
+Resize-ImagePng -source $sourceBmp -width 50 -height 50 -outputPath (Join-Path $desktopResources "StoreLogo.png")
+Write-Host "✔ composeApp\src\desktopMain\resources\StoreLogo.png generado (50x50 transparente)." -ForegroundColor Green
 
-Resize-ImagePng -source $sourceBmp -width 310 -height 150 -outputPath (Join-Path $imageDir "Wide310x150Logo.png")
-Write-Host "✔ Image\Wide310x150Logo.png generado (310x150 transparente centrado)." -ForegroundColor Green
+Resize-ImagePng -source $sourceBmp -width 310 -height 150 -outputPath (Join-Path $desktopResources "Wide310x150Logo.png")
+Write-Host "✔ composeApp\src\desktopMain\resources\Wide310x150Logo.png generado (310x150 transparente centrado)." -ForegroundColor Green
 $sourceBmp.Dispose()
 
-Write-Host "Todos los iconos fueron sincronizados y estandarizados con transparencia real." -ForegroundColor Green
+Write-Host "Todos los iconos fueron sincronizados y estandarizados con transparencia real en desktopMain/resources." -ForegroundColor Green
+

@@ -54,7 +54,6 @@ kotlin {
             }
         }
         val desktopMain by getting {
-            resources.srcDir(rootProject.file("Image"))
             dependencies {
                 implementation(compose.desktop.currentOs)
                 implementation(libs.kotlinx.coroutines.swing)

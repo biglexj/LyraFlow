@@ -100,7 +100,24 @@ Write-Host "[4/7] Firmando y verificando artefactos..." -ForegroundColor Yellow
 if (-not $SkipSigning) {
     $certificate = Join-Path $root "LyraFlow_Dev_Certificate.pfx"
     if (-not (Test-Path -LiteralPath $certificate)) { throw "Falta el certificado de firma local." }
-    Invoke-Checked $signTool @("sign", "/fd", "SHA256", "/f", $certificate, $exe)
+    
+    $maxAttempts = 5
+    $signed = $false
+    for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+        try {
+            Start-Sleep -Milliseconds 600
+            Invoke-Checked $signTool @("sign", "/fd", "SHA256", "/f", $certificate, $exe)
+            $signed = $true
+            break
+        } catch {
+            if ($attempt -lt $maxAttempts) {
+                Write-Host "Reintento de firma ($attempt/$maxAttempts) tras espera de I/O..." -ForegroundColor DarkYellow
+                Start-Sleep -Seconds 2
+            } else {
+                throw $_
+            }
+        }
+    }
     Assert-SignedArtifact -Path $exe -Publisher "CN=biglexj"
 }
 

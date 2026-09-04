@@ -5,7 +5,7 @@ LyraFlow se distribuye en Windows Desktop **exclusivamente mediante instalador e
 ## Build local
 
 ```powershell
-.\build-release.ps1 -LocalOnly
+.\scripts\release\build-release.ps1 -LocalOnly
 ```
 
 El script utiliza el JDK completo indicado por `JAVA_HOME`, ejecuta las pruebas unitarias y genera:
@@ -19,7 +19,7 @@ La salida se genera de forma limpia en `release/`.
 ## Publicación oficial en GitHub Releases
 
 ```powershell
-.\build-release.ps1
+.\scripts\release\build-release.ps1
 ```
 
 La ejecución exige `main` sincronizada con `origin/main`, GitHub CLI autenticado y una versión superior a la última tag publicada. El proceso:

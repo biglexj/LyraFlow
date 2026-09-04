@@ -8,7 +8,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$root = $PSScriptRoot
+$root = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 . (Join-Path $root "scripts\release\ReleaseTools.ps1")
 
 $repository = "biglexj/LyraFlow"

@@ -8,7 +8,7 @@
 ## 1. 🔒 Garantía de Instancia Única (Single Instance Lock) & Reactivación [CRÍTICO]
 
 > [!IMPORTANT]
-> **Estándar Core**: Conforme a `Core-Docs/features/single-instance/README.md` y `Core-Docs/platforms/windows/single_instance_lock.md`.
+> **Estándar Core**: Conforme a `Docs/features/single-instance/README.md` y `Docs/platforms/windows/single_instance_lock.md`.
 > Toda aplicación de escritorio instalada DEBE reutilizar su instancia viva por defecto cuando el usuario vuelve a iniciarla desde Inicio, el buscador, la barra de tareas, un acceso directo o la bandeja del sistema.
 
 Para prevenir la duplicación de procesos, colisión de recursos o iconos duplicados en la bandeja del sistema (System Tray):

@@ -40,9 +40,9 @@ trigger: always_on
 9. **Verificación Previa Obligatoria de la Release en GitHub [CRÍTICO]**:
    - Antes de bump de versión (`versionName` / `versionCode`) o redactar notas (`RELEASE_NOTES.md`), verificar la última tag en GitHub Releases (`https://api.github.com/repos/biglexj/LyraFlow/releases/latest`). La nueva versión debe ser estrictamente superior.
 10. **Script Oficial de Release `build-release.ps1` [CRÍTICO]**:
-    - NUNCA publicar manualmente. Utilizar siempre:
+    - NUNCA publicar manualmente. Utilizar siempre el script oficial en `scripts/release/`:
       ```powershell
-      .\build-release.ps1 -Version "X.Y.Z"
+      .\scripts\release\build-release.ps1 -Version "X.Y.Z"
       ```
     - El script compila `:composeApp:packageExe`, firma el EXE, genera `SHA256SUMS.txt` y publica la release en GitHub de forma atómica.
     - **Título de Release**: Únicamente `LyraFlow vX.Y.Z`.

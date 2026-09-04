@@ -14,7 +14,7 @@ LyraFlow es una aplicación de dictado inteligente construida con Kotlin Multipl
 
 ## Organización de recursos
 
-El icono canónico de identidad se conserva en [`assets/branding/icons/icon-transparent.png`](assets/branding/icons/icon-transparent.png). Los recursos derivados deben generarse desde esa fuente conforme al [Asset Organization Standard](../Core-Docs/global/architecture/asset-organization-standard.md); las capturas documentales viven en `docs/screenshots/`.
+El icono canónico de identidad se conserva en [`assets/branding/icons/icon-transparent.png`](assets/branding/icons/icon-transparent.png). Los recursos derivados deben generarse desde esa fuente conforme al [Asset Organization Standard](../Docs/global/architecture/asset-organization-standard.md); las capturas documentales viven en `docs/screenshots/`.
 
 
 ## Funciones actuales
@@ -62,13 +62,13 @@ $env:ANDROID_HOME = Join-Path $env:LOCALAPPDATA "Android\Sdk"
 ## Distribución
 
 ```powershell
-.\build-release.ps1 -LocalOnly
+.\scripts\release\build-release.ps1 -LocalOnly
 ```
 
 Genera y valida el instalador EXE firmado sin modificar Git ni GitHub. Para publicar la versión activa desde `main`:
 
 ```powershell
-.\build-release.ps1
+.\scripts\release\build-release.ps1
 ```
 
 El flujo automático crea el commit de release, el tag, realiza un push atómico y publica los artefactos junto con `SHA256SUMS.txt` en GitHub Releases.

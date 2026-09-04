@@ -237,7 +237,7 @@ fun main(args: Array<String>) {
                 runCatching { audio.stop() }
             }
             shortcut.close()
-            statusOverlay.dispose()
+            statusOverlay.close()
             scope.cancel()
             exitApplication()
         }
@@ -259,7 +259,7 @@ fun main(args: Array<String>) {
         DisposableEffect(tray) {
             onDispose {
                 tray?.close()
-                statusOverlay.dispose()
+                statusOverlay.close()
             }
         }
 
@@ -290,12 +290,16 @@ fun main(args: Array<String>) {
 
                 fun forceNativeForeground() {
                     window.isMinimized = false
+                    window.isVisible = true
                     window.toFront()
                     window.requestFocus()
                     runCatching {
                         val hwnd = com.sun.jna.platform.win32.WinDef.HWND(com.sun.jna.Native.getWindowPointer(window))
-                        com.sun.jna.platform.win32.User32.INSTANCE.ShowWindow(hwnd, com.sun.jna.platform.win32.WinUser.SW_RESTORE)
-                        com.sun.jna.platform.win32.User32.INSTANCE.SetForegroundWindow(hwnd)
+                        if (hwnd.pointer != null && hwnd.pointer != com.sun.jna.Pointer.NULL) {
+                            com.sun.jna.platform.win32.User32.INSTANCE.ShowWindow(hwnd, com.sun.jna.platform.win32.WinUser.SW_RESTORE)
+                            com.sun.jna.platform.win32.User32.INSTANCE.ShowWindow(hwnd, com.sun.jna.platform.win32.WinUser.SW_SHOW)
+                            com.sun.jna.platform.win32.User32.INSTANCE.SetForegroundWindow(hwnd)
+                        }
                     }
                 }
 

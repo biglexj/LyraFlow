@@ -102,6 +102,10 @@ object SingleInstanceLock {
                 val socket = ServerSocket(devPort, 10, loopback)
                 serverSocket = socket
                 startListenerThread(socket)
+            }.onFailure {
+                val devPort = getPortForChannel("dev")
+                val payload = extractPayload(args)
+                transferToExistingInstance(devPort, loopback, payload)
             }
             return true
         }

@@ -12,27 +12,20 @@ import java.awt.event.ComponentAdapter
 import java.awt.event.ComponentEvent
 import javax.swing.JComponent
 import javax.swing.JWindow
+import javax.swing.SwingUtilities
 import javax.swing.Timer
 import kotlin.math.sin
 
-/** A non-focusable, always-visible recording status light for the desktop. */
-class LyraFlowStatusOverlay : JWindow() {
+/**
+ * A non-focusable, always-visible recording status light for the desktop.
+ *
+ * Implementa inicialización perezosa (Lazy) de JWindow para evitar colisiones
+ * y bloqueos en el Desktop Window Manager (DWM) de Windows 11 antes de que la
+ * ventana principal de Compose termine su mapeo inicial (conforme a Core-Docs).
+ */
+class LyraFlowStatusOverlay : AutoCloseable {
+    private var window: JWindow? = null
     private val display = StatusDisplay()
-
-    init {
-        type = Window.Type.UTILITY
-        background = Color(0, 0, 0, 0)
-        isAlwaysOnTop = true
-        focusableWindowState = false
-        isAutoRequestFocus = false
-        size = Dimension(68, 30)
-        contentPane = display
-        addComponentListener(object : ComponentAdapter() {
-            override fun componentShown(event: ComponentEvent) = positionAtBottom()
-        })
-        positionAtBottom()
-        isVisible = true
-    }
 
     fun update(state: DictationState, level: Float = 0f) {
         display.status = when (state) {
@@ -43,11 +36,38 @@ class LyraFlowStatusOverlay : JWindow() {
         }
         display.audioLevel = level.coerceIn(0f, 1f)
         display.repaint()
+
+        SwingUtilities.invokeLater {
+            val win = window ?: JWindow().apply {
+                type = Window.Type.UTILITY
+                background = Color(0, 0, 0, 0)
+                isAlwaysOnTop = true
+                focusableWindowState = false
+                isAutoRequestFocus = false
+                size = Dimension(68, 30)
+                contentPane = display
+                addComponentListener(object : ComponentAdapter() {
+                    override fun componentShown(event: ComponentEvent) = positionAtBottom(this@apply)
+                })
+                positionAtBottom(this)
+                window = this
+            }
+            if (!win.isVisible) {
+                win.isVisible = true
+            }
+        }
     }
 
-    private fun positionAtBottom() {
+    private fun positionAtBottom(win: JWindow) {
         val area = GraphicsEnvironment.getLocalGraphicsEnvironment().maximumWindowBounds
-        setLocation(area.x + (area.width - width) / 2, area.y + area.height - height - 18)
+        win.setLocation(area.x + (area.width - win.width) / 2, area.y + area.height - win.height - 18)
+    }
+
+    override fun close() {
+        SwingUtilities.invokeLater {
+            window?.dispose()
+            window = null
+        }
     }
 }
 

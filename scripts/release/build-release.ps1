@@ -96,7 +96,13 @@ if (-not $resolvedOutput.StartsWith($resolvedRoot, [StringComparison]::OrdinalIg
     throw "La salida resuelta quedó fuera del proyecto."
 }
 Get-ChildItem -LiteralPath $output -Recurse -ErrorAction SilentlyContinue | ForEach-Object { if (-not $_.PSIsContainer) { $_.IsReadOnly = $false } }
-Get-ChildItem -LiteralPath $output -File -ErrorAction SilentlyContinue | Remove-Item -Force
+try {
+    Get-ChildItem -LiteralPath $output -File -ErrorAction SilentlyContinue | Remove-Item -Force
+} catch [System.UnauthorizedAccessException] {
+    Get-Process | Where-Object { try { $_.Path -and $_.Path.StartsWith($output, [StringComparison]::OrdinalIgnoreCase) } catch { $false } } | Stop-Process -Force -ErrorAction SilentlyContinue
+    Start-Sleep -Milliseconds 600
+    Get-ChildItem -LiteralPath $output -File -ErrorAction SilentlyContinue | Remove-Item -Force
+}
 Get-ChildItem -LiteralPath $output -Directory -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force
 
 $exe = Join-Path $output $artifactNames[0]

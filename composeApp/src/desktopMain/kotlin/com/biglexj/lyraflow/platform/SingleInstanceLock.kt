@@ -110,7 +110,7 @@ object SingleInstanceLock {
             return true
         }
 
-        val port = getPortForChannel("stable")
+        val port = getPortForChannel(getChannel())
 
         return try {
             val socket = ServerSocket(port, 50, loopback)

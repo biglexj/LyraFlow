@@ -1,12 +1,20 @@
 # 🎙️✨ LyraFlow — Historial de Versiones
 
-📌 **Versión actual: `1.1.6` · Versión mínima requerida: `1.0.0`**
+📌 **Versión actual: `1.1.7` · Versión mínima requerida: `1.0.0`**
 
 > [!IMPORTANT]
 > **Estándar SemVer Flexible (Core-Docs v1.7.0):**
 > - Se utiliza SemVer estándar (`MAJOR.MINOR.PATCH`) sin límites artificiales por dígito (segmentos mayores a 9 como `1.1.12` son 100% válidos).
 > - Se incrementa `PATCH`, `MINOR` o `MAJOR` según el alcance real del cambio y compatibilidad, sin saltos forzados de versión basados únicamente en alcanzar un dígito 9.
 > - **Nombres de Dulces para Versiones Mayores:** Cada versión mayor (`MAJOR`, ej. `2.0.0`) debe nombrarse con un nombre de dulce o postre al estilo de las versiones clásicas de Android en orden alfabético.
+
+## [1.1.7] - 2026-09-04
+
+LyraFlow v1.1.7 renueva la identidad visual de la aplicación con un nuevo icono más suave y estilizado, resuelve el fenómeno de bloqueo de ciclo de vida de ventana en Windows 11 y adopta la distribución exclusiva en ejecutables EXE:
+- **Nueva Identidad Visual & Icono Suave**: Rediseño y suavizado del icono oficial de LyraFlow con líneas más armónicas, mejorando la estética y visibilidad en la barra de tareas, la bandeja del sistema (System Tray) y las ventanas flotantes.
+- **Inmunidad al *Render Lifecycle Lock* en Windows 11**: Desacoplamiento e inicialización estrictamente perezosa de `LyraFlowStatusOverlay` tras el montaje de Compose Desktop, garantizando que la ventana principal emerja siempre visible y en primer plano nativo (`User32.SetForegroundWindow`).
+- **Distribución Exclusiva en EXE (Zero-Friction Desktop Update)**: Estandarización a instaladores `.exe` (`LyraFlow-Windows-1.1.7.exe`) para una actualización in-app de un solo clic con reinicio automático transparente.
+- **Canal de Desarrollo & Reactivación IPC Robusta**: Manejo optimizado de sockets de bucle local, reactivación fluida entre instancias y bypass automático en entornos de desarrollo.
 
 ## [1.1.6] - 2026-08-30
 

@@ -52,6 +52,13 @@ if ($Version -ne $currentVersion) {
         -replace '(?m)^(lyraflow\.versionName=)\d+\.\d+\.\d+$', "`${1}$Version" `
         -replace '(?m)^(lyraflow\.versionCode=)\d+$', "`${1}$newCode"
     Set-Content -LiteralPath $propertiesPath -Value $properties -Encoding UTF8 -NoNewline
+
+    $appVersionFile = Join-Path $root "composeApp\src\commonMain\kotlin\com\biglexj\lyraflow\core\config\AppVersion.kt"
+    if (Test-Path -LiteralPath $appVersionFile) {
+        $appVersionContent = Get-Content -LiteralPath $appVersionFile -Raw -Encoding UTF8
+        $appVersionContent = $appVersionContent -replace 'const val CURRENT = ".*?"', "const val CURRENT = `"$Version`""
+        Set-Content -LiteralPath $appVersionFile -Value $appVersionContent -Encoding UTF8 -NoNewline
+    }
     Write-Host "[1/7] Versión actualizada a $Version ($newCode)." -ForegroundColor Yellow
 } else {
     Write-Host "[1/7] Versión centralizada confirmada: $Version." -ForegroundColor Yellow

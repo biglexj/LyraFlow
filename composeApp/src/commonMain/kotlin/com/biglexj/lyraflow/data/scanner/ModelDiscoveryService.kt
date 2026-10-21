@@ -24,6 +24,8 @@ class ModelDiscoveryService(
         return when (provider) {
             AiProvider.Gemini -> discoverGeminiModels(key)
             AiProvider.OpenAiCompatible -> discoverOpenAiModels(key, endpoint)
+            // El transcriptor de MiniMax expone un unico modelo de ASR documentado.
+            AiProvider.MiniMax -> AiProvider.MiniMax.suggestedModels.map { DiscoveredModel(id = it, displayName = it) }
         }
     }
 

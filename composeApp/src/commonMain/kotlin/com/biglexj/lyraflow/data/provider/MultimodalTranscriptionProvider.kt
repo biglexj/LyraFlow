@@ -3,6 +3,7 @@ package com.biglexj.lyraflow.data.provider
 import com.biglexj.lyraflow.core.model.AiProvider
 import com.biglexj.lyraflow.core.model.ProviderConfiguration
 import com.biglexj.lyraflow.data.gemini.GeminiTranscriptionProvider
+import com.biglexj.lyraflow.data.minimax.MiniMaxSpeechToTextProvider
 import com.biglexj.lyraflow.data.openai.OpenAiCompatibleTranscriptionProvider
 import com.biglexj.lyraflow.domain.transcription.TranscriptionProvider
 import com.biglexj.lyraflow.domain.transcription.TranscriptionRequest
@@ -22,6 +23,11 @@ class MultimodalTranscriptionProvider(
         return when (selected.provider) {
             AiProvider.Gemini -> GeminiTranscriptionProvider(client, apiKey).transcribe(configuredRequest)
             AiProvider.OpenAiCompatible -> OpenAiCompatibleTranscriptionProvider(
+                client = client,
+                apiKey = apiKey,
+                endpoint = { selected.endpoint },
+            ).transcribe(configuredRequest)
+            AiProvider.MiniMax -> MiniMaxSpeechToTextProvider(
                 client = client,
                 apiKey = apiKey,
                 endpoint = { selected.endpoint },

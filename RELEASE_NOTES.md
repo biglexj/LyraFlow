@@ -1,6 +1,15 @@
 # 🎙️✨ LyraFlow — Historial de Versiones
 
-📌 **Versión actual: `1.1.7` · Versión mínima requerida: `1.0.0`**
+📌 **Versión actual: `1.1.8` · Versión mínima requerida: `1.0.0`**
+
+## [1.1.8] - 2026-10-21
+
+LyraFlow v1.1.8 incorpora MiniMax como tercer proveedor de transcripción, añade un atajo global para cancelar el dictado en curso, recupera el indicador de estado inferior del escritorio y reorganiza la pantalla de Ajustes en dos pestañas:
+- **Nuevo Proveedor MiniMax (asr-1.0 + refinamiento MiniMax-M3.1-Flash)**: Integración de MiniMax en el selector de proveedor mediante su transcriptor dedicado POST /speech_to_text, seguido de una segunda pasada de refinamiento textual vía /chat/completions para preservar el sistema de instrucciones de refinamiento de LyraFlow. Clave persistida y cifrada con DPAPI bajo MINIMAX_API_KEY mediante el mecanismo genérico por proveedor. Si el refinamiento falla se conserva la transcripción original sin perder el audio.
+- **Atajo Global para Cancelar Dictado (Ctrl + Alt + Espacio por defecto)**: Registro de un segundo hotkey Win32 con identificador independiente (0x4C5A) junto al principal (0x4C59). Permite descartar el audio capturado sin transcribirlo ni insertarlo, y abandonar una petición en vuelo cancelando su Job de corrutina para impedir la inyección de texto en la aplicación equivocada. Validación de conflicto entre ambos atajos en Ajustes, en persistencia y en el grabador, con retorno al valor por defecto ante colisiones.
+- **Recuperación del Overlay de Estado Inferior**: El JWindow de tipo UTILITY solo se re-mostraba ante cambios de estado o nivel de audio, por lo que cuando el gestor de ventanas lo ocultaba en reposo no volvía a aparecer. Se incorpora un vigilante periódico (~1.9 s) integrado en el Timer de dibujado que reactiva la ventana cuando deja de ser visible y reafirma su jerarquía con HWND_TOPMOST vía JNA, sin interferir con el estado minimizado.
+- **Reorganización de Ajustes en Dos Pestañas (General / Modelos)**: División del catálogo en dos pestañas con reparto en dos columnas mediante BoxWithConstraints (corte en 900 dp, con retorno a columna única en ventanas angostas). Título y barra de pestañas quedan fijados fuera del área desplazable. General: apariencia, atajos, historial, pos-transcripción, inicio y acerca de. Modelos: proveedor, modelo, endpoint, credenciales, instrucciones de transcripción, idioma de Whisper y funciones experimentales.
+- **Selector de Proveedor en Tres Columnas y Rejilla Responsive**: Distribución de los tres proveedores mediante FlowRow con peso uniforme, con repliegue automático a una columna en ventanas estrechas y tarjeta en orientación vertical para evitar el corte de títulos.
 
 > [!IMPORTANT]
 > **Estándar SemVer Flexible (Core-Docs v1.7.0):**

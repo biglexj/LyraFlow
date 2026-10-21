@@ -10,6 +10,11 @@ class LinuxShortcutProbe : GlobalShortcut {
         else -> "Linux: sesión gráfica no identificada"
     }
 
-    override fun start(shortcut: KeyboardShortcut, onActivated: () -> Unit) = Unit
+    override fun start(
+        shortcut: KeyboardShortcut,
+        onActivated: () -> Unit,
+        cancelShortcut: KeyboardShortcut?,
+        onCancel: () -> Unit,
+    ) = Unit
     override fun close() = Unit
 }

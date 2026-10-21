@@ -1,6 +1,10 @@
 package com.biglexj.lyraflow
 
 import com.biglexj.lyraflow.domain.dictation.DictationState
+import com.sun.jna.Native
+import com.sun.jna.platform.win32.User32
+import com.sun.jna.platform.win32.WinDef.HWND
+import com.sun.jna.platform.win32.WinUser
 import java.awt.Color
 import java.awt.Dimension
 import java.awt.Graphics
@@ -19,13 +23,18 @@ import kotlin.math.sin
 /**
  * A non-focusable, always-visible recording status light for the desktop.
  *
- * Implementa inicialización perezosa (Lazy) de JWindow para evitar colisiones
+ * Implementa inicializacion perezosa (Lazy) de JWindow para evitar colisiones
  * y bloqueos en el Desktop Window Manager (DWM) de Windows 11 antes de que la
  * ventana principal de Compose termine su mapeo inicial (conforme a Core-Docs).
+ *
+ * El gestor de ventanas puede ocultar o degradar una ventana *utility* sin aviso,
+ * y como el overlay solo se re-mostraba cuando cambiaba el estado o el nivel de
+ * audio, en reposo desaparecia y no volvia. Por eso el componente de dibujo
+ * mantiene ademas un vigilante periodico que lo reactiva y devuelve al frente.
  */
 class LyraFlowStatusOverlay : AutoCloseable {
     private var window: JWindow? = null
-    private val display = StatusDisplay()
+    private val display = StatusDisplay(onWatchdog = ::restoreWindow)
 
     fun update(state: DictationState, level: Float = 0f) {
         display.status = when (state) {
@@ -35,10 +44,21 @@ class LyraFlowStatusOverlay : AutoCloseable {
             is DictationState.AttemptFailed -> OverlayStatus.AttemptFailed
         }
         display.audioLevel = level.coerceIn(0f, 1f)
-        display.repaint()
+        ensureWindow()
+    }
 
+    private fun ensureWindow() {
         SwingUtilities.invokeLater {
-            val win = window ?: JWindow().apply {
+            val existing = window
+            if (existing != null) {
+                if (!existing.isVisible) {
+                    existing.isVisible = true
+                    positionAtBottom(existing)
+                }
+                return@invokeLater
+            }
+
+            val win = JWindow().apply {
                 type = Window.Type.UTILITY
                 background = Color(0, 0, 0, 0)
                 isAlwaysOnTop = true
@@ -49,12 +69,39 @@ class LyraFlowStatusOverlay : AutoCloseable {
                 addComponentListener(object : ComponentAdapter() {
                     override fun componentShown(event: ComponentEvent) = positionAtBottom(this@apply)
                 })
-                positionAtBottom(this)
-                window = this
             }
-            if (!win.isVisible) {
-                win.isVisible = true
-            }
+            positionAtBottom(win)
+            window = win
+            win.isVisible = true
+        }
+    }
+
+    /** Reactiva el overlay si el gestor de ventanas lo oculto o lo envio atras. */
+    private fun restoreWindow() {
+        val win = window ?: return
+        if (!win.isDisplayable) return
+
+        if (!win.isVisible) {
+            win.isVisible = true
+            positionAtBottom(win)
+            return
+        }
+        reassertTopmost(win)
+    }
+
+    /** Reforza el HWND_TOPMOST por nativo: setAlwaysOnTop de AWT no basta si el DWM ya lo degrado. */
+    private fun reassertTopmost(win: JWindow) {
+        if (!System.getProperty("os.name").contains("windows", ignoreCase = true)) return
+        runCatching {
+            val hwnd = HWND(Native.getWindowPointer(win))
+            if (hwnd.pointer == null || hwnd.pointer == com.sun.jna.Pointer.NULL) return
+            User32.INSTANCE.SetWindowPos(
+                hwnd,
+                HWND(com.sun.jna.Pointer(-1L)),
+                0, 0, 0, 0,
+                WinUser.SWP_NOMOVE or WinUser.SWP_NOSIZE or
+                    WinUser.SWP_NOACTIVATE,
+            )
         }
     }
 
@@ -78,7 +125,9 @@ private enum class OverlayStatus(val color: Color) {
     AttemptFailed(Color(0xE5, 0x53, 0x53)),
 }
 
-private class StatusDisplay : JComponent() {
+private class StatusDisplay(
+    private val onWatchdog: () -> Unit = {},
+) : JComponent() {
     var status: OverlayStatus = OverlayStatus.Idle
     var audioLevel: Float = 0f
     private var smoothedLevel: Float = 0f
@@ -86,7 +135,11 @@ private class StatusDisplay : JComponent() {
 
     init {
         isOpaque = false
-        Timer(48) { tick++; repaint() }.start()
+        Timer(48) {
+            tick++
+            if (tick % WATCHDOG_EVERY_TICKS == 0) onWatchdog()
+            repaint()
+        }.start()
     }
 
     override fun paintComponent(graphics: Graphics) {
@@ -112,5 +165,10 @@ private class StatusDisplay : JComponent() {
             canvas.fillRoundRect(x, centerY - barHeight / 2, 4, barHeight, 4, 4)
         }
         canvas.dispose()
+    }
+
+    private companion object {
+        /** ~1.9 s a 48 ms por tick. */
+        const val WATCHDOG_EVERY_TICKS = 40
     }
 }

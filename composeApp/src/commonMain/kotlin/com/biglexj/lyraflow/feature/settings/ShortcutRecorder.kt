@@ -36,7 +36,11 @@ import com.biglexj.lyraflow.core.hotkey.ShortcutKey
 import com.biglexj.lyraflow.core.hotkey.ShortcutModifier
 
 @Composable
-fun ShortcutRecorder(shortcut: KeyboardShortcut, onShortcutChange: (KeyboardShortcut) -> Unit) {
+fun ShortcutRecorder(
+    shortcut: KeyboardShortcut,
+    onShortcutChange: (KeyboardShortcut) -> Unit,
+    validate: (KeyboardShortcut) -> String? = { it.validationError() },
+) {
     var capturing by remember { mutableStateOf(false) }
     var message by remember(shortcut) { mutableStateOf<String?>(null) }
     val focusRequester = remember { FocusRequester() }
@@ -68,7 +72,7 @@ fun ShortcutRecorder(shortcut: KeyboardShortcut, onShortcutChange: (KeyboardShor
                         .onPreviewKeyEvent { event ->
                             if (!capturing || event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                             val candidate = event.toShortcut()
-                            val error = candidate?.validationError()
+                            val error = candidate?.let(validate)
                             if (candidate != null && error == null) {
                                 onShortcutChange(candidate)
                                 capturing = false

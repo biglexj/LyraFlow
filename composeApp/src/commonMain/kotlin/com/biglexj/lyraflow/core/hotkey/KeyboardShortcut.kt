@@ -36,6 +36,9 @@ data class KeyboardShortcut(
         else -> null
     }
 
+    fun conflictsWith(other: KeyboardShortcut?): Boolean =
+        other != null && modifiers == other.modifiers && key == other.key
+
     companion object {
         private val DISPLAY_ORDER = listOf(
             ShortcutModifier.Windows,
@@ -46,6 +49,15 @@ data class KeyboardShortcut(
 
         val Default = KeyboardShortcut(
             setOf(ShortcutModifier.Control),
+            ShortcutKey.Space,
+        )
+
+        /**
+         * Cancelar un dictado en curso sin transcribirlo. Deliberadamente distinto
+         * de [Default] porque el atajo principal alterna grabar/detener.
+         */
+        val DefaultCancel = KeyboardShortcut(
+            setOf(ShortcutModifier.Control, ShortcutModifier.Alt),
             ShortcutKey.Space,
         )
     }

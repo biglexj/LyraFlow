@@ -42,6 +42,7 @@ import com.biglexj.lyraflow.platform.whisper.WhisperInstaller
 import com.biglexj.lyraflow.platform.whisper.WhisperTranscriptionProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
@@ -132,6 +133,7 @@ fun main(args: Array<String>) {
         val state by coordinator.state.collectAsState()
         val geminiQuotaExhausted by coordinator.geminiQuotaExhausted.collectAsState()
         val recording = remember { mutableStateOf(false) }
+        var processingJob by remember { mutableStateOf<Job?>(null) }
 
         LaunchedEffect(state, recordingTelemetry.level) {
             statusOverlay.update(state, recordingTelemetry.level)
@@ -160,7 +162,7 @@ fun main(args: Array<String>) {
             } else {
                 recording.value = false
                 val wav = audio.stop()
-                scope.launch {
+                processingJob = scope.launch {
                     coordinator.process(
                         TranscriptionRequest(
                             audio = wav,
@@ -176,8 +178,30 @@ fun main(args: Array<String>) {
             }
         }
 
+        /**
+         * Descarta el dictado en curso: si se esta grabando tira el audio capturado
+         * sin transcribirlo, y si ya se esta procesando abandona la peticion en vuelo
+         * para no inyectar nada en la aplicacion equivocada.
+         */
+        fun cancelRecording() {
+            if (recording.value) {
+                recording.value = false
+                runCatching { audio.stop() }
+                recordingTelemetry = RecordingTelemetry()
+            } else {
+                processingJob?.cancel()
+                processingJob = null
+            }
+            coordinator.reset()
+        }
+
         remember {
-            shortcut.start(preferences.shortcut) { scope.launch { toggleRecording() } }
+            shortcut.start(
+                shortcut = preferences.shortcut,
+                onActivated = { scope.launch { toggleRecording() } },
+                cancelShortcut = preferences.cancelShortcut,
+                onCancel = { scope.launch { cancelRecording() } },
+            )
             true
         }
 
@@ -236,6 +260,7 @@ fun main(args: Array<String>) {
                 recording.value = false
                 runCatching { audio.stop() }
             }
+            processingJob?.cancel()
             shortcut.close()
             statusOverlay.close()
             scope.cancel()
@@ -437,7 +462,9 @@ fun main(args: Array<String>) {
                     },
                     reset = coordinator::reset,
                     updatePreferences = { updated ->
-                        val shortcutChanged = preferences.shortcut != updated.shortcut
+                        val shortcutChanged =
+                            preferences.shortcut != updated.shortcut ||
+                                preferences.cancelShortcut != updated.cancelShortcut
                         val providerChanged = preferences.provider != updated.provider
                         if (providerChanged) {
                             apiKey = apiKeyStore.load(updated.provider).ifBlank { environmentApiKey(updated.provider) }
@@ -451,9 +478,12 @@ fun main(args: Array<String>) {
                         if (shortcutChanged) {
                             shortcut.close()
                             shortcut = GlobalShortcutFactory.create().also { replacement ->
-                                replacement.start(updated.shortcut) {
-                                    scope.launch { toggleRecording() }
-                                }
+                                replacement.start(
+                                    shortcut = updated.shortcut,
+                                    onActivated = { scope.launch { toggleRecording() } },
+                                    cancelShortcut = updated.cancelShortcut,
+                                    onCancel = { scope.launch { cancelRecording() } },
+                                )
                             }
                         }
                     },

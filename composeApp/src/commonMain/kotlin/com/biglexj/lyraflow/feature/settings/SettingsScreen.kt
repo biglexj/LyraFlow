@@ -2,7 +2,10 @@ package com.biglexj.lyraflow.feature.settings
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -22,6 +25,8 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
+import androidx.compose.material3.Tab
+import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -29,6 +34,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -47,6 +53,8 @@ import com.biglexj.lyraflow.core.config.ThemeMode
 import com.biglexj.lyraflow.core.config.WhisperLanguage
 import com.biglexj.lyraflow.core.model.AiProvider
 
+private val SETTINGS_TABS = listOf("General", "Modelos")
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SettingsScreen(
@@ -62,15 +70,24 @@ fun SettingsScreen(
     val provider = preferences.provider
     val hasApiKey = configuration.sessionApiKey.isNotBlank()
 
-    Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(28.dp),
-        verticalArrangement = Arrangement.spacedBy(22.dp),
-    ) {
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text("Ajustes", style = MaterialTheme.typography.headlineLarge)
-            Text("Haz que LyraFlow trabaje a tu manera.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+    val availableModels = preferences.availableModels(provider)
+    val discoveredForProvider = preferences.discoveredModels[provider].orEmpty()
+    var selectedModelInput by remember(preferences.model) { mutableStateOf(preferences.model) }
+    var showDiscoveredList by remember { mutableStateOf(false) }
+    var saveFeedback by remember { mutableStateOf<String?>(null) }
+    var selectedTab by rememberSaveable { mutableStateOf(0) }
+
+    LaunchedEffect(saveFeedback) {
+        if (saveFeedback != null) {
+            kotlinx.coroutines.delay(3000)
+            saveFeedback = null
         }
-        SettingsSection("Apariencia", "Elige cómo se adapta LyraFlow a tu escritorio.") {
+    }
+
+    /** Pestana General, columna izquierda. */
+    val generalLeft: @Composable () -> Unit = {
+        Column(verticalArrangement = Arrangement.spacedBy(22.dp)) {
+            SettingsSection("Apariencia", "Elige cómo se adapta LyraFlow a tu escritorio.") {
             Surface(
                 color = MaterialTheme.colorScheme.surface,
                 shape = MaterialTheme.shapes.medium,
@@ -110,312 +127,428 @@ fun SettingsScreen(
                 }
             }
         }
-        SettingsSection("Historial y Retención", "Define el tiempo de conservación de tus dictados recientes antes del borrado automático.") {
-            Surface(
-                color = MaterialTheme.colorScheme.surface,
-                shape = MaterialTheme.shapes.medium,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+            SettingsSection("Atajo global", "Inicia y detén el dictado desde cualquier aplicación.") {
+                ShortcutRecorder(
+                    shortcut = preferences.shortcut,
+                    onShortcutChange = { shortcut ->
+                        if (!preferences.cancelShortcut.conflictsWith(shortcut)) {
+                            onPreferencesChange(preferences.copy(shortcut = shortcut))
+                        }
+                    },
+                    validate = { shortcut ->
+                        shortcut.validationError()
+                            ?: if (preferences.cancelShortcut.conflictsWith(shortcut)) {
+                                "Esa combinacion ya la usa el atajo para cancelar."
+                            } else {
+                                null
+                            }
+                    },
+                )
+            }
+            SettingsSection(
+                "Atajo para cancelar",
+                "Descarta el dictado en curso sin transcribirlo ni insertar nada. Útil cuando se te va la mano y el audio se alarga demasiado.",
             ) {
-                Row(
-                    modifier = Modifier.padding(6.dp),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ShortcutRecorder(
+                    shortcut = preferences.cancelShortcut,
+                    onShortcutChange = { shortcut ->
+                        if (!preferences.shortcut.conflictsWith(shortcut)) {
+                            onPreferencesChange(preferences.copy(cancelShortcut = shortcut))
+                        }
+                    },
+                    validate = { shortcut ->
+                        shortcut.validationError()
+                            ?: if (preferences.shortcut.conflictsWith(shortcut)) {
+                                "Esa combinacion ya la usa el atajo principal."
+                            } else {
+                                null
+                            }
+                    },
+                )
+                if (preferences.cancelShortcut.conflictsWith(preferences.shortcut)) {
+                    Text(
+                        text = "⚠️ El atajo de cancelar coincide con el atajo principal. Cambia uno de los dos para que LyraFlow pueda distinguirlos.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+            }
+        }
+    }
+
+    /** Pestana Modelos, columna izquierda: proveedor, modelo, endpoint y credenciales. */
+    val modelosLeft: @Composable () -> Unit = {
+        Column(verticalArrangement = Arrangement.spacedBy(22.dp)) {
+            SettingsSection("Proveedor multimodal", "Una sola llamada recibe el audio y devuelve el texto corregido.") {
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    HistoryRetentionPeriod.entries.forEach { period ->
-                        val selected = preferences.historyRetention == period
-                        Surface(
-                            onClick = { onPreferencesChange(preferences.copy(historyRetention = period)) },
-                            shape = MaterialTheme.shapes.small,
-                            color = if (selected) MaterialTheme.colorScheme.primaryContainer else androidx.compose.ui.graphics.Color.Transparent,
-                            border = if (selected) BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)) else null,
+                    AiProvider.entries.forEach { option ->
+                        ProviderOption(
+                            provider = option,
+                            selected = provider == option,
+                            onSelect = {
+                                onPreferencesChange(
+                                    preferences.copy(
+                                        provider = option,
+                                        model = option.defaultModel,
+                                        endpoint = option.defaultEndpoint,
+                                    ),
+                                )
+                            },
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                }
+            }
+            SettingsSection("Modelo multimodal", "Escribe cualquier identificador de modelo que acepte audio y texto.") {
+                ModelField(
+                    value = selectedModelInput,
+                    enabled = hasApiKey,
+                    onValueChange = { selectedModelInput = it },
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Button(
+                            onClick = {
+                                val target = selectedModelInput.trim().ifBlank { provider.defaultModel }
+                                selectedModelInput = target
+                                onPreferencesChange(preferences.copy(model = target))
+                                showDiscoveredList = false
+                                saveFeedback = "Modelo guardado: $target"
+                            },
+                            enabled = hasApiKey && selectedModelInput.isNotBlank(),
                         ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 18.dp, vertical = 10.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            Text("💾 Guardar modelo")
+                        }
+
+                        if (discoveredForProvider.isNotEmpty() || availableModels.isNotEmpty()) {
+                            OutlinedButton(
+                                onClick = { showDiscoveredList = !showDiscoveredList },
+                                enabled = hasApiKey,
                             ) {
-                                Text("🕒", style = MaterialTheme.typography.bodyMedium)
                                 Text(
-                                    text = period.label,
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    if (showDiscoveredList) {
+                                        "Ocultar modelos (" + (if (discoveredForProvider.isNotEmpty()) discoveredForProvider.size else availableModels.size) + ")"
+                                    } else {
+                                        "Ver modelos (" + (if (discoveredForProvider.isNotEmpty()) discoveredForProvider.size else availableModels.size) + ")"
+                                    }
+                                )
+                            }
+                        }
+                    }
+
+                    TextButton(
+                        onClick = {
+                            showDiscoveredList = true
+                            onScanModels()
+                        },
+                        enabled = hasApiKey && !isScanningModels,
+                    ) {
+                        if (isScanningModels) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                strokeWidth = 2.dp,
+                            )
+                            Text("  Escaneando…")
+                        } else {
+                            Text("🔄 Escanear modelos de " + provider.label)
+                        }
+                    }
+                }
+
+                if (saveFeedback != null) {
+                    Text(
+                        text = "✅ " + saveFeedback,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+
+                androidx.compose.animation.AnimatedVisibility(visible = showDiscoveredList && hasApiKey) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = if (discoveredForProvider.isNotEmpty()) {
+                                "Modelos detectados (" + discoveredForProvider.size + ") — Pulsa uno para seleccionarlo y luego 'Guardar modelo':"
+                            } else {
+                                "Modelos sugeridos base — Pulsa uno para seleccionarlo y luego 'Guardar modelo':"
+                            },
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            availableModels.forEach { model ->
+                                FilterChip(
+                                    selected = selectedModelInput == model,
+                                    enabled = hasApiKey,
+                                    onClick = {
+                                        selectedModelInput = model
+                                    },
+                                    label = { Text(model) },
                                 )
                             }
                         }
                     }
                 }
+
+                if (!hasApiKey) {
+                    Text(
+                        text = "🔒 Se requiere API Key: Ingresa tu clave en la sección '" + provider.label + " API' abajo para desbloquear el escaneo y la selección de modelos.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
             }
-        }
-        SettingsSection("Proveedor multimodal", "Una sola llamada recibe el audio y devuelve el texto corregido.") {
-            AiProvider.entries.forEach { option ->
-                ProviderOption(
-                    provider = option,
-                    selected = provider == option,
-                    onSelect = {
-                        onPreferencesChange(
-                            preferences.copy(
-                                provider = option,
-                                model = option.defaultModel,
-                                endpoint = option.defaultEndpoint,
-                            ),
+            if (provider == AiProvider.OpenAiCompatible || provider == AiProvider.MiniMax) {
+                val endpointHelp = when (provider) {
+                    AiProvider.MiniMax ->
+                        "URL base de MiniMax. LyraFlow llama a /speech_to_text para transcribir y a /chat/completions para refinar el texto."
+                    else ->
+                        "Compatible con OpenAI, gateways y servidores locales que acepten Chat Completions."
+                }
+                SettingsSection("Endpoint " + provider.label, endpointHelp) {
+                    EndpointField(
+                        value = preferences.endpoint,
+                        enabled = hasApiKey,
+                        onValueChange = { onPreferencesChange(preferences.copy(endpoint = it)) },
+                    )
+                    if (provider == AiProvider.OpenAiCompatible) {
+                        Text(
+                            text = "ℹ️ Nota: Integración experimental con proveedores OpenAI-compatible / pendiente de comprobación completa con todos los endpoints. Si encuentras algún problema con un servidor específico, por favor reporta el inconveniente en GitHub o en nuestro canal de Feedback.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
+                    } else {
+                        Text(
+                            text = "ℹ️ MiniMax no acepta audio en Chat Completions: el audio entra por su endpoint de transcripción y el texto se refina aparte. Límites de MiniMax: 500 segundos y 50 MB por audio.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+            SettingsSection(provider.label + " API", "La clave se conserva cifrada para tu usuario de Windows.") {
+                ApiKeyField(
+                    value = configuration.sessionApiKey,
+                    label = provider.apiKeyEnvironmentVariable,
+                    onValueChange = { newKey ->
+                        val wasEmpty = configuration.sessionApiKey.isBlank()
+                        onApiKeyChange(newKey)
+                        if (wasEmpty && newKey.isNotBlank() && preferences.systemPromptMode == SystemPromptMode.Literal) {
+                            onPreferencesChange(
+                                preferences.copy(
+                                    systemPromptMode = SystemPromptMode.Smart,
+                                    systemPrompt = AppPreferences.DEFAULT_SYSTEM_PROMPT,
+                                ),
+                            )
+                        }
                     },
                 )
             }
         }
-        SettingsSection("Modelo multimodal", "Escribe cualquier identificador de modelo que acepte audio y texto.") {
-            val availableModels = preferences.availableModels(provider)
-            val discoveredForProvider = preferences.discoveredModels[provider].orEmpty()
-            var selectedModelInput by remember(preferences.model) { mutableStateOf(preferences.model) }
-            var showDiscoveredList by remember { mutableStateOf(false) }
-            var saveFeedback by remember { mutableStateOf<String?>(null) }
+    }
 
-            LaunchedEffect(saveFeedback) {
-                if (saveFeedback != null) {
-                    kotlinx.coroutines.delay(3000)
-                    saveFeedback = null
+    /** Pestana Modelos, columna derecha: instrucciones y motor offline. */
+    val modelosRight: @Composable () -> Unit = {
+        Column(verticalArrangement = Arrangement.spacedBy(22.dp)) {
+            SettingsSection("Instrucciones de transcripción (System Prompt)", "Elige entre transcripción inteligente refinada o voz original literal sin alterar conceptos.") {
+                val effectiveMode = if (!hasApiKey) SystemPromptMode.Literal else preferences.systemPromptMode
+                SystemPromptField(
+                    currentMode = effectiveMode,
+                    value = preferences.systemPrompt,
+                    hasApiKey = hasApiKey,
+                    onModeSelect = { mode ->
+                        if (!hasApiKey && mode != SystemPromptMode.Literal) return@SystemPromptField
+                        val newPrompt = when (mode) {
+                            SystemPromptMode.Smart -> AppPreferences.DEFAULT_SYSTEM_PROMPT
+                            SystemPromptMode.Literal -> AppPreferences.LITERAL_SYSTEM_PROMPT
+                            SystemPromptMode.Custom -> preferences.systemPrompt
+                        }
+                        onPreferencesChange(preferences.copy(systemPromptMode = mode, systemPrompt = newPrompt))
+                    },
+                    onValueChange = { newValue ->
+                        if (!hasApiKey) return@SystemPromptField
+                        val newMode = when (newValue.trim()) {
+                            AppPreferences.DEFAULT_SYSTEM_PROMPT.trim() -> SystemPromptMode.Smart
+                            AppPreferences.LITERAL_SYSTEM_PROMPT.trim() -> SystemPromptMode.Literal
+                            else -> SystemPromptMode.Custom
+                        }
+                        onPreferencesChange(preferences.copy(systemPromptMode = newMode, systemPrompt = newValue))
+                    },
+                    onReset = {
+                        if (hasApiKey) {
+                            onPreferencesChange(
+                                preferences.copy(
+                                    systemPromptMode = SystemPromptMode.Smart,
+                                    systemPrompt = AppPreferences.DEFAULT_SYSTEM_PROMPT,
+                                ),
+                            )
+                        }
+                    },
+                )
+            }
+            SettingsSection(
+                "Idioma de Whisper local",
+                "Selecciona el idioma de transcripción para el motor offline de Whisper. Por defecto, 'Automático' detecta el idioma del sistema operativo.",
+            ) {
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    WhisperLanguage.entries.forEach { lang ->
+                        FilterChip(
+                            selected = preferences.whisperLanguage == lang,
+                            onClick = { onPreferencesChange(preferences.copy(whisperLanguage = lang)) },
+                            label = { Text(lang.label) },
+                        )
+                    }
                 }
             }
+            SettingsSection("Funciones Experimentales", "Características avanzadas en fase de prueba.") {
+                SettingSwitch(
+                    title = "Whisper + Refinamiento por LLM (Experimental)",
+                    supporting = "Utiliza Whisper local para transcribir audio a texto y luego procesa el resultado con un modelo LLM de texto para corregir formato y sintaxis.",
+                    checked = preferences.whisperLlmRefinementExperimental,
+                    onCheckedChange = { onPreferencesChange(preferences.copy(whisperLlmRefinementExperimental = it)) },
+                )
+            }
+        }
+    }
 
-            ModelField(
-                value = selectedModelInput,
-                enabled = hasApiKey,
-                onValueChange = { selectedModelInput = it },
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
+    /** Pestana General, columna derecha. */
+    val generalRight: @Composable () -> Unit = {
+        Column(verticalArrangement = Arrangement.spacedBy(22.dp)) {
+            SettingsSection("Historial y Retención", "Define el tiempo de conservación de tus dictados recientes antes del borrado automático.") {
+                Surface(
+                    color = MaterialTheme.colorScheme.surface,
+                    shape = MaterialTheme.shapes.medium,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                ) {
+                    Row(
+                        modifier = Modifier.padding(6.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        HistoryRetentionPeriod.entries.forEach { period ->
+                            val selected = preferences.historyRetention == period
+                            Surface(
+                                onClick = { onPreferencesChange(preferences.copy(historyRetention = period)) },
+                                shape = MaterialTheme.shapes.small,
+                                color = if (selected) MaterialTheme.colorScheme.primaryContainer else androidx.compose.ui.graphics.Color.Transparent,
+                                border = if (selected) BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)) else null,
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 18.dp, vertical = 10.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                ) {
+                                    Text("🕒", style = MaterialTheme.typography.bodyMedium)
+                                    Text(
+                                        text = period.label,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            SettingsSection("Después de transcribir", "Controla qué sucede cuando el texto está listo.") {
+                SettingSwitch(
+                    title = "Insertar automáticamente",
+                    supporting = "Pega el resultado en la aplicación que estabas usando.",
+                    checked = preferences.autoInject,
+                    onCheckedChange = { onPreferencesChange(preferences.copy(autoInject = it)) },
+                )
+            }
+            SettingsSection("Inicio", "LyraFlow puede quedar listo desde que enciendes el equipo.") {
+                SettingSwitch(
+                    title = "Iniciar con Windows",
+                    supporting = "Se abre minimizado en el área de notificación.",
+                    checked = preferences.launchAtStartup,
+                    onCheckedChange = { onPreferencesChange(preferences.copy(launchAtStartup = it)) },
+                )
+            }
+            SettingsSection("Acerca de la Aplicación", "Información de versión, autoría y comprobación de actualizaciones.") {
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Button(
-                        onClick = {
-                            val target = selectedModelInput.trim().ifBlank { provider.defaultModel }
-                            selectedModelInput = target
-                            onPreferencesChange(preferences.copy(model = target))
-                            showDiscoveredList = false
-                            saveFeedback = "Modelo guardado: $target"
-                        },
-                        enabled = hasApiKey && selectedModelInput.isNotBlank(),
-                    ) {
-                        Text("💾 Guardar modelo")
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text("LyraFlow v" + AppVersion.CURRENT, style = MaterialTheme.typography.titleMedium)
+                        Text("Creado por biglexj (2026) • Licencia MIT", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-
-                    if (discoveredForProvider.isNotEmpty() || availableModels.isNotEmpty()) {
-                        OutlinedButton(
-                            onClick = { showDiscoveredList = !showDiscoveredList },
-                            enabled = hasApiKey,
-                        ) {
-                            Text(
-                                if (showDiscoveredList) {
-                                    "Ocultar modelos (${if (discoveredForProvider.isNotEmpty()) discoveredForProvider.size else availableModels.size})"
-                                } else {
-                                    "Ver modelos (${if (discoveredForProvider.isNotEmpty()) discoveredForProvider.size else availableModels.size})"
-                                }
-                            )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        TextButton(onClick = onCheckForUpdates) {
+                            Text("Buscar actualizaciones")
                         }
-                    }
-                }
-
-                TextButton(
-                    onClick = {
-                        showDiscoveredList = true
-                        onScanModels()
-                    },
-                    enabled = hasApiKey && !isScanningModels,
-                ) {
-                    if (isScanningModels) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(16.dp),
-                            strokeWidth = 2.dp,
-                        )
-                        Text("  Escaneando…")
-                    } else {
-                        Text("🔄 Escanear modelos de ${provider.label}")
-                    }
-                }
-            }
-
-            if (saveFeedback != null) {
-                Text(
-                    text = "✅ $saveFeedback",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-            }
-
-            androidx.compose.animation.AnimatedVisibility(visible = showDiscoveredList && hasApiKey) {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        text = if (discoveredForProvider.isNotEmpty()) {
-                            "Modelos detectados (${discoveredForProvider.size}) — Pulsa uno para seleccionarlo y luego 'Guardar modelo':"
-                        } else {
-                            "Modelos sugeridos base — Pulsa uno para seleccionarlo y luego 'Guardar modelo':"
-                        },
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        availableModels.forEach { model ->
-                            FilterChip(
-                                selected = selectedModelInput == model,
-                                enabled = hasApiKey,
-                                onClick = {
-                                    selectedModelInput = model
-                                },
-                                label = { Text(model) },
-                            )
+                        TextButton(onClick = onOpenAbout) {
+                            Text("Ver detalles")
                         }
                     }
                 }
             }
+        }
+    }
 
-            if (!hasApiKey) {
-                Text(
-                    text = "🔒 Se requiere API Key: Ingresa tu clave en la sección '${provider.label} API' abajo para desbloquear el escaneo y la selección de modelos.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-            }
-        }
-        if (provider == AiProvider.OpenAiCompatible) {
-            SettingsSection("Endpoint OpenAI-compatible", "Compatible con OpenAI, gateways y servidores locales que acepten Chat Completions.") {
-                EndpointField(
-                    value = preferences.endpoint,
-                    enabled = hasApiKey,
-                    onValueChange = { onPreferencesChange(preferences.copy(endpoint = it)) },
-                )
-                Text(
-                    text = "ℹ️ Nota: Integración experimental con proveedores OpenAI-compatible / pendiente de comprobación completa con todos los endpoints. Si encuentras algún problema con un servidor específico, por favor reporta el inconveniente en GitHub o en nuestro canal de Feedback.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-        SettingsSection("${provider.label} API", "La clave se conserva cifrada para tu usuario de Windows.") {
-            ApiKeyField(
-                value = configuration.sessionApiKey,
-                label = provider.apiKeyEnvironmentVariable,
-                onValueChange = { newKey ->
-                    val wasEmpty = configuration.sessionApiKey.isBlank()
-                    onApiKeyChange(newKey)
-                    if (wasEmpty && newKey.isNotBlank() && preferences.systemPromptMode == SystemPromptMode.Literal) {
-                        onPreferencesChange(
-                            preferences.copy(
-                                systemPromptMode = SystemPromptMode.Smart,
-                                systemPrompt = AppPreferences.DEFAULT_SYSTEM_PROMPT,
-                            ),
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val twoColumns = maxWidth >= 900.dp
+        val leftColumn = if (selectedTab == 0) generalLeft else modelosLeft
+        val rightColumn = if (selectedTab == 0) generalRight else modelosRight
+
+        Column(modifier = Modifier.fillMaxSize()) {
+            Column(modifier = Modifier.padding(start = 28.dp, end = 28.dp, top = 28.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("Ajustes", style = MaterialTheme.typography.headlineLarge)
+                    Text("Haz que LyraFlow trabaje a tu manera.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Spacer(Modifier.height(18.dp))
+                PrimaryTabRow(selectedTabIndex = selectedTab) {
+                    SETTINGS_TABS.forEachIndexed { index, title ->
+                        Tab(
+                            selected = selectedTab == index,
+                            onClick = { selectedTab = index },
+                            text = { Text(title) },
                         )
                     }
-                },
-            )
-        }
-        SettingsSection("Instrucciones de transcripción (System Prompt)", "Elige entre transcripción inteligente refinada o voz original literal sin alterar conceptos.") {
-            val effectiveMode = if (!hasApiKey) SystemPromptMode.Literal else preferences.systemPromptMode
-            SystemPromptField(
-                currentMode = effectiveMode,
-                value = preferences.systemPrompt,
-                hasApiKey = hasApiKey,
-                onModeSelect = { mode ->
-                    if (!hasApiKey && mode != SystemPromptMode.Literal) return@SystemPromptField
-                    val newPrompt = when (mode) {
-                        SystemPromptMode.Smart -> AppPreferences.DEFAULT_SYSTEM_PROMPT
-                        SystemPromptMode.Literal -> AppPreferences.LITERAL_SYSTEM_PROMPT
-                        SystemPromptMode.Custom -> preferences.systemPrompt
-                    }
-                    onPreferencesChange(preferences.copy(systemPromptMode = mode, systemPrompt = newPrompt))
-                },
-                onValueChange = { newValue ->
-                    if (!hasApiKey) return@SystemPromptField
-                    val newMode = when (newValue.trim()) {
-                        AppPreferences.DEFAULT_SYSTEM_PROMPT.trim() -> SystemPromptMode.Smart
-                        AppPreferences.LITERAL_SYSTEM_PROMPT.trim() -> SystemPromptMode.Literal
-                        else -> SystemPromptMode.Custom
-                    }
-                    onPreferencesChange(preferences.copy(systemPromptMode = newMode, systemPrompt = newValue))
-                },
-                onReset = {
-                    if (hasApiKey) {
-                        onPreferencesChange(
-                            preferences.copy(
-                                systemPromptMode = SystemPromptMode.Smart,
-                                systemPrompt = AppPreferences.DEFAULT_SYSTEM_PROMPT,
-                            ),
-                        )
-                    }
-                },
-            )
-        }
-        SettingsSection("Atajo global", "Inicia y detén el dictado desde cualquier aplicación.") {
-            ShortcutRecorder(preferences.shortcut) { shortcut ->
-                onPreferencesChange(preferences.copy(shortcut = shortcut))
-            }
-        }
-        @OptIn(ExperimentalLayoutApi::class)
-        SettingsSection(
-            "Idioma de Whisper local",
-            "Selecciona el idioma de transcripción para el motor offline de Whisper. Por defecto, 'Automático' detecta el idioma del sistema operativo.",
-        ) {
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                WhisperLanguage.entries.forEach { lang ->
-                    FilterChip(
-                        selected = preferences.whisperLanguage == lang,
-                        onClick = { onPreferencesChange(preferences.copy(whisperLanguage = lang)) },
-                        label = { Text(lang.label) },
-                    )
                 }
             }
-        }
-        SettingsSection("Funciones Experimentales", "Características avanzadas en fase de prueba.") {
-            SettingSwitch(
-                title = "Whisper + Refinamiento por LLM (Experimental)",
-                supporting = "Utiliza Whisper local para transcribir audio a texto y luego procesa el resultado con un modelo LLM de texto para corregir formato y sintaxis.",
-                checked = preferences.whisperLlmRefinementExperimental,
-                onCheckedChange = { onPreferencesChange(preferences.copy(whisperLlmRefinementExperimental = it)) },
-            )
-        }
-        SettingsSection("Después de transcribir", "Controla qué sucede cuando el texto está listo.") {
-            SettingSwitch(
-                title = "Insertar automáticamente",
-                supporting = "Pega el resultado en la aplicación que estabas usando.",
-                checked = preferences.autoInject,
-                onCheckedChange = { onPreferencesChange(preferences.copy(autoInject = it)) },
-            )
-        }
-        SettingsSection("Inicio", "LyraFlow puede quedar listo desde que enciendes el equipo.") {
-            SettingSwitch(
-                title = "Iniciar con Windows",
-                supporting = "Se abre minimizado en el área de notificación.",
-                checked = preferences.launchAtStartup,
-                onCheckedChange = { onPreferencesChange(preferences.copy(launchAtStartup = it)) },
-            )
-        }
-        SettingsSection("Acerca de la Aplicación", "Información de versión, autoría y comprobación de actualizaciones.") {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
+
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState())
+                    .padding(start = 28.dp, end = 28.dp, top = 22.dp, bottom = 28.dp),
+                verticalArrangement = Arrangement.spacedBy(22.dp),
             ) {
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text("LyraFlow v${AppVersion.CURRENT}", style = MaterialTheme.typography.titleMedium)
-                    Text("Creado por biglexj (2026) • Licencia MIT", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TextButton(onClick = onCheckForUpdates) {
-                        Text("Buscar actualizaciones")
+                if (twoColumns) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    ) {
+                        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(22.dp)) {
+                            leftColumn()
+                        }
+                        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(22.dp)) {
+                            rightColumn()
+                        }
                     }
-                    TextButton(onClick = onOpenAbout) {
-                        Text("Ver detalles")
-                    }
+                } else {
+                    leftColumn()
+                    rightColumn()
                 }
             }
         }
@@ -441,24 +574,47 @@ private fun SettingsSection(title: String, supporting: String, content: @Composa
 }
 
 @Composable
-private fun ProviderOption(provider: AiProvider, selected: Boolean, onSelect: () -> Unit) {
+private fun ProviderOption(
+    provider: AiProvider,
+    selected: Boolean,
+    onSelect: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Surface(
         onClick = onSelect,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier,
         shape = MaterialTheme.shapes.medium,
         color = if (selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, if (selected) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(14.dp),
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            RadioButton(selected = selected, onClick = onSelect)
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(provider.label, style = MaterialTheme.typography.titleMedium)
-                Text(provider.description, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                RadioButton(selected = selected, onClick = onSelect)
+                Text(
+                    provider.label,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = if (selected) {
+                        MaterialTheme.colorScheme.onSecondaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.onSurface
+                    },
+                )
             }
+            Text(
+                provider.description,
+                style = MaterialTheme.typography.bodySmall,
+                color = if (selected) {
+                    MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.85f)
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
+            )
         }
     }
 }

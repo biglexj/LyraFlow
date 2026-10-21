@@ -41,6 +41,7 @@ data class AppPreferences(
     val autoInject: Boolean = true,
     val launchAtStartup: Boolean = true,
     val shortcut: KeyboardShortcut = KeyboardShortcut.Default,
+    val cancelShortcut: KeyboardShortcut = KeyboardShortcut.DefaultCancel,
     val systemPromptMode: SystemPromptMode = SystemPromptMode.Smart,
     val systemPrompt: String = DEFAULT_SYSTEM_PROMPT,
     val historyRetention: HistoryRetentionPeriod = HistoryRetentionPeriod.Hours24,

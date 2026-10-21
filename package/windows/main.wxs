@@ -1,9 +1,9 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml Version="1.1.8" encoding="utf-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi"
      xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
 
-    <Product Id="*" Name="LyraFlow" Language="1034" Version="1.1.7" Manufacturer="biglexj" UpgradeCode="55ee1e98-1bd5-4d89-990f-27756b85820c">
-        <Package InstallerVersion="200" Compressed="yes" InstallScope="perUser" SummaryCodepage="1252" Comments="LyraFlow — Dictado inteligente multiplataforma" />
+    <Product Id="*" Name="LyraFlow" Language="1034" Version="1.1.8" Manufacturer="biglexj" UpgradeCode="55ee1e98-1bd5-4d89-990f-27756b85820c">
+        <Package InstallerVersion="1.1.8" Compressed="yes" InstallScope="perUser" SummaryCodepage="1252" Comments="LyraFlow — Dictado inteligente multiplataforma" />
 
         <MediaTemplate EmbedCab="yes" />
 

@@ -16,7 +16,7 @@ enum class AiProvider(
 ) {
     Gemini(
         label = "Gemini",
-        description = "API nativa de Google con entrada de audio multimodal.",
+        description = "Google",
         defaultModel = "gemini-3.5-flash",
         defaultEndpoint = "https://generativelanguage.googleapis.com/v1beta",
         apiKeyEnvironmentVariable = "GEMINI_API_KEY",
@@ -28,7 +28,7 @@ enum class AiProvider(
     ),
     OpenAiCompatible(
         label = "OpenAI / compatible",
-        description = "OpenAI, gateways, Qwen, modelos locales y otros endpoints compatibles.",
+        description = "OpenAI o compatible",
         defaultModel = "gpt-5.6-luna",
         defaultEndpoint = "https://api.openai.com/v1/chat/completions",
         apiKeyEnvironmentVariable = "OPENAI_API_KEY",
@@ -37,6 +37,16 @@ enum class AiProvider(
             "gpt-5.6-terra",
             "gpt-5.6-sol",
             "gpt-audio-5.6",
+        ),
+    ),
+    MiniMax(
+        label = "MiniMax",
+        description = "Transcripción dedicada",
+        defaultModel = "asr-1.0",
+        defaultEndpoint = "https://api.minimax.io/v1",
+        apiKeyEnvironmentVariable = "MINIMAX_API_KEY",
+        suggestedModels = listOf(
+            "asr-1.0",
         ),
     ),
 }

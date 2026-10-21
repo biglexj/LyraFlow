@@ -54,6 +54,7 @@ class DesktopPreferencesStore(
             autoInject = node.getBoolean(AUTO_INJECT, true),
             launchAtStartup = node.getBoolean(LAUNCH_AT_STARTUP, true),
             shortcut = loadShortcut(),
+            cancelShortcut = loadCancelShortcut(),
             systemPromptMode = promptMode,
             systemPrompt = node.get(SYSTEM_PROMPT, fallbackPrompt),
             discoveredModels = loadDiscoveredModels(),
@@ -73,6 +74,8 @@ class DesktopPreferencesStore(
         node.putBoolean(LAUNCH_AT_STARTUP, preferences.launchAtStartup)
         node.put(HOTKEY_MODIFIERS, preferences.shortcut.modifiers.joinToString(",") { it.name })
         node.put(HOTKEY_KEY, preferences.shortcut.key.name)
+        node.put(CANCEL_HOTKEY_MODIFIERS, preferences.cancelShortcut.modifiers.joinToString(",") { it.name })
+        node.put(CANCEL_HOTKEY_KEY, preferences.cancelShortcut.key.name)
         node.put(SYSTEM_PROMPT_MODE, preferences.systemPromptMode.name)
         node.put(SYSTEM_PROMPT, preferences.systemPrompt)
         preferences.discoveredModels.forEach { (prov, models) ->
@@ -91,15 +94,39 @@ class DesktopPreferencesStore(
     }
 
     private fun loadShortcut(): KeyboardShortcut {
-        val defaultModifiers = KeyboardShortcut.Default.modifiers.joinToString(",") { it.name }
-        val modifiers = node.get(HOTKEY_MODIFIERS, defaultModifiers)
+        return loadShortcut(
+            modifiersKey = HOTKEY_MODIFIERS,
+            keyKey = HOTKEY_KEY,
+            fallback = KeyboardShortcut.Default,
+            conflictingWith = null,
+        )
+    }
+
+    private fun loadCancelShortcut(): KeyboardShortcut {
+        val main = loadShortcut()
+        return loadShortcut(
+            modifiersKey = CANCEL_HOTKEY_MODIFIERS,
+            keyKey = CANCEL_HOTKEY_KEY,
+            fallback = KeyboardShortcut.DefaultCancel,
+            conflictingWith = main,
+        )
+    }
+
+    private fun loadShortcut(
+        modifiersKey: String,
+        keyKey: String,
+        fallback: KeyboardShortcut,
+        conflictingWith: KeyboardShortcut?,
+    ): KeyboardShortcut {
+        val defaultModifiers = fallback.modifiers.joinToString(",") { it.name }
+        val modifiers = node.get(modifiersKey, defaultModifiers)
             .split(',')
             .mapNotNull { value -> ShortcutModifier.entries.firstOrNull { it.name == value } }
             .toSet()
-        val defaultKey = KeyboardShortcut.Default.key
-        val key = enumValue(node.get(HOTKEY_KEY, defaultKey.name), defaultKey)
-        return KeyboardShortcut(modifiers, key).takeIf { it.validationError() == null }
-            ?: KeyboardShortcut.Default
+        val key = enumValue(node.get(keyKey, fallback.key.name), fallback.key)
+        val candidate = KeyboardShortcut(modifiers, key)
+        val isUsable = candidate.validationError() == null && !candidate.conflictsWith(conflictingWith)
+        return if (isUsable) candidate else fallback
     }
 
     private inline fun <reified T : Enum<T>> enumValue(value: String, fallback: T): T =
@@ -134,6 +161,8 @@ class DesktopPreferencesStore(
         const val LAUNCH_AT_STARTUP = "launchAtStartup"
         const val HOTKEY_MODIFIERS = "hotkeyModifiers"
         const val HOTKEY_KEY = "hotkeyKey"
+        const val CANCEL_HOTKEY_MODIFIERS = "cancelHotkeyModifiers"
+        const val CANCEL_HOTKEY_KEY = "cancelHotkeyKey"
         const val SYSTEM_PROMPT_MODE = "systemPromptMode"
         const val SYSTEM_PROMPT = "systemPrompt"
         const val WINDOW_WIDTH = "windowWidth"

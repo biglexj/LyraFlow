@@ -19,7 +19,9 @@ class MultimodalTranscriptionProvider(
 
     override suspend fun transcribe(request: TranscriptionRequest): TranscriptionResult {
         val selected = configuration()
-        val configuredRequest = request.copy(model = selected.model)
+        // La peticion viaja con el proveedor y el modelo realmente configurados:
+        // el dominio los usa para atribuir la cuota agotada al origen correcto.
+        val configuredRequest = request.copy(model = selected.model, provider = selected.provider)
         return when (selected.provider) {
             AiProvider.Gemini -> GeminiTranscriptionProvider(client, apiKey).transcribe(configuredRequest)
             AiProvider.OpenAiCompatible -> OpenAiCompatibleTranscriptionProvider(

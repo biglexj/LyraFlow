@@ -6,6 +6,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.res.painterResource
@@ -131,7 +132,11 @@ fun main(args: Array<String>) {
             )
         }
         val state by coordinator.state.collectAsState()
-        val geminiQuotaExhausted by coordinator.geminiQuotaExhausted.collectAsState()
+        val quotaExhaustion by coordinator.quotaExhaustion.collectAsState()
+        // Referencia viva al coordinator: el atajo global se registro una sola vez y
+        // debe seguir operando sobre el coordinator vigente, no sobre una instancia
+        // anterior que quedó huerfana al cambiar de modelo, proveedor o API key.
+        val coordinatorRef = rememberUpdatedState(coordinator)
         val recording = remember { mutableStateOf(false) }
         var processingJob by remember { mutableStateOf<Job?>(null) }
 
@@ -144,8 +149,14 @@ fun main(args: Array<String>) {
         }
 
         fun toggleRecording() {
-            if (coordinator.state.value is DictationState.Transcribing) {
-                return
+            val active = coordinatorRef.value
+            val currentState = active.state.value
+            if (currentState is DictationState.Transcribing) {
+                // Solo se bloquea el atajo mientras exista una peticion viva. Si el estado
+                // quedo huerfano (peticion cancelada o coordinator reemplazado), se recupera
+                // para que el atajo nunca quede inutilizable.
+                if (processingJob?.isActive == true) return
+                active.reset()
             }
             if (!recording.value) {
                 recordingTelemetry = RecordingTelemetry()
@@ -157,21 +168,22 @@ fun main(args: Array<String>) {
                 }
                     .onSuccess {
                         recording.value = true
-                        coordinator.markListening()
+                        active.markListening()
                     }
             } else {
                 recording.value = false
                 val wav = audio.stop()
                 processingJob = scope.launch {
-                    coordinator.process(
+                    active.process(
                         TranscriptionRequest(
                             audio = wav,
-                            model = preferences.model,
+                            model = preferences.providerConfiguration.model,
                             systemPrompt = preferences.systemPrompt,
+                            provider = preferences.provider,
                         ),
                     )
                     if (preferences.autoInject) {
-                        val text = (coordinator.state.value as? DictationState.Completed)?.refinedText.orEmpty()
+                        val text = (active.state.value as? DictationState.Completed)?.refinedText.orEmpty()
                         injector.inject(text)
                     }
                 }
@@ -184,6 +196,7 @@ fun main(args: Array<String>) {
          * para no inyectar nada en la aplicacion equivocada.
          */
         fun cancelRecording() {
+            val active = coordinatorRef.value
             if (recording.value) {
                 recording.value = false
                 runCatching { audio.stop() }
@@ -192,7 +205,7 @@ fun main(args: Array<String>) {
                 processingJob?.cancel()
                 processingJob = null
             }
-            coordinator.reset()
+            active.reset()
         }
 
         remember {
@@ -399,17 +412,18 @@ fun main(args: Array<String>) {
                                         preferences.systemPrompt
                                     }
 
-                                    scope.launch {
-                                        coordinator.process(
+                                    processingJob = scope.launch {
+                                        coordinatorRef.value.process(
                                             TranscriptionRequest(
                                                 audio = bytes,
                                                 mimeType = mimeType,
-                                                model = preferences.model,
+                                                model = preferences.providerConfiguration.model,
                                                 systemPrompt = prompt,
+                                                provider = preferences.provider,
                                             ),
                                         )
                                         if (preferences.autoInject) {
-                                            val text = (coordinator.state.value as? DictationState.Completed)?.refinedText.orEmpty()
+                                            val text = (coordinatorRef.value.state.value as? DictationState.Completed)?.refinedText.orEmpty()
                                             injector.inject(text)
                                         }
                                     }
@@ -460,7 +474,7 @@ fun main(args: Array<String>) {
                         val text = (state as? DictationState.Completed)?.refinedText.orEmpty()
                         injector.inject(text)
                     },
-                    reset = coordinator::reset,
+                    reset = { coordinatorRef.value.reset() },
                     updatePreferences = { updated ->
                         val shortcutChanged =
                             preferences.shortcut != updated.shortcut ||
@@ -491,7 +505,7 @@ fun main(args: Array<String>) {
                         val wasEmpty = apiKey.isBlank()
                         apiKey = it
                         apiKeyStore.save(preferences.provider, it)
-                        coordinator.resetQuotaExhausted()
+                        coordinatorRef.value.resetQuotaExhausted()
                         if (it.isNotBlank()) {
                             scanModels(autoSelectBest = wasEmpty, keyOverride = it)
                         }
@@ -501,24 +515,24 @@ fun main(args: Array<String>) {
                     isScanningModels = isScanningModels,
                     retry = {
                         scope.launch {
-                            coordinator.retry()
+                            coordinatorRef.value.retry()
                             if (preferences.autoInject) {
-                                val text = (coordinator.state.value as? DictationState.Completed)?.refinedText.orEmpty()
+                                val text = (coordinatorRef.value.state.value as? DictationState.Completed)?.refinedText.orEmpty()
                                 injector.inject(text)
                             }
                         }
                     },
                     retryWhisper = {
                         scope.launch {
-                            coordinator.retry(whisperProvider)
+                            coordinatorRef.value.retry(whisperProvider)
                             if (preferences.autoInject) {
-                                val text = (coordinator.state.value as? DictationState.Completed)?.refinedText.orEmpty()
+                                val text = (coordinatorRef.value.state.value as? DictationState.Completed)?.refinedText.orEmpty()
                                 injector.inject(text)
                             }
                         }
                     },
-                    geminiQuotaExhausted = geminiQuotaExhausted,
-                    resetQuotaExhausted = coordinator::resetQuotaExhausted,
+                    quotaExhaustion = quotaExhaustion,
+                    resetQuotaExhausted = { coordinatorRef.value.resetQuotaExhausted() },
                 ),
             )
         }

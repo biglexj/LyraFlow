@@ -37,6 +37,7 @@ import com.biglexj.lyraflow.core.config.WhisperSetupState
 import com.biglexj.lyraflow.core.config.WhisperModel
 import com.biglexj.lyraflow.core.audio.RecordingTelemetry
 import com.biglexj.lyraflow.domain.dictation.DictationState
+import com.biglexj.lyraflow.domain.transcription.QuotaExhaustion
 import com.biglexj.lyraflow.feature.components.LyraIcon
 import com.biglexj.lyraflow.feature.components.LyraIconType
 
@@ -57,7 +58,7 @@ fun HomeScreen(
     onScanModels: () -> Unit = {},
     onRetry: () -> Unit = {},
     onRetryWhisper: () -> Unit = {},
-    geminiQuotaExhausted: Boolean = false,
+    quotaExhaustion: QuotaExhaustion? = null,
     onResetQuotaExhausted: () -> Unit = {},
 ) {
     var showApiKeyDialog by remember { mutableStateOf(false) }
@@ -126,7 +127,15 @@ fun HomeScreen(
             Text("Tu voz, ya bien escrita", style = MaterialTheme.typography.headlineLarge)
             Text(platform, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        if (geminiQuotaExhausted) {
+        // El aviso de cuota solo se muestra cuando corresponde al proveedor y al
+        // modelo que estan seleccionados ahora mismo: es la misma combinacion que
+        // el coordinador bloquea de forma automatica.
+        val activeQuota = quotaExhaustion?.takeIf {
+            it.provider == configuration.preferences.provider &&
+                it.model == configuration.preferences.providerConfiguration.model
+        }
+        if (activeQuota != null) {
+            val whisperIsFallback = configuration.preferences.isWhisperEnabled && whisperStatus.available
             Surface(
                 color = MaterialTheme.colorScheme.errorContainer,
                 contentColor = MaterialTheme.colorScheme.onErrorContainer,
@@ -141,11 +150,15 @@ fun HomeScreen(
                     LyraIcon(LyraIconType.Settings, Modifier.size(24.dp))
                     Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text(
-                            "⚠️ Cuota de Gemini Agotada",
+                            "⚠️ Cuota de ${activeQuota.source} agotada",
                             style = MaterialTheme.typography.titleMedium,
                         )
                         Text(
-                            "Transcripción autónoma con Whisper local activa. Las siguientes peticiones se procesarán localmente.",
+                            if (whisperIsFallback) {
+                                "Transcripción autónoma con Whisper local activa. Las siguientes peticiones se procesarán localmente."
+                            } else {
+                                "Actualiza tu API Key o elige otro proveedor o modelo para reanudar la transcripción en la nube."
+                            },
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.85f),
                         )

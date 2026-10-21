@@ -1,6 +1,21 @@
 # 🎙️✨ LyraFlow — Historial de Versiones
 
-📌 **Versión actual: `1.1.8` · Versión mínima requerida: `1.0.0`**
+📌 **Versión actual: `1.1.9` · Versión mínima requerida: `1.0.0`**
+
+## [1.1.9] - 2026-10-21
+
+LyraFlow v1.1.9 corrige dos defectos reportados en el uso real de la 1.1.8: la atribución errónea de la cuota agotada y el bloqueo permanente del atajo global de dictado:
+- **La Cuota se Atribuye al Proveedor y al Modelo Reales**: El estado de cuota agotada deja de ser una bandera única y pasa a registrar el proveedor y el modelo que la consumieron. El aviso del panel principal y los mensajes de error nombran la selección vigente (por ejemplo `MiniMax (asr-1.0)`) en lugar de mencionar siempre a Gemini. El banner solo aparece cuando la cuota corresponde al proveedor y al modelo que están seleccionados en ese momento, y su descripción indica con verdad si el respaldo local está disponible o si toca actualizar la clave o cambiar de modelo.
+- **El Atajo Global Vuelve a Responder Tras Agotarse la Cuota**: El registro del atajo global se crea una sola vez y quedaba apuntando a la instancia anterior del coordinador de dictado, de modo que al cambiar de modelo, proveedor o clave de API la interfaz y el atajo manipulaban estados distintos y el atajo dejaba de responder. Ahora el atajo resuelve siempre el coordinador vigente y, si detecta un estado de transcripción atascado sin petición viva que lo respalde, lo recupera en lugar de bloquearse.
+- **La Cuota Deja de Bloquear a Otras Selecciones**: La cuota agotada queda acotada al proveedor y al modelo que la consumieron. Cambiar de proveedor o de modelo vuelve a intentar la transcripción en la nube de inmediato, en lugar de mantener el dictado local forzado durante toda la ventana de enfriamiento.
+- **Ninguna Petición Queda Atascada**: Una petición cancelada abandonaba el estado de transcripción bloqueado, lo que dejaba el atajo inutilizable hasta reiniciar la aplicación. La cancelación y el error liberan ahora el estado de forma explícita.
+- **HTTP 429 Unificado en OpenAI-compatible**: El límite de uso del protocolo OpenAI-compatible se reportaba como un error genérico y no activaba el respaldo local autónomo. Ahora se reconoce como cuota agotada y conmuta a Whisper local igual que el resto de proveedores.
+
+> [!IMPORTANT]
+> **Estándar SemVer Flexible (Core-Docs v1.7.0):**
+> - Se utiliza SemVer estándar (`MAJOR.MINOR.PATCH`) sin límites artificiales por dígito (segmentos mayores a 9 como `1.1.12` son 100% válidos).
+> - Se incrementa `PATCH`, `MINOR` o `MAJOR` según el alcance real del cambio y compatibilidad, sin saltos forzados de versión basados únicamente en alcanzar un dígito 9.
+> - **Nombres de Dulces para Versiones Mayores:** Cada versión mayor (`MAJOR`, ej. `2.0.0`) debe nombrarse con un nombre de dulce o postre al estilo de las versiones clásicas de Android en orden alfabético.
 
 ## [1.1.8] - 2026-10-21
 
@@ -10,12 +25,6 @@ LyraFlow v1.1.8 incorpora MiniMax como tercer proveedor de transcripción, añad
 - **Recuperación del Overlay de Estado Inferior**: El JWindow de tipo UTILITY solo se re-mostraba ante cambios de estado o nivel de audio, por lo que cuando el gestor de ventanas lo ocultaba en reposo no volvía a aparecer. Se incorpora un vigilante periódico (~1.9 s) integrado en el Timer de dibujado que reactiva la ventana cuando deja de ser visible y reafirma su jerarquía con HWND_TOPMOST vía JNA, sin interferir con el estado minimizado.
 - **Reorganización de Ajustes en Dos Pestañas (General / Modelos)**: División del catálogo en dos pestañas con reparto en dos columnas mediante BoxWithConstraints (corte en 900 dp, con retorno a columna única en ventanas angostas). Título y barra de pestañas quedan fijados fuera del área desplazable. General: apariencia, atajos, historial, pos-transcripción, inicio y acerca de. Modelos: proveedor, modelo, endpoint, credenciales, instrucciones de transcripción, idioma de Whisper y funciones experimentales.
 - **Selector de Proveedor en Tres Columnas y Rejilla Responsive**: Distribución de los tres proveedores mediante FlowRow con peso uniforme, con repliegue automático a una columna en ventanas estrechas y tarjeta en orientación vertical para evitar el corte de títulos.
-
-> [!IMPORTANT]
-> **Estándar SemVer Flexible (Core-Docs v1.7.0):**
-> - Se utiliza SemVer estándar (`MAJOR.MINOR.PATCH`) sin límites artificiales por dígito (segmentos mayores a 9 como `1.1.12` son 100% válidos).
-> - Se incrementa `PATCH`, `MINOR` o `MAJOR` según el alcance real del cambio y compatibilidad, sin saltos forzados de versión basados únicamente en alcanzar un dígito 9.
-> - **Nombres de Dulces para Versiones Mayores:** Cada versión mayor (`MAJOR`, ej. `2.0.0`) debe nombrarse con un nombre de dulce o postre al estilo de las versiones clásicas de Android en orden alfabético.
 
 ## [1.1.7] - 2026-09-04
 

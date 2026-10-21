@@ -43,6 +43,7 @@ import com.biglexj.lyraflow.core.update.UpdateRelease
 import com.biglexj.lyraflow.core.update.UpdateService
 import com.biglexj.lyraflow.feature.update.UpdateModalDialog
 import com.biglexj.lyraflow.domain.dictation.DictationState
+import com.biglexj.lyraflow.domain.transcription.QuotaExhaustion
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
@@ -67,7 +68,7 @@ data class ShellActions(
     val isScanningModels: Boolean = false,
     val retry: () -> Unit = {},
     val retryWhisper: () -> Unit = {},
-    val geminiQuotaExhausted: Boolean = false,
+    val quotaExhaustion: QuotaExhaustion? = null,
     val resetQuotaExhausted: () -> Unit = {},
 )
 
@@ -332,7 +333,7 @@ private fun ScreenContent(
                     onScanModels = actions.scanModels,
                     onRetry = actions.retry,
                     onRetryWhisper = actions.retryWhisper,
-                    geminiQuotaExhausted = actions.geminiQuotaExhausted,
+                    quotaExhaustion = actions.quotaExhaustion,
                     onResetQuotaExhausted = actions.resetQuotaExhausted,
                 )
                 AppDestination.History -> HistoryScreen(

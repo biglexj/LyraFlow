@@ -1,5 +1,6 @@
 package com.biglexj.lyraflow.data.openai
 
+import com.biglexj.lyraflow.domain.transcription.QuotaExhaustedException
 import com.biglexj.lyraflow.domain.transcription.TranscriptionProvider
 import com.biglexj.lyraflow.domain.transcription.TranscriptionRequest
 import com.biglexj.lyraflow.domain.transcription.TranscriptionResult
@@ -51,14 +52,18 @@ class OpenAiCompatibleTranscriptionProvider(
             setBody(createBody(request, model))
         }
 
+        if (response.status.value == 429) {
+            // El 429 se reporta como cuota agotada para que el dominio active el
+            // respaldo local autonomo, igual que ocurre con los demas proveedores.
+            throw QuotaExhaustedException(
+                "Has alcanzado el límite de uso o cuota del servicio OpenAI-compatible. Revisa tu saldo o intenta más tarde."
+            )
+        }
+
         check(response.status.isSuccess()) {
-            if (response.status.value == 429) {
-                "⚠️ Has alcanzado el límite de uso o cuota del servicio OpenAI-compatible. Revisa tu saldo o intenta más tarde."
-            } else {
-                val detail = response.bodyAsText().trim().take(240)
-                "El endpoint OpenAI-compatible respondió HTTP ${response.status.value}." +
-                    if (detail.isBlank()) "" else " Detalle: $detail"
-            }
+            val detail = response.bodyAsText().trim().take(240)
+            "El endpoint OpenAI-compatible respondió HTTP ${response.status.value}." +
+                if (detail.isBlank()) "" else " Detalle: $detail"
         }
 
         val text = response.body<OpenAiChatResponse>()

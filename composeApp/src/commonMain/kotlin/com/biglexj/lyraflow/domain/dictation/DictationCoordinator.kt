@@ -3,6 +3,7 @@ package com.biglexj.lyraflow.domain.dictation
 import com.biglexj.lyraflow.core.model.TranscriptionHistoryEntry
 import com.biglexj.lyraflow.data.history.TranscriptionHistoryRepository
 import com.biglexj.lyraflow.domain.transcription.QuotaExhaustedException
+import com.biglexj.lyraflow.domain.transcription.QuotaExhaustion
 import com.biglexj.lyraflow.domain.transcription.TranscriptionProvider
 import com.biglexj.lyraflow.domain.transcription.TranscriptionRequest
 import com.biglexj.lyraflow.domain.transcription.TranscriptionResult
@@ -11,6 +12,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlin.time.TimeMark
+import kotlin.time.TimeSource
 
 class DictationCoordinator(
     private val transcriber: TranscriptionProvider,
@@ -21,9 +24,9 @@ class DictationCoordinator(
     private val mutableState = MutableStateFlow<DictationState>(DictationState.Idle)
     val state: StateFlow<DictationState> = mutableState.asStateFlow()
 
-    private val mutableGeminiQuotaExhausted = MutableStateFlow(false)
-    val geminiQuotaExhausted: StateFlow<Boolean> = mutableGeminiQuotaExhausted.asStateFlow()
-    private var quotaExhaustedTimeMark: kotlin.time.TimeMark? = null
+    private val mutableQuotaExhaustion = MutableStateFlow<QuotaExhaustion?>(null)
+    val quotaExhaustion: StateFlow<QuotaExhaustion?> = mutableQuotaExhaustion.asStateFlow()
+    private var quotaExhaustedTimeMark: TimeMark? = null
 
     private var lastRequest: TranscriptionRequest? = null
 
@@ -36,7 +39,7 @@ class DictationCoordinator(
     }
 
     fun resetQuotaExhausted() {
-        mutableGeminiQuotaExhausted.value = false
+        mutableQuotaExhaustion.value = null
         quotaExhaustedTimeMark = null
     }
 
@@ -55,33 +58,28 @@ class DictationCoordinator(
     private suspend fun processInternal(request: TranscriptionRequest, provider: TranscriptionProvider) {
         val fallback = fallbackTranscriber()
 
-        // Auto-restaurar estado de cuota de Gemini tras 60 segundos de cooldown
-        val timeMark = quotaExhaustedTimeMark
-        if (mutableGeminiQuotaExhausted.value && timeMark != null && timeMark.elapsedNow().inWholeSeconds >= 60) {
-            mutableGeminiQuotaExhausted.value = false
-            quotaExhaustedTimeMark = null
-        }
-
-        // Caso 2: Gemini ya fue detectado con cuota agotada previamente dentro de la ventana de enfriamiento
-        if (mutableGeminiQuotaExhausted.value) {
+        // La cuota agotada solo bloquea al proveedor y al modelo que la consumieron:
+        // cambiar de proveedor o de modelo vuelve a intentar la transcripcion en la nube.
+        val activeQuota = activeQuotaFor(request)
+        if (activeQuota != null) {
             if (fallback != null) {
-                transcribeWithFallback(request, fallback, isAutonomous = true)
+                transcribeWithFallback(request, fallback, isAutonomous = true, quotaSource = activeQuota.source)
                 return
             } else {
                 mutableState.value = DictationState.Failed(
-                    "⚠️ Cuota de Gemini agotada temporalmente (espera 1 minuto o instala Whisper local)."
+                    "⚠️ Cuota de ${activeQuota.source} agotada. ${activeQuota.detail()}"
                 )
                 return
             }
         }
 
-        // Caso 1: Intentos convencionales con el proveedor principal (Gemini)
-        val maxGeminiAttempts = 2
+        // Caso 1: Intentos convencionales con el proveedor principal
+        val maxProviderAttempts = 2
         val totalAttempts = if (fallback != null) 3 else 2
         val modelName = request.model.ifBlank { "Modelo seleccionado" }
         var lastThrowable: Throwable? = null
 
-        for (attempt in 1..maxGeminiAttempts) {
+        for (attempt in 1..maxProviderAttempts) {
             mutableState.value = DictationState.Transcribing(
                 model = modelName,
                 attempt = attempt,
@@ -92,18 +90,24 @@ class DictationCoordinator(
                 saveHistoryAndComplete(result)
                 return
             } catch (error: CancellationException) {
+                // Una peticion cancelada no puede dejar el estado en Transcribing:
+                // ese estado bloquea el atajo de dictado de forma permanente.
+                mutableState.value = DictationState.Idle
                 throw error
             } catch (error: QuotaExhaustedException) {
-                // Caso 2: Gemini falla por cuotas en el intento actual
-                mutableGeminiQuotaExhausted.value = true
-                quotaExhaustedTimeMark = kotlin.time.TimeSource.Monotonic.markNow()
+                // Caso 2: el proveedor falla por cuota en el intento actual
+                val quota = QuotaExhaustion(
+                    provider = request.provider,
+                    model = request.model,
+                    message = error.message ?: "Se agotó la cuota de ${request.provider.label}.",
+                )
+                mutableQuotaExhaustion.value = quota
+                quotaExhaustedTimeMark = TimeSource.Monotonic.markNow()
                 if (fallback != null) {
-                    transcribeWithFallback(request, fallback, isAutonomous = false)
+                    transcribeWithFallback(request, fallback, isAutonomous = false, quotaSource = quota.source)
                     return
                 } else {
-                    mutableState.value = DictationState.Failed(
-                        error.message ?: "⚠️ Cuota de Gemini agotada. Instala Whisper local o actualiza tu API Key."
-                    )
+                    mutableState.value = DictationState.Failed("⚠️ Cuota de ${quota.source} agotada. ${quota.detail()}")
                     return
                 }
             } catch (error: Throwable) {
@@ -112,13 +116,13 @@ class DictationCoordinator(
                     attempt = attempt,
                     maxAttempts = totalAttempts,
                 )
-                if (attempt < maxGeminiAttempts) {
+                if (attempt < maxProviderAttempts) {
                     delay(2000L)
                 }
             }
         }
 
-        // Caso 1 (3er intento): Si los 2 intentos con Gemini fallaron por motivo no-cuota y Whisper está disponible
+        // Caso 1 (3er intento): Si los 2 intentos fallaron por motivo no-cuota y Whisper está disponible
         if (fallback != null) {
             transcribeWithFallback(request, fallback, isAutonomous = false, attempt = 3, totalAttempts = 3)
             return
@@ -128,12 +132,27 @@ class DictationCoordinator(
         mutableState.value = DictationState.Failed(finalError)
     }
 
+    /**
+     * Devuelve la cuota vigente para la peticion cuando sigue vigente: mismo
+     * proveedor, mismo modelo y dentro de la ventana de enfriamiento.
+     */
+    private fun activeQuotaFor(request: TranscriptionRequest): QuotaExhaustion? {
+        val quota = mutableQuotaExhaustion.value ?: return null
+        if (quota.provider != request.provider || quota.model != request.model) return null
+        val timeMark = quotaExhaustedTimeMark ?: return null
+        if (timeMark.elapsedNow().inWholeSeconds < COOLDOWN_SECONDS) return quota
+        // Enfriamiento vencido: la cuota se libera y el proveedor vuelve a ser usado.
+        resetQuotaExhausted()
+        return null
+    }
+
     private suspend fun transcribeWithFallback(
         request: TranscriptionRequest,
         fallback: TranscriptionProvider,
         isAutonomous: Boolean,
         attempt: Int = 1,
         totalAttempts: Int = 1,
+        quotaSource: String? = null,
     ) {
         val modelLabel = if (isAutonomous) "Whisper local (Autónomo)" else "Whisper local"
         mutableState.value = DictationState.Transcribing(
@@ -145,12 +164,13 @@ class DictationCoordinator(
             val result = fallback.transcribe(request)
             saveHistoryAndComplete(result)
         } catch (error: CancellationException) {
+            mutableState.value = DictationState.Idle
             throw error
         } catch (error: Throwable) {
-            val failureMsg = if (mutableGeminiQuotaExhausted.value) {
-                "⚠️ Cuota de Gemini agotada y Whisper local falló: ${error.message}"
+            val failureMsg = if (quotaSource != null) {
+                "⚠️ Cuota de $quotaSource agotada y Whisper local falló: ${error.message}"
             } else {
-                "Error en Gemini y Whisper local: ${error.message}"
+                "Error en ${request.provider.label} y Whisper local: ${error.message}"
             }
             mutableState.value = DictationState.Failed(failureMsg)
         }
@@ -176,4 +196,12 @@ class DictationCoordinator(
             elapsedMillis = result.elapsedMillis,
         )
     }
+
+    private companion object {
+        const val COOLDOWN_SECONDS = 60L
+    }
 }
+
+/** Detalle del aviso de cuota sin repetir el simbolo de advertencia del proveedor. */
+private fun QuotaExhaustion.detail(): String =
+    message.removePrefix("⚠️").trim().ifBlank { "Espera un momento o cambia de modelo." }

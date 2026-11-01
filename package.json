@@ -1,0 +1,38 @@
+{
+  "name": "lyraflow",
+  "version": "1.1.9",
+  "description": "Lyra Flow — Dictado inteligente multiplataforma",
+  "private": true,
+  "scripts": {
+    "dev": "cmd /c .\\gradlew.bat dev",
+    "dev:desktop": "cmd /c .\\gradlew.bat dev",
+    "dev:isolated": "cmd /c .\\gradlew.bat devIsolated",
+    "dev:android": "cmd /c .\\gradlew.bat devAndroid",
+    "test": "cmd /c .\\gradlew.bat test",
+    "check": "cmd /c .\\gradlew.bat check",
+    "build": "cmd /c .\\gradlew.bat build",
+    "build:app": "cmd /c .\\gradlew.bat buildDesktop",
+    "build:desktop": "cmd /c .\\gradlew.bat buildDesktop",
+    "build:android": "cmd /c .\\gradlew.bat :composeApp:assembleRelease",
+    "compile": "cmd /c .\\gradlew.bat buildDesktop",
+    "compile:desktop": "cmd /c .\\gradlew.bat buildDesktop",
+    "compile:check": "cmd /c .\\gradlew.bat check",
+    "installer": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/packaging/Build-Installer.ps1",
+    "release": "powershell -NoProfile -ExecutionPolicy Bypass -File ./build-release.ps1 -LocalOnly",
+    "release:local": "powershell -NoProfile -ExecutionPolicy Bypass -File ./build-release.ps1 -LocalOnly",
+    "release:windows": "powershell -NoProfile -ExecutionPolicy Bypass -File ./build-release.ps1 -LocalOnly",
+    "release:publish": "powershell -NoProfile -ExecutionPolicy Bypass -File ./build-release.ps1",
+    "release:full": "powershell -NoProfile -ExecutionPolicy Bypass -File ./build-release.ps1"
+  },
+  "keywords": [
+    "dictado",
+    "voz",
+    "whisper",
+    "compose-multiplatform",
+    "kotlin-multiplatform",
+    "desktop",
+    "android"
+  ],
+  "author": "biglexj (2026)",
+  "license": "MIT"
+}

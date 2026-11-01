@@ -60,12 +60,8 @@ if ($Version -ne $currentVersion) {
         Set-Content -LiteralPath $appVersionFile -Value $appVersionContent -Encoding UTF8 -NoNewline
     }
 
-    $mainWxs = Join-Path $root "package\windows\main.wxs"
-    if (Test-Path -LiteralPath $mainWxs) {
-        $wxsContent = Get-Content -LiteralPath $mainWxs -Raw -Encoding UTF8
-        $wxsContent = $wxsContent -replace 'Version="[^"]+"', "Version=`"$Version`""
-        Set-Content -LiteralPath $mainWxs -Value $wxsContent -Encoding UTF8 -NoNewline
-    }
+    # La plantilla WiX toma la version de jpackage (--app-version), que a su vez
+    # viene de la propiedad centralizada, asi que aqui no se reescribe.
     Write-Host "[1/7] Versión actualizada a $Version ($newCode)." -ForegroundColor Yellow
 } else {
     Write-Host "[1/7] Versión centralizada confirmada: $Version." -ForegroundColor Yellow
@@ -79,7 +75,7 @@ if (-not $SkipBuild) {
     Write-Host "[2/7] Compilando y ejecutando verificaciones..." -ForegroundColor Yellow
     $tasks = @(
         ":composeApp:createDistributable",
-        ":composeApp:packageExe"
+        ":composeApp:packageLyraFlowInstaller"
     )
     if (-not $SkipTests) { $tasks = @(":composeApp:desktopTest") + $tasks }
     $gradleArguments = @("-Dorg.gradle.java.home=$jdk", "--no-configuration-cache") + $tasks
@@ -88,7 +84,7 @@ if (-not $SkipBuild) {
     Write-Host "[2/7] Build omitido; se usarán binarios existentes." -ForegroundColor DarkYellow
 }
 
-Write-Host "[3/7] Preparando instalador EXE..." -ForegroundColor Yellow
+Write-Host "[3/7] Generando el instalador EXE (Inno Setup)..." -ForegroundColor Yellow
 New-Item -ItemType Directory -Path $output -Force | Out-Null
 $resolvedRoot = [IO.Path]::GetFullPath($root).TrimEnd('\') + '\'
 $resolvedOutput = [IO.Path]::GetFullPath($output).TrimEnd('\') + '\'
@@ -106,7 +102,17 @@ try {
 Get-ChildItem -LiteralPath $output -Directory -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force
 
 $exe = Join-Path $output $artifactNames[0]
-Copy-Item -LiteralPath (Join-Path $root "composeApp\build\compose\binaries\main\exe\LyraFlow-$Version.exe") -Destination $exe
+# El artefacto que se publica es el instalador EXE de Inno Setup. La
+# distribucion (imagen de aplicacion) ya la genero Gradle en el paso [2/7],
+# asi que el empaquetado no vuelve a compilar la app.
+$installerBuilder = Join-Path $root "scripts\packaging\Build-Installer.ps1"
+if (-not (Test-Path -LiteralPath $installerBuilder)) {
+    throw "No se encontró el generador del instalador: $installerBuilder"
+}
+$builtInstaller = & $installerBuilder -Version $Version -SkipBuild -OutputDirectory $output -ForceStale | Select-Object -Last 1
+if (-not $builtInstaller -or -not (Test-Path -LiteralPath $builtInstaller)) {
+    throw "Inno Setup no produjo el instalador esperado en $output."
+}
 (Get-Item -LiteralPath $exe).IsReadOnly = $false
 
 Write-Host "[4/7] Firmando y verificando artefactos..." -ForegroundColor Yellow
@@ -135,11 +141,17 @@ if (-not $SkipSigning) {
 }
 
 $hashPath = Join-Path $output "SHA256SUMS.txt"
-Get-ChildItem -LiteralPath $output -File |
-    Where-Object Extension -In '.exe' |
-    Get-FileHash -Algorithm SHA256 |
-    ForEach-Object { "{0}  {1}" -f $_.Hash.ToLowerInvariant(), (Split-Path $_.Path -Leaf) } |
-    Set-Content -LiteralPath $hashPath -Encoding UTF8
+# Solo los binarios publicables entran en el fichero de sumas; el propio
+# SHA256SUMS.txt queda fuera. Se escribe en UTF-8 sin BOM y con finales de
+# linea LF: Set-Content -Encoding UTF8 de Windows PowerShell anade un BOM que
+# hace que "sha256sum -c" (GNU) rechace el fichero como mal formado.
+$hashLines = @(
+    Get-ChildItem -LiteralPath $output -File |
+        Where-Object Extension -In '.exe' |
+        Get-FileHash -Algorithm SHA256 |
+        ForEach-Object { "{0}  {1}" -f $_.Hash.ToLowerInvariant(), (Split-Path $_.Path -Leaf) }
+)
+[System.IO.File]::WriteAllText($hashPath, (($hashLines -join "`n") + "`n"), (New-Object System.Text.UTF8Encoding($false)))
 
 Write-Host "[5/7] Artefactos verificados:" -ForegroundColor Yellow
 Get-ChildItem -LiteralPath $output -File | ForEach-Object {

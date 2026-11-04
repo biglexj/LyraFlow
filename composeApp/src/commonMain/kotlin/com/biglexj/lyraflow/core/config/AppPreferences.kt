@@ -18,7 +18,7 @@ fun ThemeMode.next(): ThemeMode = when (this) {
 
 enum class SystemPromptMode(val label: String, val description: String) {
     Smart("Inteligente", "Refina puntuación, formato y corrige muletillas"),
-    Literal("Voz original", "Transcripción literal palabra por palabra sin refinar"),
+    Literal("Voz original", "Conserva tus palabras, con puntuación y párrafos para facilitar la lectura"),
     Custom("Personalizado", "Instrucciones personalizadas"),
 }
 
@@ -92,6 +92,8 @@ data class AppPreferences(
             * Si utiliza “A, B, C”, conserva esa estructura.
             * Si presenta varios puntos, requisitos, características, pasos o ejemplos, sepáralos mediante listas cuando mejore claramente la lectura.
             * Si cambia de tema o desarrolla una idea distinta, crea un nuevo párrafo.
+            * En dictados largos, separa también los cambios de enfoque dentro de un mismo tema. Agrupa las frases relacionadas y deja una línea en blanco entre párrafos; evita devolver todo como un único bloque.
+            * Un dictado breve con una sola idea puede quedar en un párrafo. No fuerces un salto después de cada frase ni inventes títulos.
             * No conviertas automáticamente todo en listas: utiliza el formato que mejor represente la forma en que habló el usuario.
 
             4. ÓRDENES DE FORMATO HABLADAS
@@ -109,11 +111,33 @@ data class AppPreferences(
                Si no existe voz o contenido inteligible suficiente, devuelve una cadena vacía.
             """.trimIndent()
 
-        const val LITERAL_SYSTEM_PROMPT =
+        val LITERAL_SYSTEM_PROMPT =
+            """
+            Transcribe fielmente la voz del usuario. Conserva sus palabras, su orden, modismos, repeticiones e ideas, sin resumir, reformular, completar ni añadir información.
+
+            Añade la puntuación y las mayúsculas necesarias para facilitar la lectura, sin corregir la gramática del hablante ni cambiar su vocabulario o su intención. No elimines muletillas, titubeos o repeticiones que sean audibles.
+
+            Separa el texto en párrafos cuando cambie la idea o el enfoque. Agrupa las frases relacionadas y deja una línea en blanco entre párrafos. En un dictado largo, evita entregar todo en un único bloque; un dictado breve con una sola idea puede quedar en un párrafo. No reordenes las frases ni conviertas automáticamente el discurso en listas o encabezados.
+
+            Devuelve únicamente el texto transcrito, sin comentarios, aclaraciones, comillas envolventes ni bloques Markdown. No inventes palabras para rellenar silencios o ruido. Si no existe voz inteligible, devuelve una cadena vacía.
+            """.trimIndent()
+
+        // Identifica únicamente la plantilla anterior; no modifica instrucciones propias.
+        private const val LEGACY_LITERAL_SYSTEM_PROMPT =
             "Transcribe el audio tal cual dice el usuario, de forma literal, palabra por palabra, sin refinar, corregir, estructurar, resumir ni omitir nada. " +
                 "Conserva fielmente todas las palabras, modismos e ideas expresadas exactamente como se pronunciaron. " +
                 "Devuelve únicamente el texto transcrito de forma directa, sin comentarios, aclaraciones, comillas ni bloques Markdown. " +
                 "Transcribe con fidelidad la voz del hablante, resolviendo con naturalidad titubeos o ruido de fondo leve. Si no existe voz audible en absoluto, devuelve únicamente una cadena vacía."
+
+        fun resolveSystemPrompt(mode: SystemPromptMode, stored: String?): String = when (mode) {
+            SystemPromptMode.Smart -> DEFAULT_SYSTEM_PROMPT
+            SystemPromptMode.Literal -> LITERAL_SYSTEM_PROMPT
+            SystemPromptMode.Custom -> when {
+                stored.isNullOrBlank() -> DEFAULT_SYSTEM_PROMPT
+                stored.trim() == LEGACY_LITERAL_SYSTEM_PROMPT -> LITERAL_SYSTEM_PROMPT
+                else -> stored
+            }
+        }
     }
 }
 

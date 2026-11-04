@@ -2,14 +2,20 @@ param(
     [string]$Version,
     [string]$ReleaseNotesFile = "RELEASE_MESSAGE.md",
     [switch]$LocalOnly,
+    [switch]$Publish,
     [switch]$SkipTests,
     [switch]$SkipBuild,
-    [switch]$SkipSigning
+    [switch]$SkipSigning,
+    [ValidateSet("github", "all")] [string]$Channel = "all"
 )
 
 $ErrorActionPreference = "Stop"
 $root = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 . (Join-Path $root "scripts\release\ReleaseTools.ps1")
+. (Join-Path $root "scripts\packaging\AppImageIdentity.ps1")
+. (Join-Path $root "scripts\release\AuroraRelease.ps1")
+if ($LocalOnly -and $Publish) { throw 'No combines -LocalOnly y -Publish.' }
+$LocalOnly = -not $Publish
 
 $repository = "biglexj/LyraFlow"
 $propertiesPath = Join-Path $root "gradle.properties"
@@ -24,12 +30,19 @@ if (-not $versionMatch.Success -or -not $codeMatch.Success) {
 $currentVersion = $versionMatch.Groups[1].Value
 if (-not $Version) { $Version = $currentVersion }
 Assert-SemanticVersion $Version
+if ($Version -ne $currentVersion) { throw 'Actualiza y revisa las fuentes de versión antes de empaquetar una versión distinta.' }
+$packageVersion = (Get-Content -LiteralPath (Join-Path $root 'package.json') -Raw | ConvertFrom-Json).version
+$appVersionContent = Get-Content -LiteralPath (Join-Path $root 'composeApp\src\commonMain\kotlin\com\biglexj\lyraflow\core\config\AppVersion.kt') -Raw
+if ($packageVersion -ne $Version -or $appVersionContent -notmatch ('const val CURRENT = "' + [regex]::Escape($Version) + '"')) {
+    throw 'Las versiones de package.json, AppVersion.kt y gradle.properties no coinciden.'
+}
 if (-not (Test-Path -LiteralPath $releaseNotesPath)) {
     throw "No se encontró el archivo de notas: $releaseNotesPath"
 }
 if (-not $LocalOnly -and $SkipSigning) {
     throw "Una publicación oficial no puede usar -SkipSigning."
 }
+if ($Publish -and ($SkipBuild -or $SkipTests)) { throw 'Una publicación debe compilar y ejecutar las pruebas del código que va a distribuir.' }
 
 $tag = "v$Version"
 $output = Join-Path $root "release"
@@ -44,28 +57,10 @@ Write-Host "══════════════════════�
 
 if (-not $LocalOnly) {
     Assert-PublishPreflight -Root $root -Repository $repository -Tag $tag
+    if ($Channel -eq 'all') { Assert-AuroraReleasePreflight -Root $root -Version $Version }
 }
 
-if ($Version -ne $currentVersion) {
-    $newCode = [int]$codeMatch.Groups[1].Value + 1
-    $properties = $properties `
-        -replace '(?m)^(lyraflow\.versionName=)\d+\.\d+\.\d+$', "`${1}$Version" `
-        -replace '(?m)^(lyraflow\.versionCode=)\d+$', "`${1}$newCode"
-    Set-Content -LiteralPath $propertiesPath -Value $properties -Encoding UTF8 -NoNewline
-
-    $appVersionFile = Join-Path $root "composeApp\src\commonMain\kotlin\com\biglexj\lyraflow\core\config\AppVersion.kt"
-    if (Test-Path -LiteralPath $appVersionFile) {
-        $appVersionContent = Get-Content -LiteralPath $appVersionFile -Raw -Encoding UTF8
-        $appVersionContent = $appVersionContent -replace 'const val CURRENT = ".*?"', "const val CURRENT = `"$Version`""
-        Set-Content -LiteralPath $appVersionFile -Value $appVersionContent -Encoding UTF8 -NoNewline
-    }
-
-    # La plantilla WiX toma la version de jpackage (--app-version), que a su vez
-    # viene de la propiedad centralizada, asi que aqui no se reescribe.
-    Write-Host "[1/7] Versión actualizada a $Version ($newCode)." -ForegroundColor Yellow
-} else {
-    Write-Host "[1/7] Versión centralizada confirmada: $Version." -ForegroundColor Yellow
-}
+Write-Host "[1/7] Versión centralizada confirmada: $Version." -ForegroundColor Yellow
 
 $jdk = Get-FullJdk
 $signTool = if ($SkipSigning) { $null } else { Get-WindowsSdkTool "signtool.exe" }
@@ -74,17 +69,18 @@ $env:JAVA_HOME = $jdk
 if (-not $SkipBuild) {
     Write-Host "[2/7] Compilando y ejecutando verificaciones..." -ForegroundColor Yellow
     $tasks = @(
-        ":composeApp:createDistributable",
-        ":composeApp:packageLyraFlowInstaller"
+        ":composeApp:createDistributable"
     )
     if (-not $SkipTests) { $tasks = @(":composeApp:desktopTest") + $tasks }
     $gradleArguments = @("-Dorg.gradle.java.home=$jdk", "--no-configuration-cache") + $tasks
     Invoke-Checked -Executable (Join-Path $root "gradlew.bat") -ArgumentList $gradleArguments
+    Write-AppImageIdentity -Root $root
 } else {
     Write-Host "[2/7] Build omitido; se usarán binarios existentes." -ForegroundColor DarkYellow
 }
 
 Write-Host "[3/7] Generando el instalador EXE (Inno Setup)..." -ForegroundColor Yellow
+Assert-AppImageIdentity -Root $root
 New-Item -ItemType Directory -Path $output -Force | Out-Null
 $resolvedRoot = [IO.Path]::GetFullPath($root).TrimEnd('\') + '\'
 $resolvedOutput = [IO.Path]::GetFullPath($output).TrimEnd('\') + '\'
@@ -109,7 +105,7 @@ $installerBuilder = Join-Path $root "scripts\packaging\Build-Installer.ps1"
 if (-not (Test-Path -LiteralPath $installerBuilder)) {
     throw "No se encontró el generador del instalador: $installerBuilder"
 }
-$builtInstaller = & $installerBuilder -Version $Version -SkipBuild -OutputDirectory $output -ForceStale | Select-Object -Last 1
+$builtInstaller = & $installerBuilder -Version $Version -SkipBuild -OutputDirectory $output | Select-Object -Last 1
 if (-not $builtInstaller -or -not (Test-Path -LiteralPath $builtInstaller)) {
     throw "Inno Setup no produjo el instalador esperado en $output."
 }
@@ -117,7 +113,9 @@ if (-not $builtInstaller -or -not (Test-Path -LiteralPath $builtInstaller)) {
 
 Write-Host "[4/7] Firmando y verificando artefactos..." -ForegroundColor Yellow
 if (-not $SkipSigning) {
-    $certificate = Join-Path $root "LyraFlow_Dev_Certificate.pfx"
+    $certificate = if ($env:LYRAFLOW_SIGNING_CERTIFICATE) { $env:LYRAFLOW_SIGNING_CERTIFICATE } else {
+        Join-Path $root '.local\signing\LyraFlow_Dev_Certificate.pfx'
+    }
     if (-not (Test-Path -LiteralPath $certificate)) { throw "Falta el certificado de firma local." }
     
     $maxAttempts = 5
@@ -162,15 +160,10 @@ if ($LocalOnly) {
     exit 0
 }
 
-Write-Host "[6/7] Creando commit, tag y push atómico..." -ForegroundColor Yellow
+Write-Host "[6/7] Creando tag y push atómico del código revisado..." -ForegroundColor Yellow
 Push-Location $root
 try {
-    Invoke-Checked git @("add", "-A")
-    Invoke-Checked git @("diff", "--cached", "--check")
-    & git diff --cached --quiet
-    if ($LASTEXITCODE -ne 0) {
-        Invoke-Checked git @("commit", "-m", "release: LyraFlow $tag")
-    }
+    if ((& git status --porcelain)) { throw 'El build modificó archivos versionados. Revisa y confirma los cambios antes de publicar.' }
     Invoke-Checked git @("tag", "-a", $tag, "-m", "LyraFlow $tag")
     Invoke-Checked git @("push", "--atomic", "origin", "HEAD:main", "refs/tags/$tag")
 } finally {
@@ -187,5 +180,11 @@ Invoke-Checked gh (@(
     "--title", "LyraFlow $tag",
     "--notes-file", $releaseNotesPath
 ))
+
+# Verificar el binario remoto antes de sincronizar su ficha.
+Assert-PublishedRelease -Root $root -Repository $repository -Tag $tag -Installer $exe -NotesPath $releaseNotesPath
+if ($Channel -eq 'all') {
+    Publish-AuroraRelease -Root $root -Version $Version -NotesPath $releaseNotesPath -Installer $exe
+}
 
 Write-Host "Release publicada: https://github.com/$repository/releases/tag/$tag" -ForegroundColor Green

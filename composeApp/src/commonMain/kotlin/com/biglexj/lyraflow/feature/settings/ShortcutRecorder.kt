@@ -1,6 +1,8 @@
 package com.biglexj.lyraflow.feature.settings
 
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -8,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -49,49 +50,42 @@ fun ShortcutRecorder(
         if (capturing) focusRequester.requestFocus()
     }
 
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            color = MaterialTheme.colorScheme.surface,
-            shape = MaterialTheme.shapes.medium,
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Row(
-                modifier = Modifier.padding(14.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
+            Text(shortcut.label, modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleSmall)
+            OutlinedButton(
+                onClick = { capturing = true; message = null },
+                border = BorderStroke(if (LocalExpandedSettings.current) 1.5.dp else 1.dp, MaterialTheme.colorScheme.outline),
+                modifier = Modifier
+                .heightIn(min = if (LocalExpandedSettings.current) 48.dp else 40.dp)
+                .focusRequester(focusRequester)
+                .focusable()
+                .onPreviewKeyEvent { event ->
+                    if (!capturing || event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                    val candidate = event.toShortcut()
+                    val error = candidate?.let(validate)
+                    if (candidate != null && error == null) {
+                        onShortcutChange(candidate)
+                        capturing = false
+                        message = "Atajo actualizado."
+                    } else {
+                        message = error
+                        ?: "Mantén uno o dos modificadores y pulsa una tecla principal."
+                    }
+                    true
+                },
+                shape = MaterialTheme.shapes.small,
             ) {
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text("Atajo actual", style = MaterialTheme.typography.bodyMedium)
-                    Text(shortcut.label, style = MaterialTheme.typography.titleMedium)
-                }
-                OutlinedButton(
-                    onClick = { capturing = true; message = null },
-                    modifier = Modifier
-                        .focusRequester(focusRequester)
-                        .focusable()
-                        .onPreviewKeyEvent { event ->
-                            if (!capturing || event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
-                            val candidate = event.toShortcut()
-                            val error = candidate?.let(validate)
-                            if (candidate != null && error == null) {
-                                onShortcutChange(candidate)
-                                capturing = false
-                                message = "Atajo actualizado."
-                            } else {
-                                message = error
-                                    ?: "Mantén uno o dos modificadores y pulsa una tecla principal."
-                            }
-                            true
-                        },
-                    shape = MaterialTheme.shapes.small,
-                ) {
-                    Text(if (capturing) "Pulsa las teclas…" else "Cambiar")
-                }
+                Text(if (capturing) "Pulsa las teclas…" else "Cambiar")
             }
         }
-        Text(
-            message ?: "Usa una combinación de 2 o 3 teclas. F12 y Windows + Espacio están reservados.",
-            style = MaterialTheme.typography.bodyMedium,
+        if (message != null) Text(
+            message.orEmpty(),
+            style = MaterialTheme.typography.bodySmall,
             color = if (message?.contains("actualizado") == true) {
                 MaterialTheme.colorScheme.secondary
             } else {

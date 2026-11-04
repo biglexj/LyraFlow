@@ -3,7 +3,7 @@
 
 [tasks.dev]
 raw_args = true
-description = "Ejecutar LyraFlow en desarrollo (Desktop por defecto, o 'android' para instalar en móvil)"
+description = "Ejecutar LyraFlow; variantes 'isolated' para varias instancias o 'android' para móvil"
 file = "scripts/mise-task.ts"
 
 [tasks.build]
@@ -14,6 +14,16 @@ file = "scripts/mise-task.ts"
 [tasks.release]
 raw_args = true
 description = "Generar instalador oficial Inno Setup en release/ sin publicar"
+file = "scripts/mise-task.ts"
+
+[tasks.check]
+raw_args = true
+description = "Verificar compilación Desktop y Android; 'desktop' comprueba solo escritorio"
+file = "scripts/mise-task.ts"
+
+[tasks.test]
+raw_args = true
+description = "Ejecutar pruebas de escritorio; 'scripts' verifica herramientas de tareas y empaquetado"
 file = "scripts/mise-task.ts"
 
 [tasks.publish]

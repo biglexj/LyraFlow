@@ -23,14 +23,17 @@
 - [x] `MultimodalTranscriptionProvider` propaga el proveedor y el modelo configurados a la petición.
 
 ## 5. Pruebas Automatizadas
-- [x] `./gradlew :composeApp:desktopTest`: 51/51 pruebas superadas (0 fallos), 14 clases de prueba.
+- [x] `./gradlew :composeApp:desktopTest`: 51/51 pruebas superadas (0 fallos, 0 errores, 0 omitidas), 14 clases de prueba. Reejecución forzada (`--rerun`) el 2026-10-28 para validar el estado final del árbol de trabajo.
 
 ## 6. Empaquetado Local de la Versión 1.1.9
-- [x] `scripts/release/build-release.ps1 -Version "1.1.9" -LocalOnly` ejecutado con éxito (pruebas, empaquetado, firma y sumas).
-- [x] Instalador generado: `release/LyraFlow-Windows-1.1.9.exe` (72.526.192 bytes / 69,17 MB).
+- [x] `scripts/release/build-release.ps1 -LocalOnly` ejecutado con éxito (pruebas, empaquetado, firma y sumas). Modo local: no toca Git ni GitHub.
+- [x] Instalador que se publicará: `release/LyraFlow-Windows-1.1.9.exe` (59.905.744 bytes / 57,13 MB), compilado con Inno Setup desde `packaging/windows/`. Sustituye al instalador MSI de jpackage + WiX (72.526.192 bytes) que se preparó en la primera fase; el procedimiento de paso está en `packaging/windows/MIGRATION.md`.
+- [x] Metadatos del ejecutable: `FileVersion` = `1.1.9`, `ProductVersion` = `1.1.9`, `ProductName` = `LyraFlow`, `CompanyName` = `Biglex`.
 - [x] Firma de autenticode aplicada con el certificado local del proyecto y publicante `CN=biglexj` (validado por `Assert-SignedArtifact` del propio script). La cadena es autofirmada y sin timestamp, por lo que Windows reporta `UnknownError` al evaluar la confianza de la raiz; es el estado propio de las releases previas (1.1.7 y 1.1.8) y no una regresion de este ciclo.
-- [x] `release/SHA256SUMS.txt` generado: `f0ec09b75b204abec985f0e92cec43742c95853dfd6b7151e964e8eb6072818d`.
+- [x] `release/SHA256SUMS.txt` generado sin BOM y con finales de linea LF, verificable con `sha256sum -c`: `112f3272bb44c36bf10562da659e9d44be1e5740c375ae069fdc06b195a682a6`. La comprobacion cruzada (`sha256sum -c SHA256SUMS.txt`) devuelve `OK`.
+- [x] La copia en el centro de releases del workspace (`12. Releases`) queda pendiente de refresco por el orquestador compartido: `Build-Installer.ps1` la deja sin firmar porque la firma se aplica despues, en el script de release.
 
 ## 7. Estado del Lanzamiento
 - [x] Trabajo desarrollado en la rama `preview`; la fusion a `main`, el tag y la publicacion en GitHub quedan pendientes de la instruccion explicita de lanzamiento.
 - [x] `v1.1.8` ya publicada en GitHub se mantiene inmutable; la 1.1.9 se preparó como parche siguiente.
+- [ ] La version 1.1.9 sigue **sin publicar**: no existe tag `v1.1.9` ni GitHub Release. El cambio de instalador (MSI → EXE de Inno Setup) obliga a desinstalar el MSI de la 1.1.8 antes de instalar el EXE nuevo.

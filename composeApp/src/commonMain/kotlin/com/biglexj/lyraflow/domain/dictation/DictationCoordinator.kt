@@ -178,16 +178,23 @@ class DictationCoordinator(
 
     private suspend fun saveHistoryAndComplete(result: TranscriptionResult) {
         if (result.rawText.isNotBlank() && isHistoryEnabled()) {
-            historyRepository?.saveEntry(
-                TranscriptionHistoryEntry(
-                    id = (System.currentTimeMillis().toString() + "-" + (1000..9999).random()),
-                    timestampMs = System.currentTimeMillis(),
-                    rawTranscript = result.rawText,
-                    refinedText = result.rawText,
-                    providerName = result.provider,
-                    audioDurationMs = result.elapsedMillis
+            try {
+                historyRepository?.saveEntry(
+                    TranscriptionHistoryEntry(
+                        id = (System.currentTimeMillis().toString() + "-" + (1000..9999).random()),
+                        timestampMs = System.currentTimeMillis(),
+                        rawTranscript = result.rawText,
+                        refinedText = result.rawText,
+                        providerName = result.provider,
+                        audioDurationMs = result.elapsedMillis
+                    )
                 )
-            )
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                // Un fallo del disco no invalida una transcripción ya completada.
+                println("No se pudo guardar la transcripción en el historial local.")
+            }
         }
         mutableState.value = DictationState.Completed(
             rawText = result.rawText,

@@ -3,6 +3,11 @@
 Plan de trabajo, objetivos y prioridades del proyecto.
 
 ## 🔴 Pendientes activos
+- [ ] Validar la migración real desde el instalador público de 1.1.8, el reinicio y una sola entrada en Aplicaciones.
+- [ ] Revisar con teclado y lector de pantalla los controles de la app y del instalador.
+- [ ] Validar la publicación y sincronización de Aurora con la ficha y credencial reales; aún no se ha publicado.
+- [ ] Validar el desarrollo con `mise dev` y `mise dev isolated` con dos instancias; la entrada de operación es Mise.
+- [ ] Validar manualmente en la interfaz la instalación de Whisper local (resolución del paquete `whisper-bin-x64.zip` de `ggml-org/whisper.cpp`).
 - [ ] Validar manualmente endpoints multimodales de terceros configurados por el usuario en Windows.
 - [ ] Añadir adaptadores nativos únicamente cuando un proveedor no exponga audio mediante OpenAI-compatible.
 
@@ -15,7 +20,8 @@ Plan de trabajo, objetivos y prioridades del proyecto.
 *(No hay tareas en esta categoría actualmente)*
 
 ## 🟢 Completado
-- [x] **v1.1.9** (2026-10-21) — Atribución de la cuota agotada al proveedor y al modelo reales (mensajes y banner sin proveedor fijo), aislamiento de la cuota por proveedor y modelo, recuperación del atajo global frente a coordinators huérfanos y estados de transcripción atascados, y unificación del HTTP 429 del protocolo OpenAI-compatible con el respaldo local autónomo.
+- [x] **Base local 1.1.9** (2026-11-03; sin publicar) — Historial en disco con retención elegida, respaldo de Whisper ante errores de red, actualizador único de Inno Setup, retirada de MSIX/WiX activos, validación de huellas del build y alias de publicación conectados al pipeline oficial.
+- [x] **v1.1.9** (2026-10-28) — Atribución de la cuota agotada al proveedor y al modelo reales (mensajes y banner sin proveedor fijo), aislamiento de la cuota por proveedor y modelo, recuperación del atajo global frente a coordinators huérfanos y estados de transcripción atascados, unificación del HTTP 429 del protocolo OpenAI-compatible con el respaldo local autónomo, y renovación del instalador de Windows: EXE autónomo de Inno Setup en español con la identidad visual de LyraFlow, instalación por usuario sin elevación, actualización en el mismo directorio y ejecución opcional al terminar (sustituye al MSI de jpackage + WiX de la 1.1.8).
 - [x] **v1.1.8** (2026-10-21) — Nuevo proveedor MiniMax (transcriptor `asr-1.0` con refinamiento `MiniMax-M3.1-Flash`), atajo global para cancelar el dictado en curso (`Ctrl + Alt + Espacio`), recuperación del overlay de estado inferior y reorganización de Ajustes en dos pestañas con selector de proveedor en tres columnas.
 - [x] **v1.1.7** (2026-09-04) — Renovación de identidad visual con nuevo icono estilizado y suave, erradicación del *Render Lifecycle Lock* en Windows 11 DWM (lazy status overlay y elevación nativa Win32), personalización completa de branding del instalador EXE de Windows (WiX con `ARPPRODUCTICON`, `banner.bmp`, `dialog.bmp`, `LyraFlow.ico`), distribución exclusiva en ejecutables EXE para auto-actualización in-app de fricción cero y robustecimiento de sockets IPC.
 - [x] **v1.1.6** (2026-08-30) — Estandarización de arquitectura de instancia única y reactivación según Docs (aislamiento de canales `stable`/`dev`, eliminación de heurísticas y flags en producción, despacho IPC y restauración de foco en Windows) y reorganización modular de activos según el Asset Organization Standard.

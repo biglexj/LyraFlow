@@ -2,6 +2,7 @@ package com.biglexj.lyraflow.feature.home
 
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -119,101 +120,106 @@ fun HomeScreen(
         )
     }
 
-    Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(28.dp),
-        verticalArrangement = Arrangement.spacedBy(22.dp),
-    ) {
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text("Tu voz, ya bien escrita", style = MaterialTheme.typography.headlineLarge)
-            Text(platform, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        // El aviso de cuota solo se muestra cuando corresponde al proveedor y al
-        // modelo que estan seleccionados ahora mismo: es la misma combinacion que
-        // el coordinador bloquea de forma automatica.
-        val activeQuota = quotaExhaustion?.takeIf {
-            it.provider == configuration.preferences.provider &&
-                it.model == configuration.preferences.providerConfiguration.model
-        }
-        if (activeQuota != null) {
-            val whisperIsFallback = configuration.preferences.isWhisperEnabled && whisperStatus.available
-            Surface(
-                color = MaterialTheme.colorScheme.errorContainer,
-                contentColor = MaterialTheme.colorScheme.onErrorContainer,
-                shape = MaterialTheme.shapes.medium,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        val heroExpansion = if (maxWidth >= 900.dp) {
+            ((maxHeight - 680.dp) / 320.dp).coerceIn(0f, 1f)
+        } else 0f
+        Column(
+            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(28.dp),
+            verticalArrangement = Arrangement.spacedBy(22.dp),
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("Tu voz, ya bien escrita", style = MaterialTheme.typography.headlineLarge)
+                Text(platform, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            // El aviso de cuota solo se muestra cuando corresponde al proveedor y al
+            // modelo que estan seleccionados ahora mismo: es la misma combinacion que
+            // el coordinador bloquea de forma automatica.
+            val activeQuota = quotaExhaustion?.takeIf {
+                it.provider == configuration.preferences.provider &&
+                    it.model == configuration.preferences.providerConfiguration.model
+            }
+            if (activeQuota != null) {
+                val whisperIsFallback = configuration.preferences.isWhisperEnabled && whisperStatus.available
+                Surface(
+                    color = MaterialTheme.colorScheme.errorContainer,
+                    contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                    shape = MaterialTheme.shapes.medium,
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
-                    LyraIcon(LyraIconType.Settings, Modifier.size(24.dp))
-                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text(
-                            "⚠️ Cuota de ${activeQuota.source} agotada",
-                            style = MaterialTheme.typography.titleMedium,
-                        )
-                        Text(
-                            if (whisperIsFallback) {
-                                "Transcripción autónoma con Whisper local activa. Las siguientes peticiones se procesarán localmente."
-                            } else {
-                                "Actualiza tu API Key o elige otro proveedor o modelo para reanudar la transcripción en la nube."
-                            },
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.85f),
-                        )
-                    }
-                    TextButton(
-                        onClick = { showApiKeyDialog = true },
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text("Actualizar Key")
+                        LyraIcon(LyraIconType.Settings, Modifier.size(24.dp))
+                        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text(
+                                "⚠️ Cuota de ${activeQuota.source} agotada",
+                                style = MaterialTheme.typography.titleMedium,
+                            )
+                            Text(
+                                if (whisperIsFallback) {
+                                    "Transcripción autónoma con Whisper local activa. Las siguientes peticiones se procesarán localmente."
+                                } else {
+                                    "Actualiza tu API Key o elige otro proveedor o modelo para reanudar la transcripción en la nube."
+                                },
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.85f),
+                            )
+                        }
+                        TextButton(
+                            onClick = { showApiKeyDialog = true },
+                        ) {
+                            Text("Actualizar Key")
+                        }
                     }
                 }
             }
-        }
-        DictationHero(state, configuration, recordingTelemetry, onRecord)
-        ResultCard(
-            state = state,
-            onInject = onInject,
-            onClear = onClear,
-            onRetry = onRetry,
-            onRetryWhisper = onRetryWhisper,
-            providerLabel = configuration.preferences.provider.label,
-            whisperAvailable = whisperStatus.available,
-        )
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            val isProviderActive = configuration.preferences.isProviderEnabled
-            val providerTitle = if (isProviderActive) configuration.preferences.provider.label else "${configuration.preferences.provider.label} (Desactivado)"
-            val providerDetail = when {
-                !isProviderActive -> "Dictado por nube desactivado"
-                configuration.sessionApiKey.isBlank() -> "Añade tu API key en Ajustes"
-                else -> configuration.preferences.model
-            }
-            StatusCard(
-                title = providerTitle,
-                detail = providerDetail,
-                available = isProviderActive && configuration.sessionApiKey.isNotBlank(),
-                modifier = Modifier.weight(1f),
-                onClick = {
-                    if (configuration.sessionApiKey.isBlank()) {
-                        showApiKeyDialog = true
-                    } else {
-                        showModelDialog = true
-                    }
-                },
+            DictationHero(state, configuration, recordingTelemetry, onRecord, heroExpansion)
+            ResultCard(
+                state = state,
+                onInject = onInject,
+                onClear = onClear,
+                onRetry = onRetry,
+                onRetryWhisper = onRetryWhisper,
+                providerLabel = configuration.preferences.provider.label,
+                whisperAvailable = whisperStatus.available,
             )
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                val isProviderActive = configuration.preferences.isProviderEnabled
+                val providerTitle = if (isProviderActive) configuration.preferences.provider.label else "${configuration.preferences.provider.label} (Desactivado)"
+                val providerDetail = when {
+                    !isProviderActive -> "Dictado por nube desactivado"
+                    configuration.sessionApiKey.isBlank() -> "Añade tu API key en Ajustes"
+                    else -> configuration.preferences.model
+                }
+                StatusCard(
+                    title = providerTitle,
+                    detail = providerDetail,
+                    available = isProviderActive && configuration.sessionApiKey.isNotBlank(),
+                    modifier = Modifier.weight(1f),
+                    onClick = {
+                        if (configuration.sessionApiKey.isBlank()) {
+                            showApiKeyDialog = true
+                        } else {
+                            showModelDialog = true
+                        }
+                    },
+                )
 
-            val isWhisperActive = configuration.preferences.isWhisperEnabled
-            val whisperTitle = if (isWhisperActive) "Whisper local" else "Whisper local (Desactivado)"
-            val whisperDetail = if (!isWhisperActive) "Dictado offline desactivado" else whisperStatus.detail
-            StatusCard(
-                title = whisperTitle,
-                detail = whisperDetail,
-                available = isWhisperActive && whisperStatus.available,
-                modifier = Modifier.weight(1f),
-                progress = whisperStatus.progress,
-                onClick = if (!whisperStatus.downloading) { { showWhisperModelDialog = true } } else null,
-            )
+                val isWhisperActive = configuration.preferences.isWhisperEnabled
+                val whisperTitle = if (isWhisperActive) "Whisper local" else "Whisper local (Desactivado)"
+                val whisperDetail = if (!isWhisperActive) "Dictado offline desactivado" else whisperStatus.detail
+                StatusCard(
+                    title = whisperTitle,
+                    detail = whisperDetail,
+                    available = isWhisperActive && whisperStatus.available,
+                    modifier = Modifier.weight(1f),
+                    progress = whisperStatus.progress,
+                    onClick = if (!whisperStatus.downloading) { { showWhisperModelDialog = true } } else null,
+                )
+            }
         }
     }
 }
@@ -319,18 +325,19 @@ private fun DictationHero(
     configuration: AppConfiguration,
     telemetry: RecordingTelemetry,
     onRecord: () -> Unit,
+    expansion: Float = 0f,
 ) {
     val listening = state is DictationState.Listening
     val attemptFailed = state is DictationState.AttemptFailed
     val processing = state is DictationState.Transcribing || attemptFailed
     ElevatedCard(shape = MaterialTheme.shapes.large) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(24.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 24.dp + 12.dp * expansion),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(18.dp),
+            verticalArrangement = Arrangement.spacedBy(18.dp + 6.dp * expansion),
         ) {
             Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = MaterialTheme.shapes.medium) {
-                LyraIcon(LyraIconType.Mic, Modifier.padding(14.dp).size(34.dp))
+                LyraIcon(LyraIconType.Mic, Modifier.padding(14.dp).size(34.dp + 6.dp * expansion))
             }
             Text(statusTitle(state), style = MaterialTheme.typography.headlineMedium)
             Text(
@@ -355,11 +362,11 @@ private fun DictationHero(
                 processing = state is DictationState.Transcribing,
                 attemptFailed = attemptFailed,
                 level = telemetry.level,
-                modifier = Modifier.fillMaxWidth().height(56.dp),
+                modifier = Modifier.fillMaxWidth().height(72.dp + 56.dp * expansion),
             )
             Button(
                 onClick = onRecord,
-                modifier = Modifier.fillMaxWidth().height(52.dp),
+                modifier = Modifier.fillMaxWidth().height(56.dp + 4.dp * expansion),
                 shape = MaterialTheme.shapes.small,
                 enabled = !processing && (configuration.sessionApiKey.isNotBlank() || listening),
             ) {

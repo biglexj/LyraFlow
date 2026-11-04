@@ -26,7 +26,7 @@ import com.biglexj.lyraflow.data.provider.MultimodalTranscriptionProvider
 import com.biglexj.lyraflow.data.provider.DisabledTranscriptionProvider
 import com.biglexj.lyraflow.data.scanner.ModelDiscoveryService
 import com.biglexj.lyraflow.domain.transcription.TranscriptionProvider
-import com.biglexj.lyraflow.data.history.InMemoryTranscriptionHistoryRepository
+import com.biglexj.lyraflow.data.history.FileTranscriptionHistoryRepository
 import com.biglexj.lyraflow.domain.dictation.DictationCoordinator
 import com.biglexj.lyraflow.domain.dictation.DictationState
 import com.biglexj.lyraflow.domain.transcription.TranscriptionRequest
@@ -98,7 +98,7 @@ fun main(args: Array<String>) {
         val startsMinimized = args.any { it.equals("--minimized", ignoreCase = true) }
         var windowVisible by remember { mutableStateOf(!startsMinimized) }
 
-        val historyRepository = remember { InMemoryTranscriptionHistoryRepository() }
+        val historyRepository = remember { FileTranscriptionHistoryRepository(retentionHours = preferences.historyRetention.hours) }
         val coordinator = remember(
             historyRepository,
             whisperStatus.available,

@@ -48,10 +48,10 @@ El icono canónico de identidad se conserva en [`assets/branding/icons/icon-tran
 Requiere JDK 17 o posterior. El proyecto está verificado con Temurin 25.
 
 ```powershell
-.\gradlew.bat dev
+mise dev
 ```
 
-También hay un lanzador de doble clic: `dev.bat`.
+Mise es la entrada principal; Gradle sigue siendo el motor de compilación.
 
 Desde Ajustes puedes seleccionar Gemini o `OpenAI / compatible`, escribir el identificador del modelo y configurar el endpoint completo. La clave puede definirse mediante `LYRAFLOW_API_KEY`, `GEMINI_API_KEY` u `OPENAI_API_KEY`, o introducirse desde Ajustes. En Windows se conserva cifrada con DPAPI por proveedor; borrar el campo elimina también la copia persistida.
 
@@ -67,7 +67,7 @@ La tarjeta `Whisper local` instala bajo demanda el binario x64 desde la última 
 
 ```powershell
 $env:ANDROID_HOME = Join-Path $env:LOCALAPPDATA "Android\Sdk"
-.\gradlew.bat check
+mise check
 ```
 
 `check` compila el escritorio y Android; `test` ejecuta la suite de escritorio (`desktopTest`).
@@ -79,6 +79,11 @@ LyraFlow implementa la interfaz universal de tareas mediante Mise:
 | Tarea | Propósito |
 |---|---|
 | `mise dev` | Ejecutar en modo desarrollo (`gradlew dev`). |
+| `mise dev isolated` | Ejecutar otra instancia de desarrollo. |
+| `mise check` | Verificar compilación de escritorio y Android. |
+| `mise check desktop` | Verificar solo el escritorio. |
+| `mise test` | Ejecutar pruebas de escritorio. |
+| `mise test scripts` | Verificar las herramientas de tareas y empaquetado. |
 | `mise build` | Compilar ejecutable de escritorio (`gradlew buildDesktop`) sin generar instaladores. |
 | `mise release` | Generar instalador oficial Inno Setup en `release/` sin publicar. |
 | `mise publish` | Publicar en GitHub Releases y sincronizar ficha en Aurora (`--plan` y `--check` sin escritura). |
@@ -102,36 +107,27 @@ Siguen el [estándar global de scripts y alias de comandos](https://github.com/b
 | `.\gradlew.bat build` | `npm run build` | Genera la imagen de aplicación lista para ejecutar. |
 | `.\gradlew.bat buildDesktop` | `npm run build:desktop` | Igual, pero solo escritorio (sin Android ni pruebas). |
 | `.\gradlew.bat releaseLocal` | `npm run release:local` | Compila, empaqueta y firma el instalador EXE sin publicar. |
-| `.\gradlew.bat releasePublish` | `npm run release:publish` | Release oficial: commit, tag, push y GitHub Release. |
+| `.\gradlew.bat releasePublish` | `npm run release:publish` | Release oficial: tag, push, GitHub y Aurora. |
 
-El pipeline de release también tiene un wrapper en la raíz, que acepta sintaxis corta:
-
-```powershell
-.\build-release.ps1 local          # instalador local, sin tocar Git ni GitHub
-.\build-release.ps1 -LocalOnly     # equivalente al anterior
-.\build-release.ps1 1.1.9          # versión concreta
-```
-
-Sin `local` ni `-LocalOnly` el wrapper publica la release oficial, así que úsalo con criterio.
-
+Los alias de Gradle y package.json delegan en las tareas y scripts canónicos, sin lanzadores adicionales en la raíz.
 
 ## Distribución
 
 LyraFlow se distribuye en Windows mediante un único instalador ejecutable: `LyraFlow-Windows-X.Y.Z.exe` (en esta versión, `LyraFlow-Windows-1.1.9.exe`). La versión está centralizada en `gradle.properties` (`lyraflow.versionName`) y se propaga al instalador, a «Acerca de la aplicación», a Ajustes y a las notas de la release.
 
 ```powershell
-.\build-release.ps1 local
+mise release
 ```
 
-Genera y valida el instalador EXE firmado y su `SHA256SUMS.txt` en `release/`, sin modificar Git ni GitHub. Para publicar la versión activa desde `main`:
+Genera y valida el instalador EXE firmado y su `SHA256SUMS.txt` en `release/`, sin modificar Git ni GitHub. Para publicar la versión activa desde `preview` o `main`, con el árbol revisado y limpio:
 
 ```powershell
-.\build-release.ps1
+mise publish
 ```
 
-El flujo automático crea el commit de release, el tag, realiza un push atómico y publica los artefactos junto con `SHA256SUMS.txt` en GitHub Releases.
+El flujo verifica el código revisado, genera el instalador, crea un tag nuevo, realiza un push atómico y verifica la descarga pública antes de sincronizar la ficha de Aurora. No crea commits ni incorpora cambios sin revisar.
 
-El instalador se compila con Inno Setup a partir de la plantilla propia de Biglex: instalación por usuario, sin elevación, actualización en el mismo directorio y una única pantalla de entrada con la identidad visual de LyraFlow. La migración desde el instalador MSI anterior (jpackage + WiX) está documentada en [`packaging/windows/MIGRATION.md`](packaging/windows/MIGRATION.md).
+El instalador se compila con Inno Setup a partir de la plantilla propia de Biglex: instalación por usuario, sin elevación, actualización en el mismo directorio y una única pantalla de entrada con la identidad visual de LyraFlow. La migración del MSI anterior conserva su carpeta y retira ese instalador; está documentada en [`packaging/windows/MIGRATION.md`](packaging/windows/MIGRATION.md).
 
 ## Estado de plataforma
 

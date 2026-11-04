@@ -1,5 +1,3 @@
-import org.jetbrains.compose.desktop.application.dsl.TargetFormat
-
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.kotlin.serialization)
@@ -10,6 +8,32 @@ plugins {
 
 val appVersion = providers.gradleProperty("lyraflow.versionName").get()
 val appVersionCode = providers.gradleProperty("lyraflow.versionCode").get().toInt()
+
+// JDK completo para la imagen de aplicación; el instalador usa Inno Setup.
+private fun jdkIsUsable(home: String?): Boolean {
+    if (home.isNullOrBlank()) return false
+    if (!File(home, "bin/jpackage.exe").exists()) return false
+    return true
+}
+
+val jpackageJdkHome: String? = run {
+    val envJavaHome = System.getenv("JAVA_HOME")
+    if (jdkIsUsable(envJavaHome)) return@run envJavaHome
+    val sysJavaHome = System.getProperty("java.home")
+    if (jdkIsUsable(sysJavaHome)) return@run sysJavaHome
+
+    val candidates = listOf(
+        File("C:/Program Files/Eclipse Adoptium/jdk-25.0.4.101-hotspot"),
+        File("C:/Program Files/Eclipse Adoptium/jdk-25.0.3.9-hotspot"),
+    )
+    candidates.firstOrNull { jdkIsUsable(it.absolutePath) }?.absolutePath
+        ?: listOf(File("C:/Program Files/Eclipse Adoptium"), File("C:/Program Files/Microsoft"), File("C:/Program Files/Java")).asSequence()
+            .filter { it.isDirectory }
+            .flatMap { it.listFiles()?.asSequence() ?: emptySequence() }
+            .map { it.absolutePath }
+            .firstOrNull { jdkIsUsable(it) }
+}
+
 
 kotlin {
     androidTarget {
@@ -86,31 +110,12 @@ android {
 compose.desktop {
     application {
         mainClass = "com.biglexj.lyraflow.MainKt"
-        val validJpackageJdk = run {
-            val envJavaHome = System.getenv("JAVA_HOME")
-            if (!envJavaHome.isNullOrBlank() && File(envJavaHome, "bin/jpackage.exe").exists()) return@run envJavaHome
-            val sysJavaHome = System.getProperty("java.home")
-            if (!sysJavaHome.isNullOrBlank() && File(sysJavaHome, "bin/jpackage.exe").exists()) return@run sysJavaHome
-
-            val candidates = listOf(
-                File("C:/Program Files/Microsoft/jdk-17.0.19.10-hotspot"),
-                File("C:/Program Files/Eclipse Adoptium/jdk-25.0.3.9-hotspot"),
-            )
-            candidates.firstOrNull { File(it, "bin/jpackage.exe").exists() }?.absolutePath
-                ?: listOf(File("C:/Program Files/Microsoft"), File("C:/Program Files/Eclipse Adoptium"), File("C:/Program Files/Java")).asSequence()
-                    .filter { it.isDirectory }
-                    .flatMap { it.listFiles()?.asSequence() ?: emptySequence() }
-                    .firstOrNull { File(it, "bin/jpackage.exe").exists() }
-                    ?.absolutePath
-        }
-        validJpackageJdk?.let {
+        jpackageJdkHome?.let {
             javaHome = it
         }
         nativeDistributions {
             modules("java.net.http")
-            targetFormats(
-                TargetFormat.Exe,
-            )
+            // Solo imagen de aplicación: los instaladores los genera Inno Setup.
             packageName = "LyraFlow"
             packageVersion = appVersion
             vendor = "biglexj"
@@ -139,17 +144,25 @@ compose.desktop {
 tasks.withType<JavaExec>().configureEach {
     if (name == "run") {
         systemProperty("lyraflow.channel", "dev")
-    }
-}
-
-val pkgWinDir = file("../package/windows")
-tasks.matching { it.name.startsWith("package") }.configureEach {
-    doFirst {
-        val resDir = file("build/compose/tmp/resources")
-        resDir.mkdirs()
-        if (pkgWinDir.exists()) {
-            pkgWinDir.copyRecursively(resDir, overwrite = true)
+        // Alias dev:isolated: permite varias instancias simultaneas.
+        // La propiedad la fija la tarea raiz devIsolated (ver build.gradle.kts).
+        if (project.findProperty("lyraflow.multiInstance") == "true") {
+            systemProperty("lyraflow.allowMultipleInstances", "true")
         }
     }
 }
 
+// Alias compatible: el único instalador oficial usa Inno Setup.
+tasks.register<Exec>("packageLyraFlowInstaller") {
+    group = "distribution"
+    description = "Genera el instalador EXE con Inno Setup."
+    dependsOn("createDistributable")
+    workingDir = rootDir
+    commandLine("powershell", "-NoProfile", "-ExecutionPolicy", "Bypass",
+        "-File", "scripts/packaging/Build-Installer.ps1", "-SkipBuild")
+}
+
+// Impide regenerar el EXE anterior que encapsulaba un MSI.
+tasks.matching { it.name in setOf("packageExe", "packageMsi", "packageReleaseExe", "packageReleaseMsi") }.configureEach {
+    doFirst { error("Usa releaseLocal o packageLyraFlowInstaller: el instalador oficial usa Inno Setup.") }
+}

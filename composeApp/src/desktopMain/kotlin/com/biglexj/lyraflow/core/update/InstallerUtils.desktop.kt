@@ -9,24 +9,17 @@ actual fun openInstaller(filePath: String) {
         val file = File(filePath)
         if (!file.exists()) return@runCatching
 
-        // 1. Liberar el Single-Instance Lock para permitir que el instalador o la nueva versión tome el socket
+        // Inno conoce la ruta instalada y solo relanza la app si termina correctamente.
+        // Argumentos separados: las rutas no pasan por cmd ni se interpretan como comandos.
+        ProcessBuilder(innoUpdateCommand(file)).start()
         SingleInstanceLock.release()
-
-        // 2. Determinar la ruta del ejecutable instalado para relanzarlo tras la actualización
-        val currentExePath = ProcessHandle.current().info().command().orElse(null)
-            ?.takeIf { File(it).exists() }
-            ?: File(System.getenv("LOCALAPPDATA") ?: ".", "LyraFlow/LyraFlow.exe").absolutePath
-
-        val absPath = file.absolutePath
-
-        // 3. Comando cmd desasociado: esperar 2s para liberar archivos en uso, ejecutar instalador EXE con /passive y relanzar LyraFlow
-        val installCmd = "timeout /t 2 /nobreak > nul & start /wait \"\" \"$absPath\" /passive & start \"\" \"$currentExePath\""
-
-        ProcessBuilder("cmd.exe", "/c", installCmd).start()
-
-        // 4. Finalizar inmediatamente la instancia antigua
         exitProcess(0)
     }.onFailure {
         it.printStackTrace()
     }
+}
+
+internal fun innoUpdateCommand(file: File): List<String> {
+    require(file.isFile && file.extension.equals("exe", ignoreCase = true)) { "No se encontró el instalador EXE." }
+    return listOf(file.absolutePath, "/SILENT", "/NORESTART", "/SP-", "/RESTARTAPP", "/LOG")
 }

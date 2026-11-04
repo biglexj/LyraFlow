@@ -2,14 +2,27 @@
 
 📌 **Versión actual: `1.1.9` · Versión mínima requerida: `1.0.0`**
 
-## [1.1.9] - 2026-10-21
+## [1.1.9] - 2026-11-03
 
-LyraFlow v1.1.9 corrige dos defectos reportados en el uso real de la 1.1.8: la atribución errónea de la cuota agotada y el bloqueo permanente del atajo global de dictado:
+LyraFlow v1.1.9 corrige dos defectos reportados en el uso real de la 1.1.8: la atribución errónea de la cuota agotada y el bloqueo permanente del atajo global de dictado. Además, optimiza la experiencia de navegación en Ajustes, incorpora escalado visual responsivo en el panel principal y renueva por completo el instalador de Windows:
+- **Rediseño Ergonómico y Adaptativo de Ajustes en Dos Columnas**: Distribución compacta en dos columnas a partir de 720 dp (con tipografía y espaciados ampliados en pantallas de alta resolución desde 1200 dp) que elimina el desplazamiento vertical innecesario. Las pestañas se alinean a la izquierda y el contenido se reorganiza en un flujo de uso sumamente estructurado:
+  - *General*: Control de dictado con los atajos de inicio y cancelación en columnas paralelas con validación de conflictos en tiempo real, Comportamiento del sistema (inyección automática y arranque con Windows), Apariencia (tema) e Historial persistente.
+  - *Modelos*: Desacoplamiento estructurado entre Conexión (proveedores de nube Gemini, OpenAI, MiniMax, clave API cifrada con DPAPI y URL de endpoint) y Transcripción (selector de modo Inteligente, Voz original o Personalizado con instrucciones contextuales, idioma de Whisper y funciones experimentales).
+- **Escalado Responsivo del Panel de Dictado en Inicio**: El contenedor principal de dictado calcula su factor de expansión dinámica según el ancho y alto de la ventana, proporcionando un visualizador de onda y botones de acción con dimensiones proporcionales tanto en ventanas compactas como en monitores amplios.
 - **La Cuota se Atribuye al Proveedor y al Modelo Reales**: El estado de cuota agotada deja de ser una bandera única y pasa a registrar el proveedor y el modelo que la consumieron. El aviso del panel principal y los mensajes de error nombran la selección vigente (por ejemplo `MiniMax (asr-1.0)`) en lugar de mencionar siempre a Gemini. El banner solo aparece cuando la cuota corresponde al proveedor y al modelo que están seleccionados en ese momento, y su descripción indica con verdad si el respaldo local está disponible o si toca actualizar la clave o cambiar de modelo.
 - **El Atajo Global Vuelve a Responder Tras Agotarse la Cuota**: El registro del atajo global se crea una sola vez y quedaba apuntando a la instancia anterior del coordinador de dictado, de modo que al cambiar de modelo, proveedor o clave de API la interfaz y el atajo manipulaban estados distintos y el atajo dejaba de responder. Ahora el atajo resuelve siempre el coordinador vigente y, si detecta un estado de transcripción atascado sin petición viva que lo respalde, lo recupera en lugar de bloquearse.
 - **La Cuota Deja de Bloquear a Otras Selecciones**: La cuota agotada queda acotada al proveedor y al modelo que la consumieron. Cambiar de proveedor o de modelo vuelve a intentar la transcripción en la nube de inmediato, en lugar de mantener el dictado local forzado durante toda la ventana de enfriamiento.
 - **Ninguna Petición Queda Atascada**: Una petición cancelada abandonaba el estado de transcripción bloqueado, lo que dejaba el atajo inutilizable hasta reiniciar la aplicación. La cancelación y el error liberan ahora el estado de forma explícita.
 - **HTTP 429 Unificado en OpenAI-compatible**: El límite de uso del protocolo OpenAI-compatible se reportaba como un error genérico y no activaba el respaldo local autónomo. Ahora se reconoce como cuota agotada y conmuta a Whisper local igual que el resto de proveedores.
+- **Instalador de Windows en Español con la Identidad Visual de LyraFlow**: El instalador EXE de Windows se genera con la plantilla propia de Biglex en Inno Setup, en lugar de la plantilla por defecto de jpackage. El asistente se muestra íntegramente en español, con una sola pantalla de entrada (presentación, ruta editable y botón principal), la marca de LyraFlow, tema claro/oscuro automático según Windows, esquinas nativas de Windows 11 e icono centrado, y las pantallas nativas de progreso y de éxito.
+- **«Ejecutar LyraFlow» al Terminar**: La pantalla final ofrece la casilla «Ejecutar LyraFlow» junto al botón «Finalizar», de modo que la aplicación queda lista para usarse en cuanto termina la instalación.
+- **Instalación por Usuario, Sin Elevación y Sin Instalaciones en Paralelo**: La instalación se hace por usuario, no solicita permisos de administrador y se aplica en `%LOCALAPPDATA%\Programs\LyraFlow`. La identidad de actualización es estable entre versiones, así que cada versión nueva actualiza la anterior en el mismo directorio en lugar de convivir con ella.
+- **Las Actualizaciones Ya No Terminan con «Ended Prematurely»**: Antes de reemplazar una versión anterior, el instalador cierra LyraFlow si sigue en ejecución, de modo que la actualización no falla por tener la aplicación abierta.
+- **Migración desde el instalador anterior**: el asistente identifica y retira el MSI anterior de LyraFlow antes de instalar la versión nueva, conserva su ubicación y detiene la instalación si la retirada falla.
+
+- **Historial que sobrevive al reinicio**: los dictados se guardan en este equipo durante el plazo elegido. Las 24 horas predeterminadas se conservan; al desactivar o limpiar el historial se elimina la copia guardada.
+- **Instalación de Whisper más resistente**: si falla la consulta a GitHub, se intentan las fuentes de respaldo.
+- **Mejor acceso con teclado**: la ruta del instalador es editable y el botón de eliminar una transcripción tiene una descripción accesible.
 
 > [!IMPORTANT]
 > **Estándar SemVer Flexible (Core-Docs v1.7.0):**

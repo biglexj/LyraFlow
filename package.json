@@ -18,11 +18,13 @@
     "compile:desktop": "cmd /c .\\gradlew.bat buildDesktop",
     "compile:check": "cmd /c .\\gradlew.bat check",
     "installer": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/packaging/Build-Installer.ps1",
-    "release": "powershell -NoProfile -ExecutionPolicy Bypass -File ./build-release.ps1 -LocalOnly",
-    "release:local": "powershell -NoProfile -ExecutionPolicy Bypass -File ./build-release.ps1 -LocalOnly",
-    "release:windows": "powershell -NoProfile -ExecutionPolicy Bypass -File ./build-release.ps1 -LocalOnly",
-    "release:publish": "powershell -NoProfile -ExecutionPolicy Bypass -File ./build-release.ps1",
-    "release:full": "powershell -NoProfile -ExecutionPolicy Bypass -File ./build-release.ps1"
+    "release": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/release/build-release.ps1 -LocalOnly",
+    "release:local": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/release/build-release.ps1 -LocalOnly",
+    "release:windows": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/release/build-release.ps1 -LocalOnly",
+    "release:publish": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/release/build-release.ps1 -Publish",
+    "release:full": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/release/build-release.ps1 -Publish",
+    "publish:check": "bun scripts/mise-task.ts publish --check",
+    "test:scripts": "bun test scripts/tests"
   },
   "keywords": [
     "dictado",

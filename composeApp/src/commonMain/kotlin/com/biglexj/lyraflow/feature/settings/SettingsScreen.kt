@@ -1,10 +1,14 @@
 package com.biglexj.lyraflow.feature.settings
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -17,18 +21,20 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.Typography
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Tab
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -36,8 +42,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -46,14 +55,63 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import com.biglexj.lyraflow.core.config.AppConfiguration
 import com.biglexj.lyraflow.core.config.AppPreferences
-import com.biglexj.lyraflow.core.config.AppVersion
 import com.biglexj.lyraflow.core.config.HistoryRetentionPeriod
 import com.biglexj.lyraflow.core.config.SystemPromptMode
 import com.biglexj.lyraflow.core.config.ThemeMode
 import com.biglexj.lyraflow.core.config.WhisperLanguage
 import com.biglexj.lyraflow.core.model.AiProvider
 
+internal val LocalExpandedSettings = staticCompositionLocalOf { false }
+
 private val SETTINGS_TABS = listOf("General", "Modelos")
+
+private fun expandedSettingsTypography(base: Typography): Typography {
+    fun enlarged(style: TextStyle, weight: FontWeight? = null) = style.copy(
+        fontSize = style.fontSize * 1.15f,
+        lineHeight = style.lineHeight * 1.15f,
+        fontWeight = weight ?: style.fontWeight,
+    )
+    return base.copy(
+        headlineMedium = enlarged(base.headlineMedium, FontWeight.SemiBold),
+        titleMedium = enlarged(base.titleMedium, FontWeight.SemiBold),
+        titleSmall = enlarged(base.titleSmall, FontWeight.SemiBold),
+        bodyLarge = enlarged(base.bodyLarge),
+        bodyMedium = enlarged(base.bodyMedium),
+        bodySmall = enlarged(base.bodySmall),
+        labelLarge = enlarged(base.labelLarge, FontWeight.SemiBold),
+        labelMedium = enlarged(base.labelMedium, FontWeight.Medium),
+        labelSmall = enlarged(base.labelSmall, FontWeight.Medium),
+    )
+}
+
+@Composable
+private fun SettingsChoiceChip(
+    selected: Boolean,
+    onClick: () -> Unit,
+    enabled: Boolean = true,
+    label: @Composable () -> Unit,
+) {
+    val expanded = LocalExpandedSettings.current
+    FilterChip(
+        selected = selected, onClick = onClick, enabled = enabled, label = label,
+        modifier = Modifier.heightIn(min = if (expanded) 44.dp else 32.dp),
+        border = FilterChipDefaults.filterChipBorder(
+            enabled = enabled, selected = selected,
+            borderWidth = if (expanded) 1.5.dp else 1.dp,
+            selectedBorderWidth = if (expanded) 1.5.dp else 0.dp,
+            selectedBorderColor = if (expanded) MaterialTheme.colorScheme.primary.copy(alpha = .45f)
+                else androidx.compose.ui.graphics.Color.Transparent,
+        ),
+    )
+}
+
+@Composable
+private fun SettingsTextButton(onClick: () -> Unit, enabled: Boolean = true, content: @Composable () -> Unit) {
+    TextButton(
+        onClick = onClick, enabled = enabled,
+        modifier = Modifier.heightIn(min = if (LocalExpandedSettings.current) 48.dp else 40.dp),
+    ) { content() }
+}
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -63,8 +121,6 @@ fun SettingsScreen(
     onApiKeyChange: (String) -> Unit,
     isScanningModels: Boolean = false,
     onScanModels: () -> Unit = {},
-    onOpenAbout: () -> Unit = {},
-    onCheckForUpdates: () -> Unit = {},
 ) {
     val preferences = configuration.preferences
     val provider = preferences.provider
@@ -84,339 +140,185 @@ fun SettingsScreen(
         }
     }
 
-    /** Pestana General, columna izquierda. */
-    val generalLeft: @Composable () -> Unit = {
-        Column(verticalArrangement = Arrangement.spacedBy(22.dp)) {
-            SettingsSection("Apariencia", "Elige cómo se adapta LyraFlow a tu escritorio.") {
-            Surface(
-                color = MaterialTheme.colorScheme.surface,
-                shape = MaterialTheme.shapes.medium,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
-            ) {
-                Row(
-                    modifier = Modifier.padding(6.dp),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    ThemeMode.entries.forEach { mode ->
-                        val selected = preferences.themeMode == mode
-                        Surface(
-                            onClick = { onPreferencesChange(preferences.copy(themeMode = mode)) },
-                            shape = MaterialTheme.shapes.small,
-                            color = if (selected) MaterialTheme.colorScheme.primaryContainer else androidx.compose.ui.graphics.Color.Transparent,
-                            border = if (selected) BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)) else null,
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 18.dp, vertical = 10.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            ) {
-                                val icon = when (mode) {
-                                    ThemeMode.System -> "💻"
-                                    ThemeMode.Light -> "☀️"
-                                    ThemeMode.Dark -> "🌙"
-                                }
-                                Text(icon, style = MaterialTheme.typography.bodyMedium)
-                                Text(
-                                    text = mode.label,
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
-            SettingsSection("Atajo global", "Inicia y detén el dictado desde cualquier aplicación.") {
-                ShortcutRecorder(
-                    shortcut = preferences.shortcut,
-                    onShortcutChange = { shortcut ->
-                        if (!preferences.cancelShortcut.conflictsWith(shortcut)) {
-                            onPreferencesChange(preferences.copy(shortcut = shortcut))
-                        }
-                    },
-                    validate = { shortcut ->
-                        shortcut.validationError()
-                            ?: if (preferences.cancelShortcut.conflictsWith(shortcut)) {
-                                "Esa combinacion ya la usa el atajo para cancelar."
-                            } else {
-                                null
-                            }
-                    },
-                )
-            }
-            SettingsSection(
-                "Atajo para cancelar",
-                "Descarta el dictado en curso sin transcribirlo ni insertar nada. Útil cuando se te va la mano y el audio se alarga demasiado.",
-            ) {
-                ShortcutRecorder(
-                    shortcut = preferences.cancelShortcut,
-                    onShortcutChange = { shortcut ->
-                        if (!preferences.shortcut.conflictsWith(shortcut)) {
-                            onPreferencesChange(preferences.copy(cancelShortcut = shortcut))
-                        }
-                    },
-                    validate = { shortcut ->
-                        shortcut.validationError()
-                            ?: if (preferences.shortcut.conflictsWith(shortcut)) {
-                                "Esa combinacion ya la usa el atajo principal."
-                            } else {
-                                null
-                            }
-                    },
-                )
-                if (preferences.cancelShortcut.conflictsWith(preferences.shortcut)) {
-                    Text(
-                        text = "⚠️ El atajo de cancelar coincide con el atajo principal. Cambia uno de los dos para que LyraFlow pueda distinguirlos.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error,
-                    )
-                }
-            }
-        }
-    }
+    var showExperimental by rememberSaveable { mutableStateOf(false) }
+    val scrollState = rememberScrollState()
+    LaunchedEffect(selectedTab) { scrollState.scrollTo(0) }
 
-    /** Pestana Modelos, columna izquierda: proveedor, modelo, endpoint y credenciales. */
-    val modelosLeft: @Composable () -> Unit = {
-        Column(verticalArrangement = Arrangement.spacedBy(22.dp)) {
-            SettingsSection("Proveedor multimodal", "Una sola llamada recibe el audio y devuelve el texto corregido.") {
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    AiProvider.entries.forEach { option ->
-                        ProviderOption(
-                            provider = option,
-                            selected = provider == option,
-                            onSelect = {
-                                onPreferencesChange(
-                                    preferences.copy(
-                                        provider = option,
-                                        model = option.defaultModel,
-                                        endpoint = option.defaultEndpoint,
-                                    ),
-                                )
-                            },
-                            modifier = Modifier.weight(1f),
-                        )
-                    }
-                }
-            }
-            SettingsSection("Modelo multimodal", "Escribe cualquier identificador de modelo que acepte audio y texto.") {
-                ModelField(
-                    value = selectedModelInput,
-                    enabled = hasApiKey,
-                    onValueChange = { selectedModelInput = it },
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Button(
-                            onClick = {
-                                val target = selectedModelInput.trim().ifBlank { provider.defaultModel }
-                                selectedModelInput = target
-                                onPreferencesChange(preferences.copy(model = target))
-                                showDiscoveredList = false
-                                saveFeedback = "Modelo guardado: $target"
-                            },
-                            enabled = hasApiKey && selectedModelInput.isNotBlank(),
-                        ) {
-                            Text("💾 Guardar modelo")
-                        }
-
-                        if (discoveredForProvider.isNotEmpty() || availableModels.isNotEmpty()) {
-                            OutlinedButton(
-                                onClick = { showDiscoveredList = !showDiscoveredList },
-                                enabled = hasApiKey,
-                            ) {
-                                Text(
-                                    if (showDiscoveredList) {
-                                        "Ocultar modelos (" + (if (discoveredForProvider.isNotEmpty()) discoveredForProvider.size else availableModels.size) + ")"
-                                    } else {
-                                        "Ver modelos (" + (if (discoveredForProvider.isNotEmpty()) discoveredForProvider.size else availableModels.size) + ")"
-                                    }
-                                )
-                            }
-                        }
-                    }
-
-                    TextButton(
+    val connection: @Composable () -> Unit = {
+        SettingsSection("Conexión", "Proveedor y credenciales de acceso.") {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                AiProvider.entries.forEach { option ->
+                    SettingsChoiceChip(
+                        selected = provider == option,
                         onClick = {
-                            showDiscoveredList = true
-                            onScanModels()
+                            if (provider != option) onPreferencesChange(preferences.copy(
+                                    provider = option, model = option.defaultModel, endpoint = option.defaultEndpoint,
+                            ))
                         },
-                        enabled = hasApiKey && !isScanningModels,
-                    ) {
-                        if (isScanningModels) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(16.dp),
-                                strokeWidth = 2.dp,
-                            )
-                            Text("  Escaneando…")
-                        } else {
-                            Text("🔄 Escanear modelos de " + provider.label)
-                        }
-                    }
-                }
-
-                if (saveFeedback != null) {
-                    Text(
-                        text = "✅ " + saveFeedback,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                }
-
-                androidx.compose.animation.AnimatedVisibility(visible = showDiscoveredList && hasApiKey) {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(
-                            text = if (discoveredForProvider.isNotEmpty()) {
-                                "Modelos detectados (" + discoveredForProvider.size + ") — Pulsa uno para seleccionarlo y luego 'Guardar modelo':"
-                            } else {
-                                "Modelos sugeridos base — Pulsa uno para seleccionarlo y luego 'Guardar modelo':"
-                            },
-                            style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        FlowRow(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            availableModels.forEach { model ->
-                                FilterChip(
-                                    selected = selectedModelInput == model,
-                                    enabled = hasApiKey,
-                                    onClick = {
-                                        selectedModelInput = model
-                                    },
-                                    label = { Text(model) },
-                                )
-                            }
-                        }
-                    }
-                }
-
-                if (!hasApiKey) {
-                    Text(
-                        text = "🔒 Se requiere API Key: Ingresa tu clave en la sección '" + provider.label + " API' abajo para desbloquear el escaneo y la selección de modelos.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary,
+                        label = { Text(option.label) },
                     )
                 }
             }
+            ApiKeyField(
+                value = configuration.sessionApiKey,
+                label = "Clave API de " + provider.label,
+                onValueChange = { newKey ->
+                    val wasEmpty = configuration.sessionApiKey.isBlank()
+                    onApiKeyChange(newKey)
+                    if (wasEmpty && newKey.isNotBlank() && preferences.systemPromptMode == SystemPromptMode.Literal) {
+                        onPreferencesChange(
+                            preferences.copy(
+                                systemPromptMode = SystemPromptMode.Smart,
+                                systemPrompt = AppPreferences.DEFAULT_SYSTEM_PROMPT,
+                            ),
+                        )
+                    }
+                },
+            )
+            Text("La clave se guarda cifrada para tu usuario de Windows.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (provider == AiProvider.OpenAiCompatible || provider == AiProvider.MiniMax) {
-                val endpointHelp = when (provider) {
-                    AiProvider.MiniMax ->
-                        "URL base de MiniMax. LyraFlow llama a /speech_to_text para transcribir y a /chat/completions para refinar el texto."
-                    else ->
-                        "Compatible con OpenAI, gateways y servidores locales que acepten Chat Completions."
+                EndpointField(value = preferences.endpoint, enabled = hasApiKey,
+                    onValueChange = { onPreferencesChange(preferences.copy(endpoint = it)) })
+                Text(
+                    if (provider == AiProvider.MiniMax) "URL base del servicio de MiniMax."
+                    else "El endpoint y el modelo deben admitir audio mediante Chat Completions.",
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        SettingsSection("Modelo", "Selecciona el modelo del proveedor conectado.") {
+            ModelField(
+                value = selectedModelInput,
+                enabled = hasApiKey,
+                onValueChange = { selectedModelInput = it },
+            )
+
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Button(
+                    onClick = {
+                        val target = selectedModelInput.trim().ifBlank { provider.defaultModel }
+                        selectedModelInput = target
+                        onPreferencesChange(preferences.copy(model = target))
+                        showDiscoveredList = false
+                        saveFeedback = "Modelo guardado: $target"
+                    },
+                    modifier = Modifier.heightIn(min = if (LocalExpandedSettings.current) 48.dp else 40.dp),
+                    enabled = hasApiKey && selectedModelInput.isNotBlank() && selectedModelInput.trim() != preferences.model,
+                ) { Text("Guardar modelo") }
+                if (discoveredForProvider.isNotEmpty() || availableModels.isNotEmpty()) {
+                    SettingsTextButton(onClick = { showDiscoveredList = !showDiscoveredList }, enabled = hasApiKey) {
+                        Text(if (showDiscoveredList) "Ocultar modelos" else "Ver modelos")
+                    }
                 }
-                SettingsSection("Endpoint " + provider.label, endpointHelp) {
-                    EndpointField(
-                        value = preferences.endpoint,
-                        enabled = hasApiKey,
-                        onValueChange = { onPreferencesChange(preferences.copy(endpoint = it)) },
+                TextButton(onClick = { showDiscoveredList = true; onScanModels() }, enabled = hasApiKey && !isScanningModels) {
+                    if (isScanningModels) {
+                        CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                        Spacer(Modifier.width(6.dp))
+                    }
+                    Text(if (isScanningModels) "Escaneando…" else "Escanear")
+                }
+            }
+
+            if (saveFeedback != null) {
+                Text(
+                    text = "✅ " + saveFeedback,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+
+            androidx.compose.animation.AnimatedVisibility(visible = showDiscoveredList && hasApiKey) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = if (discoveredForProvider.isNotEmpty()) {
+                            "Modelos detectados (" + discoveredForProvider.size + ") — Pulsa uno para seleccionarlo y luego 'Guardar modelo':"
+                        } else {
+                            "Modelos sugeridos base — Pulsa uno para seleccionarlo y luego 'Guardar modelo':"
+                        },
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    if (provider == AiProvider.OpenAiCompatible) {
-                        Text(
-                            text = "ℹ️ Nota: Integración experimental con proveedores OpenAI-compatible / pendiente de comprobación completa con todos los endpoints. Si encuentras algún problema con un servidor específico, por favor reporta el inconveniente en GitHub o en nuestro canal de Feedback.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    } else {
-                        Text(
-                            text = "ℹ️ MiniMax no acepta audio en Chat Completions: el audio entra por su endpoint de transcripción y el texto se refina aparte. Límites de MiniMax: 500 segundos y 50 MB por audio.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        availableModels.forEach { model ->
+                            FilterChip(
+                                selected = selectedModelInput == model,
+                                enabled = hasApiKey,
+                                onClick = {
+                                    selectedModelInput = model
+                                },
+                                label = { Text(model) },
+                            )
+                        }
                     }
                 }
             }
-            SettingsSection(provider.label + " API", "La clave se conserva cifrada para tu usuario de Windows.") {
-                ApiKeyField(
-                    value = configuration.sessionApiKey,
-                    label = provider.apiKeyEnvironmentVariable,
-                    onValueChange = { newKey ->
-                        val wasEmpty = configuration.sessionApiKey.isBlank()
-                        onApiKeyChange(newKey)
-                        if (wasEmpty && newKey.isNotBlank() && preferences.systemPromptMode == SystemPromptMode.Literal) {
-                            onPreferencesChange(
-                                preferences.copy(
-                                    systemPromptMode = SystemPromptMode.Smart,
-                                    systemPrompt = AppPreferences.DEFAULT_SYSTEM_PROMPT,
-                                ),
-                            )
-                        }
-                    },
+
+            if (!hasApiKey) {
+                Text(
+                    text = "Añade tu clave en Conexión para elegir o escanear modelos.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
                 )
             }
         }
     }
-
-    /** Pestana Modelos, columna derecha: instrucciones y motor offline. */
-    val modelosRight: @Composable () -> Unit = {
-        Column(verticalArrangement = Arrangement.spacedBy(22.dp)) {
-            SettingsSection("Instrucciones de transcripción (System Prompt)", "Elige entre transcripción inteligente refinada o voz original literal sin alterar conceptos.") {
-                val effectiveMode = if (!hasApiKey) SystemPromptMode.Literal else preferences.systemPromptMode
-                SystemPromptField(
-                    currentMode = effectiveMode,
-                    value = preferences.systemPrompt,
-                    hasApiKey = hasApiKey,
-                    onModeSelect = { mode ->
-                        if (!hasApiKey && mode != SystemPromptMode.Literal) return@SystemPromptField
-                        val newPrompt = when (mode) {
-                            SystemPromptMode.Smart -> AppPreferences.DEFAULT_SYSTEM_PROMPT
-                            SystemPromptMode.Literal -> AppPreferences.LITERAL_SYSTEM_PROMPT
-                            SystemPromptMode.Custom -> preferences.systemPrompt
-                        }
-                        onPreferencesChange(preferences.copy(systemPromptMode = mode, systemPrompt = newPrompt))
-                    },
-                    onValueChange = { newValue ->
-                        if (!hasApiKey) return@SystemPromptField
-                        val newMode = when (newValue.trim()) {
-                            AppPreferences.DEFAULT_SYSTEM_PROMPT.trim() -> SystemPromptMode.Smart
-                            AppPreferences.LITERAL_SYSTEM_PROMPT.trim() -> SystemPromptMode.Literal
-                            else -> SystemPromptMode.Custom
-                        }
-                        onPreferencesChange(preferences.copy(systemPromptMode = newMode, systemPrompt = newValue))
-                    },
-                    onReset = {
-                        if (hasApiKey) {
-                            onPreferencesChange(
-                                preferences.copy(
-                                    systemPromptMode = SystemPromptMode.Smart,
-                                    systemPrompt = AppPreferences.DEFAULT_SYSTEM_PROMPT,
-                                ),
-                            )
-                        }
-                    },
-                )
-            }
-            SettingsSection(
-                "Idioma de Whisper local",
-                "Selecciona el idioma de transcripción para el motor offline de Whisper. Por defecto, 'Automático' detecta el idioma del sistema operativo.",
-            ) {
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    WhisperLanguage.entries.forEach { lang ->
-                        FilterChip(
-                            selected = preferences.whisperLanguage == lang,
-                            onClick = { onPreferencesChange(preferences.copy(whisperLanguage = lang)) },
-                            label = { Text(lang.label) },
+    val transcription: @Composable () -> Unit = {
+        SettingsSection("Transcripción", "Modo de dictado, instrucciones y motor local.") {
+            val effectiveMode = if (!hasApiKey) SystemPromptMode.Literal else preferences.systemPromptMode
+            SystemPromptField(
+                currentMode = effectiveMode,
+                value = preferences.systemPrompt,
+                hasApiKey = hasApiKey,
+                onModeSelect = { mode ->
+                    if (!hasApiKey && mode != SystemPromptMode.Literal) return@SystemPromptField
+                    val newPrompt = when (mode) {
+                        SystemPromptMode.Smart -> AppPreferences.DEFAULT_SYSTEM_PROMPT
+                        SystemPromptMode.Literal -> AppPreferences.LITERAL_SYSTEM_PROMPT
+                        SystemPromptMode.Custom -> preferences.systemPrompt
+                    }
+                    onPreferencesChange(preferences.copy(systemPromptMode = mode, systemPrompt = newPrompt))
+                },
+                onValueChange = { newValue ->
+                    if (!hasApiKey) return@SystemPromptField
+                    val newMode = when (newValue.trim()) {
+                        AppPreferences.DEFAULT_SYSTEM_PROMPT.trim() -> SystemPromptMode.Smart
+                        AppPreferences.LITERAL_SYSTEM_PROMPT.trim() -> SystemPromptMode.Literal
+                        else -> SystemPromptMode.Custom
+                    }
+                    onPreferencesChange(preferences.copy(systemPromptMode = newMode, systemPrompt = newValue))
+                },
+                onReset = {
+                    if (hasApiKey) {
+                        onPreferencesChange(
+                            preferences.copy(
+                                systemPromptMode = SystemPromptMode.Smart,
+                                systemPrompt = AppPreferences.DEFAULT_SYSTEM_PROMPT,
+                            ),
                         )
                     }
+                },
+            )
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            Text("Idioma de Whisper local", style = MaterialTheme.typography.titleSmall)
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                WhisperLanguage.entries.forEach { lang ->
+                    FilterChip(
+                        selected = preferences.whisperLanguage == lang,
+                        onClick = { onPreferencesChange(preferences.copy(whisperLanguage = lang)) },
+                        label = { Text(lang.label) },
+                    )
                 }
             }
-            SettingsSection("Funciones Experimentales", "Características avanzadas en fase de prueba.") {
+            TextButton(onClick = { showExperimental = !showExperimental }) {
+                Text(if (showExperimental) "Ocultar opciones experimentales" else "Opciones experimentales")
+            }
+            androidx.compose.animation.AnimatedVisibility(visible = showExperimental) {
                 SettingSwitch(
                     title = "Whisper + Refinamiento por LLM (Experimental)",
                     supporting = "Utiliza Whisper local para transcribir audio a texto y luego procesa el resultado con un modelo LLM de texto para corregir formato y sintaxis.",
@@ -427,128 +329,118 @@ fun SettingsScreen(
         }
     }
 
-    /** Pestana General, columna derecha. */
-    val generalRight: @Composable () -> Unit = {
-        Column(verticalArrangement = Arrangement.spacedBy(22.dp)) {
-            SettingsSection("Historial y Retención", "Define el tiempo de conservación de tus dictados recientes antes del borrado automático.") {
-                Surface(
-                    color = MaterialTheme.colorScheme.surface,
-                    shape = MaterialTheme.shapes.medium,
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
-                ) {
-                    Row(
-                        modifier = Modifier.padding(6.dp),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    ) {
-                        HistoryRetentionPeriod.entries.forEach { period ->
-                            val selected = preferences.historyRetention == period
-                            Surface(
-                                onClick = { onPreferencesChange(preferences.copy(historyRetention = period)) },
-                                shape = MaterialTheme.shapes.small,
-                                color = if (selected) MaterialTheme.colorScheme.primaryContainer else androidx.compose.ui.graphics.Color.Transparent,
-                                border = if (selected) BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)) else null,
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 18.dp, vertical = 10.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                ) {
-                                    Text("🕒", style = MaterialTheme.typography.bodyMedium)
-                                    Text(
-                                        text = period.label,
-                                        style = MaterialTheme.typography.titleMedium,
-                                        color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        // Se mide el contenido, no la pantalla: dos columnas también en una ventana normal.
+        val twoColumns = maxWidth >= 720.dp
+        val expanded = maxWidth >= 1200.dp && maxHeight >= 700.dp
+        val horizontalPadding = if (maxWidth < 480.dp) 16.dp else if (expanded) 28.dp else 20.dp
+        val typography = MaterialTheme.typography
+        val settingsTypography = remember(typography, expanded) {
+            if (expanded) expandedSettingsTypography(typography) else typography
+        }
+        MaterialTheme(typography = settingsTypography) {
+            CompositionLocalProvider(LocalExpandedSettings provides expanded) {
+                Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Column(modifier = Modifier.fillMaxWidth()
+                        .padding(start = horizontalPadding, end = horizontalPadding, top = if (expanded) 28.dp else 20.dp)) {
+                        Text("Ajustes", style = MaterialTheme.typography.headlineMedium)
+                        Spacer(Modifier.height(if (expanded) 18.dp else 12.dp))
+                        PrimaryTabRow(selectedTabIndex = selectedTab, modifier = Modifier.widthIn(max = if (expanded) 300.dp else 240.dp)) {
+                            SETTINGS_TABS.forEachIndexed { index, title ->
+                                Tab(selected = selectedTab == index, onClick = { selectedTab = index }, text = { Text(title) })
                             }
                         }
                     }
-                }
-            }
-            SettingsSection("Después de transcribir", "Controla qué sucede cuando el texto está listo.") {
-                SettingSwitch(
-                    title = "Insertar automáticamente",
-                    supporting = "Pega el resultado en la aplicación que estabas usando.",
-                    checked = preferences.autoInject,
-                    onCheckedChange = { onPreferencesChange(preferences.copy(autoInject = it)) },
-                )
-            }
-            SettingsSection("Inicio", "LyraFlow puede quedar listo desde que enciendes el equipo.") {
-                SettingSwitch(
-                    title = "Iniciar con Windows",
-                    supporting = "Se abre minimizado en el área de notificación.",
-                    checked = preferences.launchAtStartup,
-                    onCheckedChange = { onPreferencesChange(preferences.copy(launchAtStartup = it)) },
-                )
-            }
-            SettingsSection("Acerca de la Aplicación", "Información de versión, autoría y comprobación de actualizaciones.") {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text("LyraFlow v" + AppVersion.CURRENT, style = MaterialTheme.typography.titleMedium)
-                        Text("Creado por biglexj (2026) • Licencia MIT", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        TextButton(onClick = onCheckForUpdates) {
-                            Text("Buscar actualizaciones")
-                        }
-                        TextButton(onClick = onOpenAbout) {
-                            Text("Ver detalles")
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-        val twoColumns = maxWidth >= 900.dp
-        val leftColumn = if (selectedTab == 0) generalLeft else modelosLeft
-        val rightColumn = if (selectedTab == 0) generalRight else modelosRight
-
-        Column(modifier = Modifier.fillMaxSize()) {
-            Column(modifier = Modifier.padding(start = 28.dp, end = 28.dp, top = 28.dp)) {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("Ajustes", style = MaterialTheme.typography.headlineLarge)
-                    Text("Haz que LyraFlow trabaje a tu manera.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                Spacer(Modifier.height(18.dp))
-                PrimaryTabRow(selectedTabIndex = selectedTab) {
-                    SETTINGS_TABS.forEachIndexed { index, title ->
-                        Tab(
-                            selected = selectedTab == index,
-                            onClick = { selectedTab = index },
-                            text = { Text(title) },
-                        )
-                    }
-                }
-            }
-
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .verticalScroll(rememberScrollState())
-                    .padding(start = 28.dp, end = 28.dp, top = 22.dp, bottom = 28.dp),
-                verticalArrangement = Arrangement.spacedBy(22.dp),
-            ) {
-                if (twoColumns) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    Column(
+                        modifier = Modifier.weight(1f).fillMaxWidth()
+                        .verticalScroll(scrollState)
+                        .padding(start = horizontalPadding, end = horizontalPadding, top = 16.dp, bottom = 20.dp),
+                        verticalArrangement = Arrangement.spacedBy(if (expanded) 20.dp else 14.dp),
                     ) {
-                        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(22.dp)) {
-                            leftColumn()
-                        }
-                        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(22.dp)) {
-                            rightColumn()
+                        if (selectedTab == 0) {
+                            SettingsSection("Control del dictado") {
+                                SettingsColumns(twoColumns, first = {
+                                    Text("Iniciar y detener", style = MaterialTheme.typography.titleSmall)
+                                    ShortcutRecorder(
+                                        shortcut = preferences.shortcut,
+                                        onShortcutChange = { shortcut ->
+                                            if (!preferences.cancelShortcut.conflictsWith(shortcut)) {
+                                                onPreferencesChange(preferences.copy(shortcut = shortcut))
+                                            }
+                                        },
+                                        validate = { shortcut ->
+                                            shortcut.validationError()
+                                            ?: if (preferences.cancelShortcut.conflictsWith(shortcut)) {
+                                                "Esa combinacion ya la usa el atajo para cancelar."
+                                            } else {
+                                                null
+                                            }
+                                        },
+                                    )
+                                    }, second = {
+                                    Text("Cancelar dictado", style = MaterialTheme.typography.titleSmall)
+                                    ShortcutRecorder(
+                                        shortcut = preferences.cancelShortcut,
+                                        onShortcutChange = { shortcut ->
+                                            if (!preferences.shortcut.conflictsWith(shortcut)) {
+                                                onPreferencesChange(preferences.copy(cancelShortcut = shortcut))
+                                            }
+                                        },
+                                        validate = { shortcut ->
+                                            shortcut.validationError()
+                                            ?: if (preferences.shortcut.conflictsWith(shortcut)) {
+                                                "Esa combinacion ya la usa el atajo principal."
+                                            } else {
+                                                null
+                                            }
+                                        },
+                                    )
+                                    if (preferences.cancelShortcut.conflictsWith(preferences.shortcut)) {
+                                        Text(
+                                            text = "⚠️ El atajo de cancelar coincide con el atajo principal. Cambia uno de los dos para que LyraFlow pueda distinguirlos.",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.error,
+                                        )
+                                    }
+                                })
+                                Text("Combinaciones de 2 o 3 teclas. F12 y Windows + Espacio están reservados.",
+                                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            SettingsSection("Comportamiento") {
+                                SettingsColumns(twoColumns, first = {
+                                    SettingSwitch("Insertar automáticamente", "Pega el resultado en la aplicación activa.", preferences.autoInject,
+                                        { onPreferencesChange(preferences.copy(autoInject = it)) })
+                                    }, second = {
+                                    SettingSwitch("Iniciar con Windows", "Se abre en el área de notificación.", preferences.launchAtStartup,
+                                        { onPreferencesChange(preferences.copy(launchAtStartup = it)) })
+                                })
+                            }
+                            SettingsColumns(twoColumns, first = {
+                                SettingsSection("Apariencia") {
+                                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        ThemeMode.entries.forEach { mode ->
+                                            FilterChip(selected = preferences.themeMode == mode,
+                                                onClick = { onPreferencesChange(preferences.copy(themeMode = mode)) },
+                                                label = { Text(mode.label) })
+                                        }
+                                    }
+                                }
+                                }, second = {
+                                SettingsSection("Historial", "Se conserva al cerrar la app. Desactivarlo borra los dictados guardados.") {
+                                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        HistoryRetentionPeriod.entries.forEach { period ->
+                                            FilterChip(selected = preferences.historyRetention == period,
+                                                onClick = { onPreferencesChange(preferences.copy(historyRetention = period)) },
+                                                label = { Text(if (period == HistoryRetentionPeriod.Disabled) period.label else "${period.hours} horas") })
+                                        }
+                                    }
+                                }
+                            })
+
+                        } else {
+                            SettingsColumns(twoColumns, connection, transcription)
                         }
                     }
-                } else {
-                    leftColumn()
-                    rightColumn()
                 }
             }
         }
@@ -556,65 +448,37 @@ fun SettingsScreen(
 }
 
 @Composable
-private fun SettingsSection(title: String, supporting: String, content: @Composable () -> Unit) {
+private fun SettingsSection(title: String, supporting: String = "", content: @Composable () -> Unit) {
+    val expanded = LocalExpandedSettings.current
     Surface(
         modifier = Modifier.fillMaxWidth(),
+        border = if (expanded) BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = .5f)) else null,
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .34f),
-        shape = MaterialTheme.shapes.large,
+        shape = MaterialTheme.shapes.medium,
     ) {
-        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Column(Modifier.padding(if (expanded) 24.dp else 16.dp), verticalArrangement = Arrangement.spacedBy(if (expanded) 14.dp else 10.dp)) {
             Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                Text(title, style = MaterialTheme.typography.titleLarge)
-                Text(supporting, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(title, style = MaterialTheme.typography.titleMedium)
+                if (supporting.isNotBlank()) {
+                    Text(supporting, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             content()
         }
     }
 }
 
 @Composable
-private fun ProviderOption(
-    provider: AiProvider,
-    selected: Boolean,
-    onSelect: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Surface(
-        onClick = onSelect,
-        modifier = modifier,
-        shape = MaterialTheme.shapes.medium,
-        color = if (selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, if (selected) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
-    ) {
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                RadioButton(selected = selected, onClick = onSelect)
-                Text(
-                    provider.label,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = if (selected) {
-                        MaterialTheme.colorScheme.onSecondaryContainer
-                    } else {
-                        MaterialTheme.colorScheme.onSurface
-                    },
-                )
-            }
-            Text(
-                provider.description,
-                style = MaterialTheme.typography.bodySmall,
-                color = if (selected) {
-                    MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.85f)
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                },
-            )
+private fun SettingsColumns(twoColumns: Boolean, first: @Composable () -> Unit, second: @Composable () -> Unit) {
+    if (twoColumns) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(if (LocalExpandedSettings.current) 28.dp else 20.dp)) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) { first() }
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) { second() }
+        }
+    } else {
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            first()
+            second()
         }
     }
 }
@@ -625,7 +489,7 @@ private fun ModelField(value: String, enabled: Boolean = true, onValueChange: (S
         value = value,
         enabled = enabled,
         onValueChange = onValueChange,
-        modifier = Modifier.fillMaxWidth().widthIn(max = 680.dp),
+        modifier = Modifier.fillMaxWidth(),
         label = { Text("Identificador del modelo") },
         placeholder = { Text("Ejemplo: gpt-5.6-sol") },
         singleLine = true,
@@ -639,7 +503,7 @@ private fun EndpointField(value: String, enabled: Boolean = true, onValueChange:
         value = value,
         enabled = enabled,
         onValueChange = onValueChange,
-        modifier = Modifier.fillMaxWidth().widthIn(max = 900.dp),
+        modifier = Modifier.fillMaxWidth(),
         label = { Text("URL completa del endpoint") },
         placeholder = { Text("https://api.openai.com/v1/chat/completions") },
         singleLine = true,
@@ -654,7 +518,7 @@ private fun ApiKeyField(value: String, label: String, onValueChange: (String) ->
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
-        modifier = Modifier.fillMaxWidth().widthIn(max = 680.dp),
+        modifier = Modifier.fillMaxWidth(),
         label = { Text(label) },
         placeholder = { Text("Pega aquí tu clave de API") },
         singleLine = true,
@@ -670,18 +534,23 @@ private fun ApiKeyField(value: String, label: String, onValueChange: (String) ->
 @Composable
 private fun SettingSwitch(title: String, supporting: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().toggleable(
+            value = checked, role = Role.Switch, onValueChange = onCheckedChange,
+            interactionSource = remember { MutableInteractionSource() }, indication = null,
+        )
+        .padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(title, style = MaterialTheme.typography.titleMedium)
-            Text(supporting, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(title, style = MaterialTheme.typography.titleSmall)
+            Text(supporting, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
+        Switch(checked = checked, onCheckedChange = null)
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun SystemPromptField(
     currentMode: SystemPromptMode,
@@ -691,76 +560,35 @@ private fun SystemPromptField(
     onValueChange: (String) -> Unit,
     onReset: () -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Surface(
-            color = MaterialTheme.colorScheme.surface,
-            shape = MaterialTheme.shapes.medium,
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
-        ) {
-            Row(
-                modifier = Modifier.padding(6.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                SystemPromptMode.entries.forEach { mode ->
-                    val selected = currentMode == mode
-                    val enabled = hasApiKey || mode == SystemPromptMode.Literal
-                    Surface(
-                        onClick = { if (enabled) onModeSelect(mode) },
-                        shape = MaterialTheme.shapes.small,
-                        color = if (selected) MaterialTheme.colorScheme.primaryContainer else androidx.compose.ui.graphics.Color.Transparent,
-                        border = if (selected) BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)) else null,
-                        modifier = Modifier.then(
-                            if (!enabled) Modifier.padding(0.dp) else Modifier
-                        ),
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        ) {
-                            val icon = when (mode) {
-                                SystemPromptMode.Smart -> if (hasApiKey) "🧠" else "🔒"
-                                SystemPromptMode.Literal -> "🎙️"
-                                SystemPromptMode.Custom -> if (hasApiKey) "✏️" else "🔒"
-                            }
-                            Text(icon, style = MaterialTheme.typography.bodyMedium)
-                            Text(
-                                text = mode.label,
-                                style = MaterialTheme.typography.titleMedium,
-                                color = when {
-                                    selected -> MaterialTheme.colorScheme.onPrimaryContainer
-                                    !enabled -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
-                                    else -> MaterialTheme.colorScheme.onSurfaceVariant
-                                },
-                            )
-                        }
-                    }
-                }
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("Modo de transcripción", style = MaterialTheme.typography.titleSmall)
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            SystemPromptMode.entries.forEach { mode ->
+                FilterChip(
+                    selected = currentMode == mode,
+                    enabled = hasApiKey || mode == SystemPromptMode.Literal,
+                    onClick = { onModeSelect(mode) },
+                    label = { Text(mode.label) },
+                )
             }
         }
         Text(
-            text = if (!hasApiKey) {
-                "ℹ️ Sin API Key configurada: Se utiliza 'Voz original' (transcripción literal offline). Para refinamiento con IA ('Inteligente' o 'Personalizado'), agrega tu API Key de Gemini u OpenAI arriba."
-            } else {
-                currentMode.description
-            },
+            text = if (hasApiKey) currentMode.description else "Añade una clave API en Conexión para activar el refinamiento con IA.",
             style = MaterialTheme.typography.bodySmall,
-            color = if (!hasApiKey) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        if (hasApiKey) {
-            OutlinedTextField(
-                value = value,
-                onValueChange = onValueChange,
-                modifier = Modifier.fillMaxWidth(),
-                minLines = 4,
-                maxLines = 8,
-                shape = MaterialTheme.shapes.medium,
-                placeholder = { Text("Escribe tus instrucciones personalizadas...") },
-            )
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                TextButton(onClick = onReset) {
-                    Text("Restablecer modo Inteligente predeterminado")
-                }
+        androidx.compose.animation.AnimatedVisibility(visible = hasApiKey && currentMode == SystemPromptMode.Custom) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                OutlinedTextField(
+                    value = value,
+                    onValueChange = onValueChange,
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 4,
+                    maxLines = 6,
+                    label = { Text("Instrucciones personalizadas") },
+                    shape = MaterialTheme.shapes.medium,
+                )
+                TextButton(onClick = onReset) { Text("Restablecer modo inteligente") }
             }
         }
     }

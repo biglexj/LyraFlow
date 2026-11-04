@@ -30,9 +30,11 @@ const appVersion = readPropertiesVersion(join(root, "gradle.properties"));
 const appName = "LyraFlow";
 const repository = "biglexj/LyraFlow";
 
-const help = `LyraFlow: mise <dev|build|release|publish> [opciones]
+const help = `LyraFlow: mise <dev|build|check|test|release|publish> [opciones]
   dev      Ejecutar en modo desarrollo (:composeApp:run).
-  build    Compilar ejecutable de escritorio (:composeApp:packageExe) sin instalador.
+  build    Generar imagen de escritorio (buildDesktop), sin instalador.
+  check    Compilar escritorio y Android; desktop verifica solo escritorio.
+  test     Pruebas de escritorio; scripts verifica las herramientas de tareas.
   release  Generar instalador Inno Setup en release/.
   publish  [github|all] Publicar en GitHub y sincronizar ficha en Aurora.
   --plan   Mostrar los comandos o el plan sin ejecutar acciones ni escribir.
@@ -49,6 +51,9 @@ Ejemplos:
 `;
 
 async function handlePublish(args: string[]): Promise<number> {
+    for (const arg of args) {
+        if (arg.startsWith("-") && !["--plan", "--check"].includes(arg)) throw new Error(`Opción desconocida: ${arg}`);
+    }
     const isPlan = args.includes("--plan");
     const isCheck = args.includes("--check");
     const positional = args.filter((arg) => !arg.startsWith("-"));
@@ -66,10 +71,10 @@ async function handlePublish(args: string[]): Promise<number> {
 
     if (isPlan) {
         console.log("\n[Plan de publicación]");
-        console.log("1. Verificar que el repositorio esté en rama preview limpia y commit en remoto.");
-        console.log(`2. Comprobar instalador local en release/: LyraFlow-Windows-${appVersion}.exe (o variante).`);
+        console.log("1. Verificar preview/main limpia, avance de main y versión no publicada.");
+        console.log("2. Ejecutar pruebas, imagen vigente, Inno Setup, firma y SHA-256 mediante el pipeline oficial.");
         console.log("3. Validar RELEASE_MESSAGE.md (notas de versión públicas sin secretos).");
-        console.log(`4. Crear tag git v${appVersion} y GitHub Release vía gh.`);
+        console.log(`4. Publicar tag v${appVersion} y avance de main; verificar la descarga pública.`);
         if (channel === "all") {
             console.log("5. Sincronizar metadatos y enlace de descarga en Aurora (https://www.biglexj.com).");
         } else {
@@ -86,7 +91,8 @@ async function handlePublish(args: string[]): Promise<number> {
         // 1. Git status
         const gitStatus = runCmdSync(["git", "status", "--porcelain"]);
         if (gitStatus.stdout) {
-            console.warn("⚠️  Aviso: El repositorio tiene cambios locales sin confirmar.");
+            console.warn("❌ Hay cambios sin confirmar. Revisa y confirma antes de publicar.");
+            hasErrors = true;
         } else {
             console.log("✅ Árbol Git limpio.");
         }
@@ -94,7 +100,8 @@ async function handlePublish(args: string[]): Promise<number> {
         // 2. Git tag
         const tagCheck = runCmdSync(["git", "tag", "-l", `v${appVersion}`]);
         if (tagCheck.stdout.includes(`v${appVersion}`)) {
-            console.warn(`⚠️  El tag v${appVersion} ya existe localmente.`);
+            console.warn(`❌ El tag v${appVersion} ya existe localmente.`);
+            hasErrors = true;
         } else {
             console.log(`✅ Tag v${appVersion} libre localmente.`);
         }
@@ -104,13 +111,18 @@ async function handlePublish(args: string[]): Promise<number> {
         let foundInstaller: string | null = null;
         if (existsSync(releaseDir)) {
             const files = readdirSync(releaseDir);
-            foundInstaller = files.find((f) => f.startsWith("LyraFlow") && f.endsWith(".exe")) ?? null;
+            foundInstaller = files.includes(`LyraFlow-Windows-${appVersion}.exe`) ? `LyraFlow-Windows-${appVersion}.exe` : null;
         }
 
         if (foundInstaller) {
             const fullPath = join(releaseDir, foundInstaller);
             const st = statSync(fullPath);
             const hash = sha256(fullPath);
+            const checksumFile = join(releaseDir, "SHA256SUMS.txt");
+            if (!existsSync(checksumFile) || readFileSync(checksumFile, "utf8").trim() !== `${hash}  ${foundInstaller}`) {
+                console.error("❌ El SHA-256 no coincide con SHA256SUMS.txt.");
+                hasErrors = true;
+            }
             console.log(`✅ Instalador presente: ${foundInstaller} (${(st.size / 1024 / 1024).toFixed(2)} MB)`);
             console.log(`   SHA-256: ${hash}`);
         } else {
@@ -123,16 +135,72 @@ async function handlePublish(args: string[]): Promise<number> {
         if (existsSync(notesPath)) {
             console.log("✅ RELEASE_MESSAGE.md presente.");
         } else {
-            console.warn("⚠️  RELEASE_MESSAGE.md no encontrado en la raíz.");
+            console.warn("❌ RELEASE_MESSAGE.md no encontrado en la raíz.");
+            hasErrors = true;
         }
 
-        console.log("\n(--check completado: modo solo lectura sin escrituras)");
+        const branch = runCmdSync(["git", "branch", "--show-current"]);
+        if (branch.code !== 0 || !["preview", "main"].includes(branch.stdout)) hasErrors = true;
+        if (gitStatus.code !== 0 || tagCheck.code !== 0) hasErrors = true;
+        const remoteTags = runCmdSync(["git", "ls-remote", "--tags", "origin", `refs/tags/v${appVersion}`]);
+        if (remoteTags.code !== 0 || remoteTags.stdout) {
+            console.error("❌ No se pudo confirmar que el tag remoto esté libre."); hasErrors = true;
+        }
+        const releases = runCmdSync(["gh", "api", `repos/${repository}/releases?per_page=100`, "--jq", ".[].tag_name"]);
+        if (releases.code !== 0 || releases.stdout.split(/\r?\n/).includes(`v${appVersion}`)) {
+            console.error("❌ No se pudo confirmar que la versión no esté publicada."); hasErrors = true;
+        }
+        const image = runCmdSync(["powershell", "-NoProfile", "-Command",
+            ". ./scripts/packaging/AppImageIdentity.ps1; Assert-AppImageIdentity -Root (Get-Location).Path"]);
+        if (image.code !== 0) {
+            console.error("❌ La imagen no tiene huellas vigentes. Ejecuta mise release."); hasErrors = true;
+        }
+        if (channel === "all") {
+            const web = runCmdSync(["powershell", "-NoProfile", "-Command",
+                `. ./scripts/release/AuroraRelease.ps1; Assert-AuroraReleasePreflight -Root (Get-Location).Path -Version '${appVersion}'`]);
+            if (web.code !== 0) {
+                console.error("❌ Aurora no está preparada: comprueba LYRAFLOW_AURORA_APP_ID, AURORA_RELEASE_TOKEN y el historial remoto."); hasErrors = true;
+            }
+        }
+        console.log("\n(--check completado: solo lectura; los cambios locales requieren revisión)");
         return hasErrors ? 1 : 0;
     }
 
-    console.error("\n❌ Publicación bloqueada: Requiere confirmación y autorización explícita para publicar en producción.");
-    console.error("   Usa --plan para revisar los pasos previstos o --check para verificar el estado de los artefactos.");
-    return 1;
+    const child = Bun.spawn(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass",
+        "-File", "./scripts/release/build-release.ps1", "-Publish", "-Channel", channel],
+        { cwd: root, stdin: "inherit", stdout: "inherit", stderr: "inherit" });
+    return (await child.exited) ?? 1;
+}
+
+export function taskCommand(action: string, args: string[]): string[] {
+    for (const arg of args) {
+        if (arg.startsWith("-") && arg !== "--plan") throw new Error(`Opción desconocida: ${arg}`);
+    }
+    const positional = args.filter((arg) => !arg.startsWith("-"));
+    if (positional.length > 1) throw new Error("Se admite una sola variante por tarea.");
+    const variant = positional[0]?.toLowerCase();
+    const gradle = (task: string) => ["cmd", "/c", "gradlew.bat", task];
+    if (action === "dev") {
+        if (variant && !["android", "isolated"].includes(variant)) throw new Error("Usa dev, dev android o dev isolated.");
+        return gradle(variant === "android" ? "devAndroid" : variant === "isolated" ? "devIsolated" : "dev");
+    }
+    if (action === "build") {
+        if (variant && variant !== "android") throw new Error("Usa build o build android.");
+        return gradle(variant === "android" ? ":composeApp:assembleRelease" : "buildDesktop");
+    }
+    if (action === "check") {
+        if (variant && variant !== "desktop") throw new Error("Usa check o check desktop.");
+        return gradle(variant === "desktop" ? ":composeApp:compileKotlinDesktop" : "check");
+    }
+    if (action === "test") {
+        if (variant && variant !== "scripts") throw new Error("Usa test o test scripts.");
+        return variant === "scripts" ? ["bun", "test", "scripts/tests"] : gradle(":composeApp:desktopTest");
+    }
+    if (action === "release") {
+        if (variant) throw new Error("release no admite variantes; publica con mise publish.");
+        return ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "./scripts/release/build-release.ps1", "-LocalOnly"];
+    }
+    throw new Error(`Acción desconocida: ${action}. Usa dev, build, check, test, release o publish.`);
 }
 
 export async function main(args = Bun.argv.slice(2)): Promise<number> {
@@ -146,45 +214,12 @@ export async function main(args = Bun.argv.slice(2)): Promise<number> {
         return handlePublish(rest);
     }
 
-    const isPlan = rest.includes("--plan");
+    const cmd = taskCommand(action, rest);
+    console.log(`${action} ${appName}\nDirectorio: ${root}\nComando: ${cmd.join(" ")}`);
+    if (rest.includes("--plan")) return 0;
+    const child = Bun.spawn(cmd, { cwd: root, stdin: "inherit", stdout: "inherit", stderr: "inherit" });
+    return (await child.exited) ?? 1;
 
-    if (action === "dev") {
-        const isAndroid = rest.some((arg) => arg.toLowerCase() === "android");
-        const cmd = isAndroid
-            ? ["cmd", "/c", "gradlew.bat", "devAndroid"]
-            : ["cmd", "/c", "gradlew.bat", "dev"];
-        console.log(`dev ${appName} (${isAndroid ? "Android" : "Desktop"})\nDirectorio: ${root}\nComando: ${cmd.join(" ")}`);
-        if (isPlan) return 0;
-        const child = Bun.spawn(cmd, { cwd: root, stdin: "inherit", stdout: "inherit", stderr: "inherit" });
-        return (await child.exited) ?? 0;
-    }
-
-    if (action === "build") {
-        const isAndroid = rest.some((arg) => arg.toLowerCase() === "android");
-        const cmd = isAndroid
-            ? ["cmd", "/c", "gradlew.bat", ":composeApp:assembleRelease"]
-            : ["cmd", "/c", "gradlew.bat", "buildDesktop"];
-        console.log(`build ${appName} (${isAndroid ? "Android" : "Desktop"})\nDirectorio: ${root}\nComando: ${cmd.join(" ")}`);
-        if (isPlan) return 0;
-
-        console.log(`\n==> Compilando ${isAndroid ? "APK de Android" : "ejecutable de escritorio"} Compose Multiplatform...`);
-        const child = Bun.spawn(cmd, { cwd: root, stdin: "inherit", stdout: "inherit", stderr: "inherit" });
-        return (await child.exited) ?? 0;
-    }
-
-    if (action === "release") {
-        const psArgs = [
-            "powershell", "-NoProfile", "-ExecutionPolicy", "Bypass",
-            "-File", "./build-release.ps1", "-LocalOnly",
-        ];
-        console.log(`release ${appName}\nDirectorio: ${root}\nComando: ${psArgs.join(" ")}`);
-        if (isPlan) return 0;
-
-        const child = Bun.spawn(psArgs, { cwd: root, stdin: "inherit", stdout: "inherit", stderr: "inherit" });
-        return (await child.exited) ?? 0;
-    }
-
-    throw new Error(`Acción desconocida: ${action}. Usa mise dev, mise build, mise release o mise publish.`);
 }
 
 if (import.meta.main) {

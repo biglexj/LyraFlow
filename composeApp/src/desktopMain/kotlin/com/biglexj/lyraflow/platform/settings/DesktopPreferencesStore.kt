@@ -37,11 +37,6 @@ class DesktopPreferencesStore(
     override fun load(): AppPreferences {
         val provider = currentProvider()
         val promptMode = enumValue(node.get(SYSTEM_PROMPT_MODE, SystemPromptMode.Smart.name), SystemPromptMode.Smart)
-        val fallbackPrompt = when (promptMode) {
-            SystemPromptMode.Smart -> AppPreferences.DEFAULT_SYSTEM_PROMPT
-            SystemPromptMode.Literal -> AppPreferences.LITERAL_SYSTEM_PROMPT
-            SystemPromptMode.Custom -> AppPreferences.DEFAULT_SYSTEM_PROMPT
-        }
         return AppPreferences(
             themeMode = enumValue(node.get(THEME, ThemeMode.System.name), ThemeMode.System),
             provider = provider,
@@ -56,7 +51,7 @@ class DesktopPreferencesStore(
             shortcut = loadShortcut(),
             cancelShortcut = loadCancelShortcut(),
             systemPromptMode = promptMode,
-            systemPrompt = node.get(SYSTEM_PROMPT, fallbackPrompt),
+            systemPrompt = AppPreferences.resolveSystemPrompt(promptMode, node.get(SYSTEM_PROMPT, null)),
             discoveredModels = loadDiscoveredModels(),
         )
     }

@@ -24,6 +24,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.biglexj.lyraflow.core.model.TranscriptionHistoryEntry
@@ -36,7 +40,8 @@ fun HistoryScreen(
     onCopyText: (String) -> Unit,
     onDeleteEntry: (String) -> Unit,
     onClearAll: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    errorMessage: String? = null,
 ) {
     Column(
         modifier = modifier
@@ -71,6 +76,10 @@ fun HistoryScreen(
             }
         }
 
+        if (errorMessage != null) {
+            Text(errorMessage, color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+        }
         if (entries.isEmpty()) {
             Box(
                 modifier = Modifier
@@ -152,7 +161,10 @@ private fun HistoryEntryCard(
                     )
                 }
 
-                IconButton(onClick = onDelete) {
+                IconButton(
+                    onClick = onDelete,
+                    modifier = Modifier.semantics { contentDescription = "Eliminar transcripción" },
+                ) {
                     LyraIcon(
                         type = LyraIconType.Clear,
                         modifier = Modifier.size(18.dp)

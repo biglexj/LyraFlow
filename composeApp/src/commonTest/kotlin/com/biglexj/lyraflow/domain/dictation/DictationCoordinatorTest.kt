@@ -20,6 +20,20 @@ import kotlin.test.assertTrue
 
 class DictationCoordinatorTest {
     @Test
+    fun completesDictationWhenHistoryCannotBeSaved() = runTest {
+        val history = object : com.biglexj.lyraflow.data.history.TranscriptionHistoryRepository by
+            com.biglexj.lyraflow.data.history.InMemoryTranscriptionHistoryRepository() {
+            override suspend fun saveEntry(entry: com.biglexj.lyraflow.core.model.TranscriptionHistoryEntry) {
+                throw IllegalStateException("Disk unavailable")
+            }
+        }
+        val provider = TranscriptionProvider { TranscriptionResult("texto recuperable", "Fake", "fake", 12) }
+        val coordinator = DictationCoordinator(provider, historyRepository = history)
+        coordinator.process(TranscriptionRequest(byteArrayOf(1)))
+        assertEquals("texto recuperable", assertIs<DictationState.Completed>(coordinator.state.value).rawText)
+    }
+
+    @Test
     fun preservesRawTranscript() = runTest {
         val provider = TranscriptionProvider {
             TranscriptionResult("punto por punto", "Fake", "fake", 12)

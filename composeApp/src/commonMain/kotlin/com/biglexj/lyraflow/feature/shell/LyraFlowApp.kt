@@ -163,7 +163,17 @@ fun LyraFlowApp(
             if (!historyEnabled && destination == AppDestination.History) {
                 destination = AppDestination.Home
             }
-            historyRepository.purgeExpired(configuration.preferences.historyRetention.hours)
+            do {
+                try {
+                    historyRepository.purgeExpired(configuration.preferences.historyRetention.hours)
+                } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                    throw cancelled
+                } catch (_: Exception) {
+                    toastMessage = "No se pudo actualizar el historial guardado. Comprueba el acceso al disco."
+                    break
+                }
+                if (historyEnabled) kotlinx.coroutines.delay(60_000L)
+            } while (historyEnabled)
         }
 
         // Auto-ocultar el toast flotante tras 4 segundos (conforme a Core-Docs y auto_updater.md).
@@ -233,8 +243,6 @@ fun LyraFlowApp(
                                 actions = actions,
                                 availableUpdate = availableUpdate,
                                 onDismissUpdate = { availableUpdate = null },
-                                onOpenAbout = { showAboutDialog = true },
-                                onCheckForUpdates = checkForUpdates,
                                 historyRepository = historyRepository,
                                 modifier = Modifier.weight(1f),
                             )
@@ -251,8 +259,6 @@ fun LyraFlowApp(
                                 actions = actions,
                                 availableUpdate = availableUpdate,
                                 onDismissUpdate = { availableUpdate = null },
-                                onOpenAbout = { showAboutDialog = true },
-                                onCheckForUpdates = checkForUpdates,
                                 historyRepository = historyRepository,
                                 modifier = Modifier.weight(1f),
                             )
@@ -306,13 +312,24 @@ private fun ScreenContent(
     actions: ShellActions,
     availableUpdate: UpdateRelease?,
     onDismissUpdate: () -> Unit,
-    onOpenAbout: () -> Unit,
-    onCheckForUpdates: () -> Unit,
     historyRepository: TranscriptionHistoryRepository,
     modifier: Modifier,
 ) {
     val scope = rememberCoroutineScope()
     val historyEntries by historyRepository.history.collectAsState()
+    var historyError by remember { mutableStateOf<String?>(null) }
+    fun changeHistory(operation: suspend () -> Unit) {
+        scope.launch {
+            try {
+                operation()
+                historyError = null
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                historyError = "No se pudo modificar el historial guardado. Comprueba el acceso al disco."
+            }
+        }
+    }
     val clipboardManager = LocalClipboardManager.current
     Box(modifier) {
         Crossfade(targetState = destination, label = "main-navigation") { current ->
@@ -342,11 +359,12 @@ private fun ScreenContent(
                         clipboardManager.setText(AnnotatedString(text))
                     },
                     onDeleteEntry = { id ->
-                        scope.launch { historyRepository.deleteEntry(id) }
+                        changeHistory { historyRepository.deleteEntry(id) }
                     },
                     onClearAll = {
-                        scope.launch { historyRepository.clearHistory() }
+                        changeHistory { historyRepository.clearHistory() }
                     },
+                    errorMessage = historyError,
                 )
                 AppDestination.Settings -> SettingsScreen(
                     configuration = configuration,
@@ -354,8 +372,6 @@ private fun ScreenContent(
                     onApiKeyChange = actions.updateApiKey,
                     isScanningModels = actions.isScanningModels,
                     onScanModels = actions.scanModels,
-                    onOpenAbout = onOpenAbout,
-                    onCheckForUpdates = onCheckForUpdates,
                 )
             }
         }

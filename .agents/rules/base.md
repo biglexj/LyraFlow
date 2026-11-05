@@ -2,7 +2,7 @@
 trigger: always_on
 ---
 
-# 🌌 Instrucciones del Agente — LyraFlow
+# Instrucciones del proyecto — LyraFlow
 
 ## Documentación Core — entrada compartida
 
@@ -15,63 +15,53 @@ Consultar primero [Documentación Core](../../../Docs/README.md) y seleccionar s
 
 En estos criterios comunes, aplicar las bases vigentes enlazadas en lugar de copias históricas de este archivo. Respetar la dirección actual de Biglex y los contratos específicos del producto; ante una contradicción, comprobar la implementación vigente y resolverla explícitamente. Las skills generales importadas son apoyo técnico, no una autoridad para redefinir estas reglas.
 
-Entrada canónica del agente. Consultar [Docs](file:///D:/Proyectos/biglexj/Docs) como fuente de verdad compartida de arquitectura, estándares y plantillas del ecosistema.
-
 ---
 
-## 1. 🏛️ Ecosistema & Proyectos de Referencia
-Para patrones de diseño, componentes compartidos o arquitectura KMP:
-- **Documentación Core (`Docs`)**: [`D:\Proyectos\biglexj\Docs`](file:///D:/Proyectos/biglexj/Docs) (Estándares globales, plataformas y features).
-- **Central de Agentes (`Agents`)**: [`D:\Proyectos\biglexj\Docs/agents`](file:///D:/Proyectos/biglexj/Docs/agents) ([Comportamiento](file:///D:/Proyectos/biglexj/Docs/agents/core/behavior.md), [Ecosistema](file:///D:/Proyectos/biglexj/Docs/agents/profiles/ecosystem.md)).
+## 1. Alcance del proyecto
 
----
+Aplicación de dictado por voz: captura con atajo global, transcribe con un proveedor de IA o con Whisper local e inserta el texto en la aplicación activa. Escritorio Windows y Linux, más base compartida compilable para Android.
 
-## 2. 📁 Estructura & Recursos
-- **Carpeta `temp/`**: Todo archivo temporal o borrador se aloja en `temp/` de la raíz (ignorado en Git).
-- **Convención de Procesos**: Trabajo planificado en `process/active/YYYY-MM-DD_objetivo/` (`PLAN.md`, `TASKS.md`, `VALIDATION.md`, `APPROVAL.md`). Mover completados a `process/completed/YYYY/`.
-- **Estandarización de Recursos**: Seguir el [Asset Organization Standard](file:///D:/Proyectos/biglexj/Docs/global/architecture/asset-organization-standard.md). Fuente canónica en [`assets/branding/icons/icon-transparent.png`](file:///d:/Proyectos/biglexj/LyraFlow/assets/branding/icons/icon-transparent.png). Todo icono en superficies del sistema (tray, barra de tareas, instalador EXE) DEBE ser transparente sin fondos cuadrados opacos.
-- **Distribución Windows Desktop**: Exclusivamente instaladores EXE (`LyraFlow-Windows-X.Y.Z.exe`). Prohibido empaquetar MSI o MSIX.
-- **Límite de Reglas (`.agents/rules/`)**: Ningún archivo `.md` debe superar **12,000 caracteres**. Priorizar síntesis y enlaces a `Docs`.
+Stack: Kotlin Multiplatform y Compose Multiplatform. Gradle es el motor de compilación; Mise es la entrada principal de comandos (sección 4).
 
----
+Módulos de Core que aplican a este proyecto. Consultar solo los pertinentes a la tarea:
 
-## 3. 🎭 Estilo de Comunicación (Científico y Elegante) [CRÍTICO]
-- **Tono Metódico**: Estructurado, analítico y elegante (inspirado en Dr. Xeno y Senku Ishigami de *Dr. Stone*).
-- **Terminología**: *"Qué solución tan elegante"*, *"Cierre de ciclo elegante"*, *"Arquitectura de código sumamente elegante"*.
-- **Certeza Matemática**: Usar *"al 10,000 millones por ciento"* para denotar precisión y rigor científico.
+- **Tipo y plataforma**: [Desktop App Standards](../../../Docs/types/desktop/desktop_app_standards.md), [instalador de Windows](../../../Docs/platforms/windows/installer.md), [instancia única](../../../Docs/features/single-instance/README.md), [estado de ventana](../../../Docs/types/desktop/window-state.md).
+- **Funciones adoptadas**: [actualización integrada](../../../Docs/features/auto-updater/auto_updater.md), [instaladores](../../../Docs/features/installer/README.md), [modelos de IA](../../../Docs/features/ai-models/README.md), [soporte oficial y «Acerca de»](../../../Docs/features/official-support/official-support-baseline.md), [centro de feedback](../../../Docs/features/feedback-center/feedback_center.md), [design system](../../../Docs/features/design-system/design-system-baseline.md).
+- **Interfaz**: [textos de interfaz](../../../Docs/global/design/interface-writing.md) y [diseño común](../../../Docs/global/design/design_system.md).
+- **Operación y publicación**: [comandos mediante Mise](../../../Docs/global/architecture/mise-command-standard.md), [scripts y alias](../../../Docs/global/architecture/command-scripts-standard.md), [organización de carpetas](../../../Docs/global/architecture/project-structure.md), [organización de assets](../../../Docs/global/architecture/asset-organization-standard.md), [base de lanzamientos](../../../Docs/global/releases/release-baseline.md), [protocolo de lanzamiento](../../../Docs/global/releases/protocolo_lanzamiento_actualizacion.md) y [release message para la web](../../../Docs/global/releases/web-release-message-standard.md).
+- **Reglas de trabajo**: [reglas de trabajo del agente](../../../Docs/global/documentation/agent-working-rules.md), [estilo de comunicación](../../../Docs/global/agents/communication-style.md) y [gobernanza documental](../../../Docs/global/documentation/documentation-governance.md).
 
----
+## 2. Contratos y decisiones locales
 
-## 4. 🛠️ Flujo de Desarrollo & Verificación
-- **Planning Mode**: Diseñar `implementation_plan.md` antes de cambios complejos y esperar confirmación del usuario.
-- **Seguimiento**: Actualizar `TASKS.md` y `VALIDATION.md` en el sprint activo.
-- **Verificación**: Siempre compilar y verificar tests unitarios (`./gradlew :composeApp:desktopTest`). Documentar resultados en `walkthrough.md`.
-- **Commits de Resguardo**: Commits periódicos tras hitos de trabajo (`checkpoint: session YYYY-MM-DD - [tarea]`).
+Estos contratos son exclusivos de LyraFlow; no se replican en Core.
 
----
+- **Atajos globales**: `Ctrl + Espacio` alterna grabar/detener y `Ctrl + Alt + Espacio` cancela el dictado en curso sin transcribirlo. Ambos se editan en Ajustes, no pueden coincidir entre sí y vuelven al valor por defecto ante colisión. Fuente: [`KeyboardShortcut.kt`](../../composeApp/src/commonMain/kotlin/com/biglexj/lyraflow/core/hotkey/KeyboardShortcut.kt).
+- **Transcripción**: proveedores `Gemini`, `OpenAI / compatible` (endpoint y modelo editables) y `MiniMax` (transcriptor `asr-1.0` con refinamiento posterior), más `Whisper local` por sidecar. Las claves se cifran con DPAPI por proveedor en Windows y se leen de `LYRAFLOW_API_KEY`, `GEMINI_API_KEY`, `OPENAI_API_KEY` o `MINIMAX_API_KEY`.
+- **Canales de instancia única**: `stable` usa el puerto `49281`, `dev` el `49283` y las pruebas el `49285`. Varias instancias simultáneas solo con `lyraflow.allowMultipleInstances=true` (`mise dev isolated`).
+- **Distribución**: un único instalador ejecutable Inno Setup por versión (`LyraFlow-Windows-X.Y.Z.exe`), instalación por usuario sin elevación y actualización en el mismo directorio. No se empaquetan MSI ni MSIX.
+- **Versionado**: fuente única en `gradle.properties` (`lyraflow.versionName` y `lyraflow.versionCode`), propagada a `package.json`, `AppVersion.kt` y al instalador. El pipeline de release aborta si los tres no coinciden.
+- **Identidad visual**: la fuente canónica es [`assets/branding/icons/icon-transparent.png`](../../assets/branding/icons/icon-transparent.png) y los derivados los genera `scripts/branding/Sync-Icons.ps1`. Los iconos en superficies del sistema son transparentes, sin fondo cuadrado opaco.
+- **Empaquetado e instalación**: el detalle operativo vive en [`Docs/packaging.md`](../../Docs/packaging.md) y el flujo vigente en `packaging/windows/`.
 
-## 5. 🚀 Publicación y Script de Release
+## 3. Procesos del proyecto
 
-**Entrada principal:** Mise (`mise dev`, `mise build`, `mise check`, `mise test`, `mise release`, `mise publish`). Por decisión actual de Biglex, no recrear `dev.bat` ni `build-release.ps1` en la raíz: las tareas apuntan directamente a `scripts/`. Conservar `gradlew` y `gradlew.bat` como wrapper necesario de Gradle. Los ejemplos compartidos que piden lanzadores adicionales en la raíz quedan sustituidos por esta decisión local.
-Consultar el [Protocolo Oficial de Lanzamiento](file:///D:/Proyectos/biglexj/Docs/global/releases/protocolo_lanzamiento_actualizacion.md):
-- **Script Oficial**: Ejecutar siempre [`scripts/release/build-release.ps1`](file:///d:/Proyectos/biglexj/LyraFlow/scripts/release/build-release.ps1). Nunca compilar ni publicar manualmente.
-- **Verificación Previa**: Consultar `gh release list`. Prohibido sobrescribir o re-etiquetar versiones existentes.
-- **Notas de Lanzamiento**: Sanitizadas, profesionales y redactadas para el usuario final en [`RELEASE_NOTES.md`](file:///d:/Proyectos/biglexj/LyraFlow/RELEASE_NOTES.md) y [`RELEASE_MESSAGE.md`](file:///d:/Proyectos/biglexj/LyraFlow/RELEASE_MESSAGE.md).
+El trabajo planificado vive en `process/active/YYYY-MM-DD_objetivo/` con `PLAN.md`, `TASKS.md`, `VALIDATION.md` y `APPROVAL.md`, según el [flujo de procesos de Core](../../../Docs/global/documentation/process-workflow.md). Los moldes están en `process/templates/`, con la adaptación local de los módulos de Core. `ROADMAP.md` es la fuente de pendientes generales; no existe un `TASKS.md` en la raíz.
 
----
+Los commits de resguardo y el límite de tamaño de este archivo se rigen por las [reglas de trabajo del agente](../../../Docs/global/documentation/agent-working-rules.md); no se replican aquí.
 
-## 6. 💖 Soporte Oficial y Donaciones
-Toda aplicación debe integrar información y enlaces oficiales:
-- **Donaciones Directas**: `https://www.biglexj.com/donaciones` (Yape, Plin, transferencias).
-- **Buy Me a Coffee**: `https://buymeacoffee.com/biglexj`
-- **GitHub**: `https://github.com/biglexj`
+## 4. Entrada de comandos
 
-## Módulos y Estándares Core del Ecosistema
+Mise es la entrada principal: `mise dev`, `mise build`, `mise check`, `mise test`, `mise release` y `mise publish`.
 
-Consultar directamente en Core Docs según corresponda al encargo (la única regla local es este archivo `base.md`):
+- `release` prepara el instalador local y **no publica** nada.
+- `publish` es la única vía de publicación y requiere autorización explícita; el canal `github` omite la sincronización con Aurora.
+- `--plan` muestra el comando o el plan sin ejecutar procesos, sin escribir y sin consultar la red.
+- `--check` (solo en `publish`) verifica requisitos locales y remotos en modo de solo lectura.
 
-- [Auto-Updater (Desktop)](file:///D:/Proyectos/biglexj/Docs/features/auto-updater/auto_updater.md): Flujo canónico de auto-actualización in-app en escritorio, sanitización de notas y ciclo de vida de instalación.
-- [Design System](file:///D:/Proyectos/biglexj/Docs/global/design/design_system.md): Pautas globales de diseño, espaciado útil, ergonomía visual y Material 3 Expressive.
-- [Desktop App Standards](file:///D:/Proyectos/biglexj/Docs/types/desktop/desktop_app_standards.md): Estándares de aplicaciones de escritorio (instancia única, bandeja del sistema, atajos globales y ciclo de vida).
-- [Feedback Center](file:///D:/Proyectos/biglexj/Docs/features/feedback-center/feedback_center.md): Integración de soporte y reporte de feedback mediante GitHub Issues.
-- [Folder Structure](file:///D:/Proyectos/biglexj/Docs/templates/project/folder_structure.md): Organización canónica de carpetas y límites modulares del ecosistema.
+El contrato completo está en el [estándar de comandos mediante Mise](../../../Docs/global/architecture/mise-command-standard.md). `mise.toml` y `scripts/mise-task.ts` son su implementación local: el despachador resuelve la raíz desde la ubicación del script y no contiene rutas absolutas al disco local.
+
+`gradlew` y `gradlew.bat` se conservan como wrappers técnicos de Gradle. Los alias de `package.json` y las tareas de Gradle delegan en `scripts/`; no se añaden lanzadores propios en la raíz.
+
+## 5. Excepciones
+
+Ninguna. LyraFlow adopta el estilo de comunicación, los enlaces de soporte oficial, la política de ramas y el flujo de versiones definidos en Core; este archivo solo los enlaza y conserva los contratos exclusivos del producto.

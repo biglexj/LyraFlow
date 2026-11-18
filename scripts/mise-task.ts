@@ -42,6 +42,7 @@ const help = `LyraFlow: mise <dev|build|check|test|release|publish> [opciones]
 
 Ejemplos:
   mise dev
+  mise dev gpui       Demo nativa Rust + GPUI (también build, check y test).
   mise dev --plan
   mise build --plan
   mise release --plan
@@ -179,6 +180,14 @@ export function taskCommand(action: string, args: string[]): string[] {
     const positional = args.filter((arg) => !arg.startsWith("-"));
     if (positional.length > 1) throw new Error("Se admite una sola variante por tarea.");
     const variant = positional[0]?.toLowerCase();
+    if (variant === "gpui") {
+        const manifest = ["--manifest-path", "native/Cargo.toml"];
+        if (action === "dev") return ["cargo", "run", ...manifest, "--locked"];
+        if (action === "build") return ["cargo", "build", ...manifest, "--locked", "--release"];
+        if (action === "check") return ["cargo", "check", ...manifest, "--locked"];
+        if (action === "test") return ["cargo", "test", ...manifest, "--locked"];
+        throw new Error("La demo GPUI solo admite dev, build, check y test. No tiene instalador ni publicación.");
+    }
     const gradle = (task: string) => ["cmd", "/c", "gradlew.bat", task];
     if (action === "dev") {
         if (variant && !["android", "isolated"].includes(variant)) throw new Error("Usa dev, dev android o dev isolated.");
@@ -208,6 +217,10 @@ export async function main(args = Bun.argv.slice(2)): Promise<number> {
     if (!action || action === "--help" || rest.includes("--help")) {
         console.log(help);
         return 0;
+    }
+
+    if (["release", "publish"].includes(action) && rest.some(arg => arg.toLowerCase() === "gpui")) {
+        throw new Error("La demo GPUI no tiene instalador ni publicación. Usa mise build gpui.");
     }
 
     if (action === "publish") {

@@ -6,6 +6,8 @@
 
 LyraFlow es una aplicación de dictado inteligente construida con Kotlin Multiplatform y Compose Multiplatform. Captura tu voz mediante un atajo global, la convierte en texto contextualizado y la inserta en la aplicación activa.
 
+**Demo de migración Rust + GPUI:** en esta rama, `mise dev gpui` abre la primera prueba nativa con grabación WAV local. [Alcance, requisitos y comandos](native/README.md). La transcripción y las demás funciones siguen pendientes de migración.
+
 ## 📸 Capturas de Pantalla
 
 | Inicio claro | Inicio oscuro |

@@ -498,3 +498,6 @@ local.properties
 # Custom local folders for Biglex J standard
 /test/
 /scratch/
+
+# Rust / GPUI prototype
+/native/target/

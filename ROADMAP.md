@@ -3,6 +3,7 @@
 Plan de trabajo, objetivos y prioridades del proyecto.
 
 ## 🔴 Pendientes activos
+- [ ] Revisar la [primera demo Rust + GPUI](process/active/2026-11-13_rust-gpui-demo/PLAN.md) — Aurora y Clásico con la preferencia persistida, y el «Acerca de» ya validados en la demo; falta la aceptación visual de Biglex y continuar la migración de proveedores, Whisper, atajos globales, inserción y persistencia.
 - [ ] Validar la migración real desde el instalador público de 1.1.8, el reinicio y una sola entrada en Aplicaciones.
 - [ ] Revisar con teclado y lector de pantalla los controles de la app y del instalador.
 - [ ] Validar la publicación y sincronización de Aurora con la ficha y credencial reales; aún no se ha publicado.

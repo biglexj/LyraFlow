@@ -23,11 +23,13 @@ Aplicación de dictado por voz: captura con atajo global, transcribe con un prov
 
 Stack: Kotlin Multiplatform y Compose Multiplatform. Gradle es el motor de compilación; Mise es la entrada principal de comandos (sección 4).
 
+En `codex/rust-gpui-demo` convive una primera demo Rust + GPUI en `native/`, con captura WAV local y temas de LyraFlow. Se opera mediante `mise dev|build|check|test gpui`; su alcance y límites están en [`native/README.md`](../../native/README.md). No sustituye Compose ni tiene instalador o publicación. La migración funcional completa está pendiente.
+
 Módulos de Core que aplican a este proyecto. Consultar solo los pertinentes a la tarea:
 
 - **Tipo y plataforma**: [Desktop App Standards](../../../Docs/types/desktop/desktop_app_standards.md), [instalador de Windows](../../../Docs/platforms/windows/installer.md), [instancia única](../../../Docs/features/single-instance/README.md), [estado de ventana](../../../Docs/types/desktop/window-state.md).
 - **Funciones adoptadas**: [actualización integrada](../../../Docs/features/auto-updater/auto_updater.md), [instaladores](../../../Docs/features/installer/README.md), [modelos de IA](../../../Docs/features/ai-models/README.md), [soporte oficial y «Acerca de»](../../../Docs/features/official-support/official-support-baseline.md), [centro de feedback](../../../Docs/features/feedback-center/feedback_center.md), [design system](../../../Docs/features/design-system/design-system-baseline.md).
-- **Interfaz**: [textos de interfaz](../../../Docs/global/design/interface-writing.md) y [diseño común](../../../Docs/global/design/design_system.md).
+- **Interfaz**: [textos de interfaz](../../../Docs/global/design/interface-writing.md), [diseño común](../../../Docs/global/design/design_system.md) y [Aurora y Clásico](../../../Docs/global/design/app-colors.md).
 - **Operación y publicación**: [comandos mediante Mise](../../../Docs/global/architecture/mise-command-standard.md), [scripts y alias](../../../Docs/global/architecture/command-scripts-standard.md), [organización de carpetas](../../../Docs/global/architecture/project-structure.md), [organización de assets](../../../Docs/global/architecture/asset-organization-standard.md), [base de lanzamientos](../../../Docs/global/releases/release-baseline.md), [protocolo de lanzamiento](../../../Docs/global/releases/protocolo_lanzamiento_actualizacion.md) y [release message para la web](../../../Docs/global/releases/web-release-message-standard.md).
 - **Reglas de trabajo**: [reglas de trabajo del agente](../../../Docs/global/documentation/agent-working-rules.md), [estilo de comunicación](../../../Docs/global/agents/communication-style.md) y [gobernanza documental](../../../Docs/global/documentation/documentation-governance.md).
 
@@ -41,6 +43,7 @@ Estos contratos son exclusivos de LyraFlow; no se replican en Core.
 - **Distribución**: un único instalador ejecutable Inno Setup por versión (`LyraFlow-Windows-X.Y.Z.exe`), instalación por usuario sin elevación y actualización en el mismo directorio. No se empaquetan MSI ni MSIX.
 - **Versionado**: fuente única en `gradle.properties` (`lyraflow.versionName` y `lyraflow.versionCode`), propagada a `package.json`, `AppVersion.kt` y al instalador. El pipeline de release aborta si los tres no coinciden.
 - **Identidad visual**: la fuente canónica es [`assets/branding/icons/icon-transparent.png`](../../assets/branding/icons/icon-transparent.png) y los derivados los genera `scripts/branding/Sync-Icons.ps1`. Los iconos en superficies del sistema son transparentes, sin fondo cuadrado opaco.
+- **Apariencia de la demo nativa**: la demo de `native/` ofrece **Aurora** (tokens globales de Core, versión `1.0.0`, copiados en [`native/assets/tokens/biglex-app-base.json`](../../native/assets/tokens/biglex-app-base.json)) y **Clásico** (la paleta propia de LyraFlow), con los modos Automático, Claro y Oscuro y la preferencia persistida en un archivo propio de la demo. La aplicación de Compose mantiene Clásico hasta que la nativa la sustituya. Su «Acerca de» sigue la base de soporte oficial de Core.
 - **Empaquetado e instalación**: el detalle operativo vive en [`Docs/packaging.md`](../../Docs/packaging.md) y el flujo vigente en `packaging/windows/`.
 
 ## 3. Procesos del proyecto

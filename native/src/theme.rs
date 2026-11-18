@@ -192,13 +192,19 @@ pub const fn aurora(dark: bool) -> Palette {
     }
 }
 
-/// Paleta clásica de LyraFlow, conservada de la aplicación de Compose.
+/// Paleta clásica de LyraFlow.
+///
+/// Conserva el diseño tal como está: los fondos, textos y el violeta que la demo
+/// ya mostraba. Los roles que ese diseño no definía se toman literalmente de
+/// [`LyraFlowTheme.kt`](../../composeApp/src/commonMain/kotlin/com/biglexj/lyraflow/core/theme/LyraFlowTheme.kt)
+/// —`primary`, `primaryContainer`, `surfaceVariant`, `outline`, `secondary` y
+/// `error`—, sin aproximaciones.
 pub const fn classic(dark: bool) -> Palette {
     if dark {
         Palette {
             background: 0x141218,
             surface: 0x211C29,
-            surface_raised: 0x2C2734,
+            surface_raised: 0x49454F,
             foreground: 0xE6E1E9,
             secondary_foreground: 0xCAC4D0,
             border_subtle: 0x49454F,
@@ -206,10 +212,10 @@ pub const fn classic(dark: bool) -> Palette {
             accent: 0xB499FF,
             on_accent: 0x431198,
             accent_foreground: 0xECE3FF,
-            accent_hover: 0xC4ACFF,
-            accent_pressed: 0x9C7BFF,
-            surface_hover: 0x2C2734,
-            surface_pressed: 0x0F0D11,
+            accent_hover: 0xB499FF,
+            accent_pressed: 0x5B34B6,
+            surface_hover: 0x49454F,
+            surface_pressed: 0x49454F,
             selection: 0x5B34B6,
             focus_ring: 0xB499FF,
             error: 0xFF8B8B,
@@ -228,12 +234,12 @@ pub const fn classic(dark: bool) -> Palette {
             accent: 0x7F52FF,
             on_accent: 0xFFFFFF,
             accent_foreground: 0x24005A,
-            accent_hover: 0x906DFF,
-            accent_pressed: 0x6A3FE6,
-            surface_hover: 0xF6F0FF,
+            accent_hover: 0x7F52FF,
+            accent_pressed: 0xECE3FF,
+            surface_hover: 0xE7E0EC,
             surface_pressed: 0xE7E0EC,
             selection: 0xECE3FF,
-            focus_ring: 0x5B34B6,
+            focus_ring: 0x7F52FF,
             error: 0xE55353,
             meter: 0x00A896,
             scrim: 0x00000052,
@@ -305,6 +311,75 @@ mod tests {
         assert_eq!(classic(true).accent, 0xB499FF);
         assert_eq!(classic(false).background, 0xF9F7FC);
         assert_eq!(classic(true).background, 0x141218);
+    }
+
+    #[test]
+    fn classic_only_uses_values_of_the_lyraflow_palette() {
+        // Cada rol del tema clásico es un valor literal del diseño actual de la demo
+        // o de LyraFlowTheme.kt. 0x211C29 es la superficie de la tarjeta que la demo
+        // ya mostraba en oscuro.
+        let light = classic(false);
+        let dark = classic(true);
+        let light_values = [
+            0xF9F7FC, 0xECE3FF, 0xFDF8FF, 0x1C1B20, 0x49454F, 0xCAC4D0, 0x7A757F, 0x7F52FF,
+            0xFFFFFF, 0x24005A, 0xE7E0EC, 0xE55353, 0x00A896,
+        ];
+        let dark_values = [
+            0x141218, 0x211C29, 0x49454F, 0xE6E1E9, 0xCAC4D0, 0x938F99, 0xB499FF, 0x431198,
+            0xECE3FF, 0x5B34B6, 0xFF8B8B, 0x56E3CE,
+        ];
+        let roles = [
+            light.background,
+            light.surface,
+            light.surface_raised,
+            light.foreground,
+            light.secondary_foreground,
+            light.border_subtle,
+            light.control_border,
+            light.accent,
+            light.on_accent,
+            light.accent_foreground,
+            light.accent_hover,
+            light.accent_pressed,
+            light.surface_hover,
+            light.surface_pressed,
+            light.selection,
+            light.focus_ring,
+            light.error,
+            light.meter,
+        ];
+        for value in roles {
+            assert!(
+                light_values.contains(&value),
+                "El tema clásico claro usa un valor ajeno a LyraFlowTheme.kt: {value:#08X}"
+            );
+        }
+        let roles = [
+            dark.background,
+            dark.surface,
+            dark.surface_raised,
+            dark.foreground,
+            dark.secondary_foreground,
+            dark.border_subtle,
+            dark.control_border,
+            dark.accent,
+            dark.on_accent,
+            dark.accent_foreground,
+            dark.accent_hover,
+            dark.accent_pressed,
+            dark.surface_hover,
+            dark.surface_pressed,
+            dark.selection,
+            dark.focus_ring,
+            dark.error,
+            dark.meter,
+        ];
+        for value in roles {
+            assert!(
+                dark_values.contains(&value),
+                "El tema clásico oscuro usa un valor ajeno a LyraFlowTheme.kt: {value:#08X}"
+            );
+        }
     }
 
     #[test]

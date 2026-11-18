@@ -25,9 +25,6 @@ actions!(
         CloseAbout,
         UseAurora,
         UseClassic,
-        UseSystemMode,
-        UseLightMode,
-        UseDarkMode,
         FocusNext,
         FocusPrevious
     ]
@@ -39,9 +36,7 @@ struct FocusControls {
     cancel: FocusHandle,
     theme_aurora: FocusHandle,
     theme_classic: FocusHandle,
-    mode_system: FocusHandle,
-    mode_light: FocusHandle,
-    mode_dark: FocusHandle,
+    mode: FocusHandle,
     about: FocusHandle,
     about_donate: FocusHandle,
     about_coffee: FocusHandle,
@@ -61,9 +56,7 @@ impl FocusControls {
             cancel: handle(cx),
             theme_aurora: handle(cx),
             theme_classic: handle(cx),
-            mode_system: handle(cx),
-            mode_light: handle(cx),
-            mode_dark: handle(cx),
+            mode: handle(cx),
             about: handle(cx),
             about_donate: handle(cx),
             about_coffee: handle(cx),
@@ -97,6 +90,11 @@ fn is_dark(appearance: WindowAppearance) -> bool {
         appearance,
         WindowAppearance::Dark | WindowAppearance::VibrantDark
     )
+}
+
+/// Rótulo del control de modo: el estado actual, con el vocabulario de la aplicación.
+fn mode_button_label(mode: ThemeMode) -> String {
+    format!("Tema {}", mode.label().to_lowercase())
 }
 
 impl Demo {
@@ -278,6 +276,16 @@ impl Demo {
         self.set_mode(mode, cx);
     }
 
+    /// Recorre los modos como lo hace la aplicación de Compose: automático, claro y oscuro.
+    fn cycle_mode(&mut self, cx: &mut Context<Self>) {
+        let mode = match self.appearance.mode {
+            ThemeMode::System => ThemeMode::Light,
+            ThemeMode::Light => ThemeMode::Dark,
+            ThemeMode::Dark => ThemeMode::System,
+        };
+        self.set_mode(mode, cx);
+    }
+
     fn open_about(&mut self, _: &OpenAbout, _: &mut Window, cx: &mut Context<Self>) {
         self.about_open = true;
         cx.notify();
@@ -303,7 +311,7 @@ impl Demo {
 /// Botón secundario: superficie neutra, texto legible y borde de control.
 fn secondary_button(
     id: &'static str,
-    label: &'static str,
+    label: impl Into<SharedString>,
     palette: &Palette,
     focus: &FocusHandle,
     listener: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
@@ -325,7 +333,7 @@ fn secondary_button(
         .active(|style| style.bg(rgb(palette.surface_pressed)))
         .focus(|style| style.border_color(rgb(palette.focus_ring)))
         .on_click(listener)
-        .child(label)
+        .child(label.into())
 }
 
 /// Opción de un grupo de selección: la elegida queda marcada con el color de selección.
@@ -446,11 +454,6 @@ impl Render for Demo {
             self.seconds as u64 / 60,
             self.seconds as u64 % 60
         );
-        let mode_label = if self.appearance.mode == ThemeMode::System {
-            format!("modo {}", if dark { "oscuro" } else { "claro" })
-        } else {
-            format!("modo {}", self.appearance.mode.label().to_lowercase())
-        };
 
         let root = div()
             .id("root")
@@ -477,15 +480,6 @@ impl Render for Demo {
             }))
             .on_action(cx.listener::<UseClassic>(|view, _, _, cx| {
                 view.set_theme(ThemeName::Classic, cx)
-            }))
-            .on_action(cx.listener::<UseSystemMode>(|view, _, _, cx| {
-                view.set_mode(ThemeMode::System, cx)
-            }))
-            .on_action(cx.listener::<UseLightMode>(|view, _, _, cx| {
-                view.set_mode(ThemeMode::Light, cx)
-            }))
-            .on_action(cx.listener::<UseDarkMode>(|view, _, _, cx| {
-                view.set_mode(ThemeMode::Dark, cx)
             }))
             .on_action(cx.listener::<FocusNext>(|_, _, window, _| window.focus_next()))
             .on_action(cx.listener::<FocusPrevious>(|_, _, window, _| window.focus_prev()))
@@ -514,13 +508,48 @@ impl Render for Demo {
                                 ),
                             ),
                     )
-                    .child(secondary_button(
-                        "about",
-                        "Acerca de",
-                        &palette,
-                        &self.controls.about,
-                        cx.listener(|view, _, window, cx| view.open_about(&OpenAbout, window, cx)),
-                    )),
+                    .child(
+                        div()
+                            .flex()
+                            .items_center()
+                            .gap_2()
+                            .child(option_button(
+                                "theme-aurora",
+                                ThemeName::Aurora.label(),
+                                self.appearance.theme == ThemeName::Aurora,
+                                &palette,
+                                &self.controls.theme_aurora,
+                                cx.listener(|view, _, _, cx| {
+                                    view.set_theme(ThemeName::Aurora, cx)
+                                }),
+                            ))
+                            .child(option_button(
+                                "theme-classic",
+                                ThemeName::Classic.label(),
+                                self.appearance.theme == ThemeName::Classic,
+                                &palette,
+                                &self.controls.theme_classic,
+                                cx.listener(|view, _, _, cx| {
+                                    view.set_theme(ThemeName::Classic, cx)
+                                }),
+                            ))
+                            .child(secondary_button(
+                                "mode",
+                                mode_button_label(self.appearance.mode),
+                                &palette,
+                                &self.controls.mode,
+                                cx.listener(|view, _, _, cx| view.cycle_mode(cx)),
+                            ))
+                            .child(secondary_button(
+                                "about",
+                                "Acerca de",
+                                &palette,
+                                &self.controls.about,
+                                cx.listener(|view, _, window, cx| {
+                                    view.open_about(&OpenAbout, window, cx)
+                                }),
+                            )),
+                    ),
             )
             .child(
                 div()
@@ -655,104 +684,6 @@ impl Render for Demo {
                 div()
                     .flex()
                     .flex_col()
-                    .gap_3()
-                    .p_6()
-                    .rounded_2xl()
-                    .bg(rgb(palette.surface))
-                    .child(
-                        div()
-                            .font_weight(gpui::FontWeight::SEMIBOLD)
-                            .child("Apariencia"),
-                    )
-                    .child(
-                        div()
-                            .flex()
-                            .items_center()
-                            .gap_3()
-                            .child(
-                                div()
-                                    .w(px(72.))
-                                    .text_sm()
-                                    .text_color(rgb(palette.secondary_foreground))
-                                    .child("Tema"),
-                            )
-                            .child(option_button(
-                                "theme-aurora",
-                                ThemeName::Aurora.label(),
-                                self.appearance.theme == ThemeName::Aurora,
-                                &palette,
-                                &self.controls.theme_aurora,
-                                cx.listener(|view, _, _, cx| view.set_theme(ThemeName::Aurora, cx)),
-                            ))
-                            .child(option_button(
-                                "theme-classic",
-                                ThemeName::Classic.label(),
-                                self.appearance.theme == ThemeName::Classic,
-                                &palette,
-                                &self.controls.theme_classic,
-                                cx.listener(|view, _, _, cx| view.set_theme(ThemeName::Classic, cx)),
-                            )),
-                    )
-                    .child(
-                        div()
-                            .flex()
-                            .items_center()
-                            .gap_3()
-                            .child(
-                                div()
-                                    .w(px(72.))
-                                    .text_sm()
-                                    .text_color(rgb(palette.secondary_foreground))
-                                    .child("Modo"),
-                            )
-                            .child(option_button(
-                                "mode-system",
-                                ThemeMode::System.label(),
-                                self.appearance.mode == ThemeMode::System,
-                                &palette,
-                                &self.controls.mode_system,
-                                cx.listener(|view, _, _, cx| view.set_mode(ThemeMode::System, cx)),
-                            ))
-                            .child(option_button(
-                                "mode-light",
-                                ThemeMode::Light.label(),
-                                self.appearance.mode == ThemeMode::Light,
-                                &palette,
-                                &self.controls.mode_light,
-                                cx.listener(|view, _, _, cx| view.set_mode(ThemeMode::Light, cx)),
-                            ))
-                            .child(option_button(
-                                "mode-dark",
-                                ThemeMode::Dark.label(),
-                                self.appearance.mode == ThemeMode::Dark,
-                                &palette,
-                                &self.controls.mode_dark,
-                                cx.listener(|view, _, _, cx| view.set_mode(ThemeMode::Dark, cx)),
-                            )),
-                    )
-                    .child(
-                        div()
-                            .text_xs()
-                            .text_color(rgb(palette.secondary_foreground))
-                            .child(format!(
-                                "Tema {} · paleta {} · {mode_label}",
-                                self.appearance.theme.label(),
-                                theme::palette_version()
-                            )),
-                    )
-                    .when(self.appearance_notice.is_some(), |column| {
-                        column.child(
-                            div()
-                                .text_xs()
-                                .text_color(rgb(palette.error))
-                                .child(self.appearance_notice.clone().unwrap_or_default()),
-                        )
-                    }),
-            )
-            .child(
-                div()
-                    .flex()
-                    .flex_col()
                     .gap_2()
                     .child(
                         div()
@@ -814,7 +745,15 @@ impl Render for Demo {
                     .flex_col()
                     .gap_1()
                     .child("Pendiente de migrar: transcripción, Whisper, historial, ajustes e inserción de texto.")
-                    .child("Atajos solo con esta ventana activa: Ctrl + Espacio · Esc para cancelar · Ctrl + T para el modo · Tab para recorrer los controles."),
+                    .child("Atajos solo con esta ventana activa: Ctrl + Espacio · Esc para cancelar · Ctrl + T para el tema.")
+                    .when(self.appearance_notice.is_some(), |column| {
+                        column.child(
+                            div()
+                                .text_xs()
+                                .text_color(rgb(palette.error))
+                                .child(self.appearance_notice.clone().unwrap_or_default()),
+                        )
+                    }),
             );
 
         if !self.about_open {
@@ -950,10 +889,10 @@ impl Render for Demo {
                                     .text_sm()
                                     .text_color(rgb(palette.secondary_foreground))
                                     .child(format!(
-                                        "Licencia {} · Autor {} · {}",
+                                        "Licencia {} · Autor {} · Paleta Aurora {}",
                                         about::LICENSE,
                                         about::AUTHOR,
-                                        about::APP_NAME
+                                        theme::palette_version()
                                     )),
                             ),
                     )
@@ -1008,11 +947,11 @@ fn main() {
             }
         })
         .detach();
-        let bounds = Bounds::centered(None, size(px(900.), px(860.)), cx);
+        let bounds = Bounds::centered(None, size(px(900.), px(780.)), cx);
         if let Err(error) = cx.open_window(
             WindowOptions {
                 window_bounds: Some(WindowBounds::Windowed(bounds)),
-                window_min_size: Some(size(px(760.), px(760.))),
+                window_min_size: Some(size(px(760.), px(700.))),
                 titlebar: Some(TitlebarOptions {
                     title: Some(SharedString::from("LyraFlow — Demo GPUI")),
                     ..Default::default()

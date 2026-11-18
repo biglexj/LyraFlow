@@ -24,10 +24,11 @@ mise build gpui
 
 ## Apariencia
 
-La demo ofrece **Aurora** y **Clásico** en el apartado *Apariencia*, con los modos **Automático**, **Claro** y **Oscuro**.
+La distribución del panel no cambia: los controles de color viven en la cabecera, junto al acceso «Acerca de».
 
 - **Aurora** es el tema predeterminado y usa los tokens globales de Core (`biglex-app-base`, versión `1.0.0`). La copia consumida por la compilación está en [`assets/tokens/biglex-app-base.json`](assets/tokens/biglex-app-base.json); su origen y su procedimiento de actualización, en [`assets/tokens/README.md`](assets/tokens/README.md). La adaptación a roles de GPUI vive en [`src/theme.rs`](src/theme.rs) y una prueba comprueba que no se desvía de la copia.
-- **Clásico** conserva la paleta anterior de LyraFlow: los violetas `#7F52FF` y `#B499FF`, y sus fondos y textos propios.
+- **Clásico** conserva el diseño tal como está: la paleta propia de LyraFlow (los violetas `#7F52FF` y `#B499FF`, con sus fondos y textos). Los roles que ese diseño no definía se toman literalmente de `LyraFlowTheme.kt`, sin aproximaciones.
+- El control de modo recorre **Automático**, **Claro** y **Oscuro**, como lo hace la aplicación de Compose.
 - La preferencia se guarda en un archivo propio de la demo (`%LOCALAPPDATA%\LyraFlow-gpui-demo\appearance.txt` en Windows). No lee ni escribe las preferencias de la instalación de Compose.
 
 ## Acerca de

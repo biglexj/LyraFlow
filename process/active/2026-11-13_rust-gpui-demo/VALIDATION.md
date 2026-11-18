@@ -18,9 +18,10 @@ Una compilación o una prueba sintética no demuestra la captura física, transc
 ## Fase 2 — Apariencia Aurora y «Acerca de» (2026-11-17)
 
 - [x] `mise check gpui`: sin errores ni avisos del paquete.
-- [x] `mise test gpui`: 17 pruebas, 0 fallos. Añadidas: los tokens de Aurora coinciden con la copia empaquetada, la versión declarada es la fijada, el texto de Aurora no se atenúa, Clásico conserva el violeta de LyraFlow, la resolución del modo sigue la preferencia, una instalación nueva empieza en Aurora, la preferencia sobrevive a un reinicio, un archivo ausente o roto no bloquea la demo y el «Acerca de» muestra la información mínima con destinos oficiales y HTTPS.
+- [x] `mise test gpui`: 18 pruebas, 0 fallos. Añadidas: los tokens de Aurora coinciden con la copia empaquetada, la versión declarada es la fijada, el texto de Aurora no se atenúa, Clásico conserva el violeta de LyraFlow y solo usa valores del diseño actual o de `LyraFlowTheme.kt`, la resolución del modo sigue la preferencia, una instalación nueva empieza en Aurora, la preferencia sobrevive a un reinicio, un archivo ausente o roto no bloquea la demo y el «Acerca de» muestra la información mínima con destinos oficiales y HTTPS.
 - [x] `bun test scripts/tests`: 7 pruebas, 0 fallos. Dos fallos anteriores (`release` aceptaba variantes y `publish` no rechazaba opciones desconocidas) venían del refactor local del publicador y se corrigieron restituyendo las guardas; el resto del cambio previo se conserva sin mezclar su alcance.
 - [x] Ventana abierta y revisada: Aurora en oscuro y en claro, Clásico en oscuro, «Acerca de» en oscuro y en claro, cambio de tema en vivo, restauración de la preferencia tras reiniciar la demo, cierre del «Acerca de» con `Esc`, recorrido con `Tab` y foco visible en el control alcanzado.
+- [x] La composición del panel se conserva respecto a la primera entrega: los controles de color están en la cabecera y no hay apartados nuevos en el cuerpo.
 - [x] El velo del «Acerca de» se midió sobre la captura: el texto de fondo pasa de RGB(230,225,233) a RGB(101,99,102), coherente con el velo del 56 % del modo oscuro.
 
 Límites de esta fase:

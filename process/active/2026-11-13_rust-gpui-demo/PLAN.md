@@ -16,7 +16,7 @@ La dirección vigente es la de Core: **Aurora** es la base común y **Clásico**
 
 Alcance de esta fase:
 
-- **Apariencia** en el panel: tema Aurora/Clásico y modo Automático/Claro/Oscuro, con la preferencia guardada y restaurada al reiniciar. La distribución de las secciones del panel no cambia.
+- **Apariencia** en la cabecera del panel, junto al acceso «Acerca de»: tema Aurora/Clásico y modo Automático/Claro/Oscuro, con la preferencia guardada y restaurada al reiniciar. La distribución del panel no cambia: no se añaden apartados ni se reordenan las secciones.
 - **Adaptador de tokens**: Aurora consume la copia versionada de Core (`native/assets/tokens/biglex-app-base.json`, versión `1.0.0`) con su origen documentado; los hexadecimales viven concentrados en `native/src/theme.rs`.
 - **Clásico** conserva la paleta propia de LyraFlow, incluida en la paleta de Compose.
 - **«Acerca de»** con identidad, autoría, licencia, agradecimiento, destinos oficiales de apoyo y ayuda y créditos.

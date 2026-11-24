@@ -37,21 +37,13 @@ test("packaging detects source and payload changes even when the timestamps matc
     expect(result.exitCode).toBe(0);
 });
 
-test("publish plan never dispatches publication and rejects misspelled options", async () => {
-    const { main } = await import("../mise-task");
-    expect(await main(["publish", "github", "--plan"])).toBe(0);
-    await expect(main(["publish", "github", "--plna"])).rejects.toThrow("Opción desconocida");
-});
-
-test("Mise tasks resolve to canonical scripts without root launchers", async () => {
-    const { taskCommand } = await import("../mise-task");
-    expect(taskCommand("release", ["--plan"])).toContain("./scripts/release/build-release.ps1");
-    expect(taskCommand("release", ["--plan"])).toContain("-LocalOnly");
-    expect(taskCommand("dev", ["isolated", "--plan"])).toEqual(["cmd", "/c", "gradlew.bat", "devIsolated"]);
-    expect(taskCommand("check", ["desktop"])).toEqual(["cmd", "/c", "gradlew.bat", ":composeApp:compileKotlinDesktop"]);
+test("branch GPUI rejects legacy Compose/release/publish dispatches cleanly", async () => {
+    const { main, taskCommand } = await import("../mise-task");
+    await expect(main(["publish", "github", "--plan"])).rejects.toThrow("no tiene instalador ni publicación");
+    expect(() => taskCommand("release", ["--plan"])).toThrow("no tiene instalador ni publicación");
+    expect(() => taskCommand("dev", ["isolated", "--plan"])).toThrow("Compose/Android");
+    expect(() => taskCommand("check", ["desktop"])).toThrow("Compose/Android");
     expect(taskCommand("test", ["scripts"])).toEqual(["bun", "test", "scripts/tests"]);
-    expect(() => taskCommand("release", ["--plna"])).toThrow("Opción desconocida");
-    expect(() => taskCommand("release", ["publish"])).toThrow("mise publish");
 });
 
 test("Aurora verifies the written notes and refuses a mismatched remote response without network", () => {

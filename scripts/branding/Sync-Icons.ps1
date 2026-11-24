@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Sincronización y generación reproducible de iconos derivados de LyraFlow conforme a Core-Docs.
 .DESCRIPTION
@@ -142,3 +142,42 @@ $installerResources = Join-Path $root "packaging\windows"
 New-Item -ItemType Directory -Path $installerResources -Force | Out-Null
 Copy-Item -LiteralPath $composeIco -Destination (Join-Path $installerResources "LyraFlow.ico") -Force
 Write-Host "Iconos de la aplicación y del instalador Inno Setup sincronizados." -ForegroundColor Green
+
+# 6. Distintivo con fondo blanco redondeado para el icono superior de barra de título en nativo.
+$nativeBrandingDir = Join-Path $root "native\assets\branding"
+New-Item -ItemType Directory -Path $nativeBrandingDir -Force | Out-Null
+$badgeOut = Join-Path $nativeBrandingDir "titlebar-icon-badge.png"
+$badgeSize = 64
+$badgeBmp = New-Object System.Drawing.Bitmap($badgeSize, $badgeSize, [System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
+$bg = [System.Drawing.Graphics]::FromImage($badgeBmp)
+$bg.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+$bg.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
+$bg.PixelOffsetMode = [System.Drawing.Drawing2D.PixelOffsetMode]::HighQuality
+$bg.CompositingQuality = [System.Drawing.Drawing2D.CompositingQuality]::HighQuality
+$bg.Clear([System.Drawing.Color]::Transparent)
+
+$path = New-Object System.Drawing.Drawing2D.GraphicsPath
+$rect = New-Object System.Drawing.RectangleF(2, 2, 60, 60)
+$d = 24
+$path.AddArc($rect.X, $rect.Y, $d, $d, 180, 90)
+$path.AddArc($rect.Right - $d, $rect.Y, $d, $d, 270, 90)
+$path.AddArc($rect.Right - $d, $rect.Bottom - $d, $d, $d, 0, 90)
+$path.AddArc($rect.X, $rect.Bottom - $d, $d, $d, 90, 90)
+$path.CloseFigure()
+
+$fillBrush = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(255, 255, 255, 255))
+$borderPen = New-Object System.Drawing.Pen([System.Drawing.Color]::FromArgb(255, 203, 213, 225), 2)
+$bg.FillPath($fillBrush, $path)
+$bg.DrawPath($borderPen, $path)
+
+$srcIcon = [System.Drawing.Bitmap]::FromFile($masterIcon)
+$bg.DrawImage($srcIcon, 6, 6, 52, 52)
+
+$srcIcon.Dispose()
+$borderPen.Dispose()
+$fillBrush.Dispose()
+$path.Dispose()
+$bg.Dispose()
+$badgeBmp.Save($badgeOut, [System.Drawing.Imaging.ImageFormat]::Png)
+$badgeBmp.Dispose()
+Write-Host "✔ native\assets\branding\titlebar-icon-badge.png generado." -ForegroundColor Green

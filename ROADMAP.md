@@ -3,6 +3,7 @@
 Plan de trabajo, objetivos y prioridades del proyecto.
 
 ## 🔴 Pendientes activos
+- [ ] Revisar el [componente «Acerca de» del ecosistema](process/active/2026-11-17_acercada-ecosistema/PLAN.md): prototipo con tres presentaciones; faltan la aceptación visual y el portado a la demo GPUI y a la app de Compose.
 - [ ] Revisar la [primera demo Rust + GPUI](process/active/2026-11-13_rust-gpui-demo/PLAN.md) — Aurora y Clásico con la preferencia persistida, y el «Acerca de» ya validados en la demo; falta la aceptación visual de Biglex y continuar la migración de proveedores, Whisper, atajos globales, inserción y persistencia.
 - [ ] Validar la migración real desde el instalador público de 1.1.8, el reinicio y una sola entrada en Aplicaciones.
 - [ ] Revisar con teclado y lector de pantalla los controles de la app y del instalador.

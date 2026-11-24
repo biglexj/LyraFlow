@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+import { publishRelease } from "../../Scripts/releases/aurora-publisher.ts";
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { resolve, join } from "node:path";
@@ -30,25 +31,14 @@ const appVersion = readPropertiesVersion(join(root, "gradle.properties"));
 const appName = "LyraFlow";
 const repository = "biglexj/LyraFlow";
 
-const help = `LyraFlow: mise <dev|build|check|test|release|publish> [opciones]
-  dev      Ejecutar en modo desarrollo (:composeApp:run).
-  build    Generar imagen de escritorio (buildDesktop), sin instalador.
-  check    Compilar escritorio y Android; desktop verifica solo escritorio.
-  test     Pruebas de escritorio; scripts verifica las herramientas de tareas.
-  release  Generar instalador Inno Setup en release/.
-  publish  [github|all] Publicar en GitHub y sincronizar ficha en Aurora.
+const help = `LyraFlow (rama GPUI): mise <dev|build|check|test> [opciones]
+  dev      Ejecutar la aplicación nativa Rust + GPUI (native/Cargo.toml).
+  build    Compilar binario nativo GPUI en release.
+  check    Verificar compilación Rust + GPUI (cargo check --locked).
+  test     Pruebas unitarias GPUI; 'scripts' verifica las herramientas de tareas.
   --plan   Mostrar los comandos o el plan sin ejecutar acciones ni escribir.
-  --check  Para publish: verificar requisitos locales y remotos sin escribir.
 
-Ejemplos:
-  mise dev
-  mise dev gpui       Demo nativa Rust + GPUI (también build, check y test).
-  mise dev --plan
-  mise build --plan
-  mise release --plan
-  mise publish --plan
-  mise publish github --plan
-  mise publish --check
+Nota de ramas: esta rama ejecuta GPUI con 'mise dev'; la edición Compose (v1.1.9) vive en 'main' y 'preview'.
 `;
 
 async function handlePublish(args: string[]): Promise<number> {
@@ -181,35 +171,26 @@ export function taskCommand(action: string, args: string[]): string[] {
     if (positional.length > 1) throw new Error("Se admite una sola variante por tarea.");
     const variant = positional[0]?.toLowerCase();
     if (variant === "gpui") {
-        const manifest = ["--manifest-path", "native/Cargo.toml"];
-        if (action === "dev") return ["cargo", "run", ...manifest, "--locked"];
-        if (action === "build") return ["cargo", "build", ...manifest, "--locked", "--release"];
-        if (action === "check") return ["cargo", "check", ...manifest, "--locked"];
-        if (action === "test") return ["cargo", "test", ...manifest, "--locked"];
-        throw new Error("La demo GPUI solo admite dev, build, check y test. No tiene instalador ni publicación.");
+        throw new Error("En esta rama GPUI se ejecuta directamente con 'mise dev' sin alias de tecnología.");
     }
-    const gradle = (task: string) => ["cmd", "/c", "gradlew.bat", task];
-    if (action === "dev") {
-        if (variant && !["android", "isolated"].includes(variant)) throw new Error("Usa dev, dev android o dev isolated.");
-        return gradle(variant === "android" ? "devAndroid" : variant === "isolated" ? "devIsolated" : "dev");
+    if (variant === "compose" || variant === "android" || variant === "isolated" || variant === "desktop") {
+        throw new Error("La variante Compose/Android vive en las ramas 'main' y 'preview'.");
     }
-    if (action === "build") {
-        if (variant && variant !== "android") throw new Error("Usa build o build android.");
-        return gradle(variant === "android" ? ":composeApp:assembleRelease" : "buildDesktop");
+    if (action === "test" && variant === "scripts") {
+        return ["bun", "test", "scripts/tests"];
     }
-    if (action === "check") {
-        if (variant && variant !== "desktop") throw new Error("Usa check o check desktop.");
-        return gradle(variant === "desktop" ? ":composeApp:compileKotlinDesktop" : "check");
+    if (variant) {
+        throw new Error(`Argumento no admitido en la rama GPUI: ${variant}.`);
     }
-    if (action === "test") {
-        if (variant && variant !== "scripts") throw new Error("Usa test o test scripts.");
-        return variant === "scripts" ? ["bun", "test", "scripts/tests"] : gradle(":composeApp:desktopTest");
+    if (["release", "publish"].includes(action)) {
+        throw new Error("La rama GPUI no tiene instalador ni publicación. Usa 'main' o 'preview' para Compose.");
     }
-    if (action === "release") {
-        if (variant) throw new Error("release no admite variantes; publica con mise publish.");
-        return ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "./scripts/release/build-release.ps1", "-LocalOnly"];
-    }
-    throw new Error(`Acción desconocida: ${action}. Usa dev, build, check, test, release o publish.`);
+    const manifest = ["--manifest-path", "native/Cargo.toml"];
+    if (action === "dev") return ["cargo", "run", ...manifest, "--locked"];
+    if (action === "build") return ["cargo", "build", ...manifest, "--locked", "--release"];
+    if (action === "check") return ["cargo", "check", ...manifest, "--locked"];
+    if (action === "test") return ["cargo", "test", ...manifest, "--locked"];
+    throw new Error(`Acción desconocida: ${action}. Usa dev, build, check o test.`);
 }
 
 export async function main(args = Bun.argv.slice(2)): Promise<number> {
@@ -219,12 +200,43 @@ export async function main(args = Bun.argv.slice(2)): Promise<number> {
         return 0;
     }
 
-    if (["release", "publish"].includes(action) && rest.some(arg => arg.toLowerCase() === "gpui")) {
-        throw new Error("La demo GPUI no tiene instalador ni publicación. Usa mise build gpui.");
+    const isPlan = rest.includes("--plan");
+
+    if (["release", "publish"].includes(action)) {
+        throw new Error("La rama GPUI no tiene instalador ni publicación. Usa 'main' o 'preview' para Compose.");
+    }
+
+
+    if (action === "release") {
+        const variant = rest.find(arg => !arg.startsWith("-"));
+        if (variant) throw new Error("release no admite variantes; publica con mise publish.");
+        const psArgs = ["powershell","-NoProfile","-ExecutionPolicy","Bypass","-File","./scripts/release/build-release.ps1","-LocalOnly"];
+        console.log(`release ${appName}\nDirectorio: ${root}\nComando: ${psArgs.join(" ")}`);
+        if (isPlan) return 0;
+
+        const child = Bun.spawn(psArgs, { cwd: root, stdin: "inherit", stdout: "inherit", stderr: "inherit" });
+        return (await child.exited) ?? 0;
     }
 
     if (action === "publish") {
-        return handlePublish(rest);
+        for (const arg of rest) {
+            if (arg.startsWith("-") && !["--plan", "--check"].includes(arg)) throw new Error(`Opción desconocida: ${arg}`);
+        }
+        return publishRelease({
+            slug: "lyraflow",
+            appName: "LyraFlow",
+            repository: "biglexj/LyraFlow",
+            version: appVersion,
+            versionCode: 119,
+            projectRoot: root,
+            primaryAssetPattern: new RegExp(`^LyraFlow-.*\\.exe$`, "i"),
+            build: async (isPlan) => {
+                const psArgs = ["powershell","-NoProfile","-ExecutionPolicy","Bypass","-File","./scripts/release/build-release.ps1","-LocalOnly"];
+                if (isPlan) return 0;
+                const child = Bun.spawn(psArgs, { cwd: root, stdin: "inherit", stdout: "inherit", stderr: "inherit" });
+                return (await child.exited) ?? 0;
+            }
+        }, rest);
     }
 
     const cmd = taskCommand(action, rest);

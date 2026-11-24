@@ -2,13 +2,14 @@ use anyhow::{Context, Result, bail};
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use std::{
     fs::{self, File, OpenOptions},
-    io::BufWriter,
+    io::{BufWriter, Cursor},
     path::PathBuf,
     sync::{Arc, Mutex},
     time::{SystemTime, UNIX_EPOCH},
 };
 
 pub const MAX_SECONDS: u32 = 300;
+const TARGET_SAMPLE_RATE: u32 = 16_000;
 type Writer = hound::WavWriter<BufWriter<File>>;
 
 #[derive(Default)]
@@ -16,13 +17,17 @@ pub struct Progress {
     pub samples: u64,
     pub peak: f32,
     pub error: Option<String>,
+    pub mono_samples: Vec<f32>,
 }
 
 pub struct Recording {
     pub path: PathBuf,
     pub seconds: f64,
+    #[allow(dead_code)]
     pub sample_rate: u32,
+    #[allow(dead_code)]
     pub channels: u16,
+    pub wav_16khz_mono: Vec<u8>,
 }
 
 pub struct Capture {
@@ -31,6 +36,7 @@ pub struct Capture {
     pub progress: Arc<Mutex<Progress>>,
     pub sample_rate: u32,
     pub channels: u16,
+    #[allow(dead_code)]
     pub device: String,
     path: PathBuf,
     keep: bool,
@@ -70,7 +76,6 @@ impl Capture {
                 return Err(error.into());
             }
         };
-        // Construct the guard before opening the stream: every failure removes the partial WAV.
         let mut capture = Self {
             stream: None,
             writer: Arc::new(Mutex::new(Some(writer))),
@@ -106,6 +111,7 @@ impl Capture {
         let writer = self.writer.clone();
         let progress = self.progress.clone();
         let errors = self.progress.clone();
+        let channels = usize::from(self.channels.max(1));
         let limit = u64::from(self.sample_rate) * u64::from(self.channels) * u64::from(MAX_SECONDS);
         Ok(device.build_input_stream(
             config,
@@ -120,16 +126,26 @@ impl Capture {
                 let Some(writer) = guard.as_mut() else { return };
                 let remaining = limit.saturating_sub(progress.samples) as usize;
                 let mut peak = 0.0_f32;
+                let mut frame_acc = 0.0_f32;
+                let mut frame_count = 0usize;
                 for &sample in data.iter().take(remaining) {
                     let value: f32 = cpal::Sample::from_sample(sample);
-                    peak = peak.max(value.abs());
-                    if let Err(error) = writer.write_sample(pcm16(value)) {
+                    let clean = if value.is_finite() { value } else { 0.0 };
+                    peak = peak.max(clean.abs());
+                    if let Err(error) = writer.write_sample(pcm16(clean)) {
                         progress.error = Some(format!("No se pudo guardar el audio: {error}"));
                         return;
                     }
                     progress.samples += 1;
+                    frame_acc += clean;
+                    frame_count += 1;
+                    if frame_count == channels {
+                        progress.mono_samples.push(frame_acc / channels as f32);
+                        frame_acc = 0.0;
+                        frame_count = 0;
+                    }
                 }
-                progress.peak = peak.min(1.0);
+                progress.peak = (peak * 4.5).min(1.0);
             },
             move |error| {
                 if let Ok(mut progress) = errors.lock() {
@@ -153,7 +169,7 @@ impl Capture {
 
     pub fn finish(mut self) -> Result<Recording> {
         self.stream.take();
-        let progress = self
+        let mut progress = self
             .progress
             .lock()
             .map_err(|_| anyhow::anyhow!("Error al leer el audio."))?;
@@ -165,6 +181,7 @@ impl Capture {
         }
         let seconds =
             progress.samples as f64 / f64::from(self.sample_rate) / f64::from(self.channels);
+        let mono_samples = std::mem::take(&mut progress.mono_samples);
         drop(progress);
         self.writer
             .lock()
@@ -173,11 +190,13 @@ impl Capture {
             .context("La grabación ya está cerrada.")?
             .finalize()?;
         self.keep = true;
+        let wav_16khz_mono = encode_16khz_mono_wav(&mono_samples, self.sample_rate)?;
         Ok(Recording {
             path: self.path.clone(),
             seconds,
             sample_rate: self.sample_rate,
             channels: self.channels,
+            wav_16khz_mono,
         })
     }
 }
@@ -201,6 +220,44 @@ fn pcm16(value: f32) -> i16 {
     (value.clamp(-1.0, 1.0) * f32::from(i16::MAX)).round() as i16
 }
 
+pub fn encode_16khz_mono_wav(mono_samples: &[f32], source_rate: u32) -> Result<Vec<u8>> {
+    let source_rate = source_rate.max(1);
+    let resampled: Vec<i16> = if source_rate == TARGET_SAMPLE_RATE || mono_samples.is_empty() {
+        mono_samples.iter().map(|&s| pcm16(s)).collect()
+    } else {
+        let ratio = source_rate as f64 / TARGET_SAMPLE_RATE as f64;
+        let out_len = ((mono_samples.len() as f64) / ratio).round().max(1.0) as usize;
+        let mut out = Vec::with_capacity(out_len);
+        for i in 0..out_len {
+            let pos = i as f64 * ratio;
+            let idx = (pos.floor() as usize).min(mono_samples.len().saturating_sub(1));
+            let next_idx = (idx + 1).min(mono_samples.len().saturating_sub(1));
+            let frac = (pos - idx as f64) as f32;
+            let s = mono_samples[idx] + (mono_samples[next_idx] - mono_samples[idx]) * frac;
+            out.push(pcm16(s));
+        }
+        out
+    };
+
+    let mut buffer = Cursor::new(Vec::new());
+    {
+        let mut writer = hound::WavWriter::new(
+            &mut buffer,
+            hound::WavSpec {
+                channels: 1,
+                sample_rate: TARGET_SAMPLE_RATE,
+                bits_per_sample: 16,
+                sample_format: hound::SampleFormat::Int,
+            },
+        )?;
+        for sample in resampled {
+            writer.write_sample(sample)?;
+        }
+        writer.finalize()?;
+    }
+    Ok(buffer.into_inner())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -212,6 +269,16 @@ mod tests {
         assert_eq!(pcm16(f32::NAN), 0);
         assert_eq!(pcm16(f32::INFINITY), 0);
         assert_eq!(pcm16(0.0), 0);
+    }
+
+    #[test]
+    fn resamples_to_16khz_mono_wav() {
+        let samples = vec![0.0_f32; 48_000];
+        let wav = encode_16khz_mono_wav(&samples, 48_000).unwrap();
+        let reader = hound::WavReader::new(Cursor::new(wav)).unwrap();
+        assert_eq!(reader.spec().sample_rate, 16_000);
+        assert_eq!(reader.spec().channels, 1);
+        assert_eq!(reader.duration(), 16_000);
     }
 
     fn capture_fixture(samples: &[i16]) -> Capture {
@@ -238,11 +305,16 @@ mod tests {
         for sample in samples {
             writer.write_sample(*sample).unwrap();
         }
+        let mono_samples: Vec<f32> = samples
+            .iter()
+            .map(|&s| f32::from(s) / f32::from(i16::MAX))
+            .collect();
         Capture {
             stream: None,
             writer: Arc::new(Mutex::new(Some(writer))),
             progress: Arc::new(Mutex::new(Progress {
                 samples: samples.len() as u64,
+                mono_samples,
                 ..Default::default()
             })),
             sample_rate: 16000,
@@ -259,6 +331,7 @@ mod tests {
             .finish()
             .unwrap();
         assert_eq!(recording.seconds, 4.0 / 16000.0);
+        assert!(!recording.wav_16khz_mono.is_empty());
         let mut reader = hound::WavReader::open(&recording.path).unwrap();
         assert_eq!(reader.spec().sample_rate, 16000);
         assert_eq!(

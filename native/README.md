@@ -1,45 +1,51 @@
-# LyraFlow — demo Rust + GPUI
+# LyraFlow — aplicación nativa Rust + GPUI
 
-Prototipo de la migración en la rama `codex/rust-gpui-demo`. Convive con Compose; no sustituye la app instalada. La versión `0.1.0` identifica exclusivamente este paquete experimental, sin cambiar la versión del producto.
+Aplicación nativa LyraFlow 2.0.0, confirmada por Biglex como estable el 2026-11-19. Los nombres internos y rutas con gpui-demo se conservan por compatibilidad de datos y comandos. Esta corrección no publica ni instala una versión.
 
 Desde la raíz del repositorio:
 
 ```powershell
-mise dev gpui
-mise check gpui
-mise test gpui
-mise build gpui
+mise dev
+mise check
+mise test
+mise build
 ```
 
 `dev` abre la ventana nativa. `build` genera `native/target/release/lyraflow-gpui-demo.exe` en Windows. Todas las tareas usan `Cargo.lock`; `--plan` muestra el comando sin ejecutarlo. No hay instalador ni publicación para la demo.
 
 ## Alcance
 
-- Panel de captura con el icono y los colores actuales de LyraFlow; temas claro y oscuro durante la sesión.
-- Grabación real mediante CPAL, duración calculada a partir del audio recibido, nivel de entrada y límite de cinco minutos.
-- WAV PCM de 16 bits con la frecuencia y los canales nativos del micrófono predeterminado; formatos de entrada `f32`, `i16` y `u16`. Todavía no se convierte a mono de 16 kHz.
-- Detener finaliza el WAV y muestra su ruta. Cancelar elimina la toma activa; cerrar la ventana descarta una toma en curso. Las grabaciones finalizadas permanecen en la carpeta temporal `LyraFlow-gpui-demo` del sistema hasta su limpieza manual o por el sistema operativo.
-- Copiar la ruta del último audio al portapapeles.
-- Errores reales de dispositivo y de escritura visibles, sin transcripciones de ejemplo.
+- Interfaz completa de LyraFlow en Rust + GPUI (`Inicio`, `Historial`, `Ajustes` y `Acerca de`), con diseño adaptable (`LyraNavigationRail` y `LyraNavigationBar`).
+- Captura de audio real mediante CPAL con conversión a WAV PCM de 16 bits mono a `16 kHz` para transcripción, nivel en vivo y límite de cinco minutos.
+- Arrastrar y soltar archivos de audio o imagen sobre la vista **Inicio** para transcribirlos o extraer texto (OCR).
+- Proveedores en la nube (**Gemini**, **OpenAI / compatible** y **MiniMax** con transcripción `asr-1.0` y refinamiento posterior) con descubrimiento dinámico de modelos mediante escaneo contra la API (sin listas de modelos fijas para Gemini ni OpenAI-compatible).
+- Almacenamiento cifrado de claves API por proveedor con **DPAPI** en Windows (`%LOCALAPPDATA%\LyraFlow-gpui-demo\secrets.json`) y respaldo en variables de entorno (`LYRAFLOW_API_KEY`, `GEMINI_API_KEY`, `OPENAI_API_KEY`, `MINIMAX_API_KEY`).
+- Coordinación de dictado con 2 reintentos, detección de cuota agotada (`HTTP 429`) por `(proveedor, modelo)` con enfriamiento de 60 s y respaldo automático con **Whisper local** (`whisper-cli.exe`, instalación y descarga de modelos bajo `%LOCALAPPDATA%\LyraFlow\whisper`).
+- Atajos globales de Windows (`RegisterHotKey`), editor interactivo en **Ajustes**, inyección de texto en la aplicación activa (`SendInput`), arranque con Windows e historial persistente en JSON con retención configurable.
 
-## Apariencia
+## Diseño y apariencia
 
-La distribución del panel no cambia: los controles de color viven en la cabecera, junto al acceso «Acerca de».
+La interfaz replica el diseño de la aplicación de Compose en Rust + GPUI: barra de navegación lateral (`LyraNavigationRail` o barra inferior por debajo de `720 px`), vistas **Inicio** (`DictationHero` con visualizador de 17 barras, **Último resultado** y tarjetas de estado), **Historial** y **Ajustes** (`General` y `Modelos`), más el acceso **Acerca de**.
 
 - **Aurora** es el tema predeterminado y usa los tokens globales de Core (`biglex-app-base`, versión `1.0.0`). La copia consumida por la compilación está en [`assets/tokens/biglex-app-base.json`](assets/tokens/biglex-app-base.json); su origen y su procedimiento de actualización, en [`assets/tokens/README.md`](assets/tokens/README.md). La adaptación a roles de GPUI vive en [`src/theme.rs`](src/theme.rs) y una prueba comprueba que no se desvía de la copia.
-- **Clásico** conserva el diseño tal como está: la paleta propia de LyraFlow (los violetas `#7F52FF` y `#B499FF`, con sus fondos y textos). Los roles que ese diseño no definía se toman literalmente de `LyraFlowTheme.kt`, sin aproximaciones.
-- El control de modo recorre **Automático**, **Claro** y **Oscuro**, como lo hace la aplicación de Compose.
-- La preferencia se guarda en un archivo propio de la demo (`%LOCALAPPDATA%\LyraFlow-gpui-demo\appearance.txt` en Windows). No lee ni escribe las preferencias de la instalación de Compose.
+- **Clásico** conserva literalmente la paleta de [`LyraFlowTheme.kt`](../composeApp/src/commonMain/kotlin/com/biglexj/lyraflow/core/theme/LyraFlowTheme.kt) (`#7F52FF` / `#B499FF`, fondos y textos propios).
+- El selector de color (**Aurora** / **Clásico**) y modo (**Automático** / **Claro** / **Oscuro**) vive en **Ajustes → General → Apariencia**; el botón **Tema** de la barra lateral recorre los modos igual que la aplicación de Compose.
+- Las preferencias de la demo se guardan en un archivo propio (`%LOCALAPPDATA%\LyraFlow-gpui-demo\appearance.txt` en Windows). No lee ni escribe las preferencias de la instalación de Compose.
 
 ## Acerca de
 
-El acceso **Acerca de** abre un diálogo con la identidad del producto (nombre, versión y licencia MIT), la autoría, los destinos oficiales de apoyo y los enlaces de ayuda y créditos, siguiendo la base de soporte oficial de Core. Se cierra con el botón *Cerrar*, con `Esc` o pulsando fuera del diálogo.
+El acceso **Acerca de** presenta un diálogo compacto con cabecera y cierre, logo oficial de LyraFlow, versión del paquete, plataforma, licencia y autoría. Sigue la distribución de la referencia de Prisma Upscaler, con apoyo oficial, enlaces propios y licencia MIT real desplegable. Los botones de apoyo se apilan en ventanas estrechas y el contenido puede desplazarse cuando falta altura. Se cierra con ×, Esc o pulsando fuera del diálogo. No muestra estados de actualización sin comprobar.
+
+El bloque intermedio **Actualizaciones de LyraFlow** consulta las releases estables públicas de GitHub al iniciar y al pulsar **Buscar actualizaciones**, con timeout de 15 segundos y trabajo en segundo plano. Distingue versión nueva, igualdad, copia instalada posterior a la publicada, ausencia de release y errores. Los resultados solo consultan versiones; la descarga e instalación automática continúan pendientes. Cuando hay una versión nueva, se ofrece visitar la ficha del producto.
+
+En Windows, [`src/modal_backdrop.rs`](src/modal_backdrop.rs) toma una instantánea exclusivamente del cliente de esta ventana antes de abrir el «Acerca de», la reduce, desenfoca y desatura en RAM. El fondo queda congelado mientras el modal está abierto; la instantánea se descarta al cerrarlo, no se guarda ni se transmite. Si falla la captura o en otras plataformas, se usa un fondo uniforme del tema. La ventana y la posición del contenido pueden cambiar mientras el modal está cerrado; al reabrir se toma una instantánea nueva.
 
 ## Atajos
 
-Los atajos son **locales a la ventana**: `Ctrl + Espacio` graba/detiene; `Ctrl + Alt + Espacio` o `Esc` cancelan; `Ctrl + T` cambia entre modo claro y oscuro; `Ctrl + Mayús + C` copia la ruta; `Tab` y `Mayús + Tab` recorren los controles con foco visible. El micrófono solo se abre al pulsar Grabar o su atajo.
+- **Atajos globales en Windows** (`RegisterHotKey`): `Ctrl + Espacio` alterna grabar/detener y `Ctrl + Alt + Espacio` cancela el dictado en curso; ambos son editables en **Ajustes → General → Control del dictado**.
+- **Atajos de ventana**: `Esc` cancela o cierra diálogos; `Ctrl + T` alterna claro/oscuro; `Tab` y `Mayús + Tab` recorren los controles con foco visible.
 
-Pendientes de migración: transcripción con proveedores, Whisper, atajos globales, inserción de texto, historial, ajustes persistentes, instancia única, bandeja, actualizaciones y accesibilidad completa. Esta demo no lee claves ni preferencias de la instalación de Compose y no hace solicitudes a proveedores de IA.
+Pendientes de integrar en el paquete nativo respecto a la distribución instalada: bandeja del sistema, instancia única y descarga/instalación de actualizaciones (`mise release`/`publish` siguen bloqueados para `gpui`). Esta versión guarda su configuración, credenciales cifradas e historial en `%LOCALAPPDATA%\LyraFlow-gpui-demo\` sin modificar la instalación de Compose.
 
 ## Entorno
 

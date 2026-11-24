@@ -23,7 +23,7 @@ Aplicación de dictado por voz: captura con atajo global, transcribe con un prov
 
 Stack: Kotlin Multiplatform y Compose Multiplatform. Gradle es el motor de compilación; Mise es la entrada principal de comandos (sección 4).
 
-En `codex/rust-gpui-demo` convive una primera demo Rust + GPUI en `native/`, con captura WAV local y temas de LyraFlow. Se opera mediante `mise dev|build|check|test gpui`; su alcance y límites están en [`native/README.md`](../../native/README.md). No sustituye Compose ni tiene instalador o publicación. La migración funcional completa está pendiente.
+La aplicación nativa Rust + GPUI vive en `native/` y declara la versión `2.0.0`, confirmada por Biglex como estable el 2026-11-19. Se opera mediante `mise dev|build|check|test gpui`; su alcance y límites de empaquetado están en [`native/README.md`](../../native/README.md). Los identificadores heredados con `gpui-demo` se conservan por compatibilidad de datos y comandos; no deben presentarse como estado del producto. Compose permanece en el repositorio.
 
 Módulos de Core que aplican a este proyecto. Consultar solo los pertinentes a la tarea:
 

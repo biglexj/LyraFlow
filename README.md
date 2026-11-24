@@ -1,5 +1,8 @@
 # LyraFlow 🎙️✨
 
+> [!NOTE]
+> **Rama histórica (`v-kmp`, v1.1.9 — descontinuada):** esta rama conserva la última implementación publicada en Kotlin Multiplatform y Compose Multiplatform (`v1.1.9`). La versión activa y vigente de LyraFlow (**v2.0.0**, Rust + GPUI) vive en la rama **`main`**.
+
 [![Versión](https://img.shields.io/badge/LyraFlow-v1.1.9-4C6EF5)](https://github.com/biglexj/LyraFlow/releases/latest)
 [![Licencia](https://img.shields.io/badge/licencia-MIT-lightgrey)](LICENSE)
 [![Plataforma](https://img.shields.io/badge/plataforma-Windows%20%7C%20Linux-informational)](https://github.com/biglexj/LyraFlow)

@@ -11,9 +11,9 @@
 ; ubicacion editable con selector de carpeta y un unico boton principal).
 ; Despues: progreso y pantalla de exito, con los controles nativos.
 ;
-; La distribucion de la app (imagen de aplicacion de jpackage: lanzador +
-; app\ + runtime\) la prepara scripts\packaging\Build-Installer.ps1 en
-; build\inno-staging\app antes de compilar este script.
+; La distribucion de la app (binario nativo Rust + GPUI) la prepara
+; scripts\packaging\Build-Installer.ps1 en build\inno-staging\app antes de
+; compilar este script.
 ;
 ; Compilar:
 ;   & "D:\Proyectos\biglexj\Scripts\tools\InnoSetup\ISCC.exe" setup.iss /O<release>
@@ -95,7 +95,7 @@ spanish.RunApp=Ejecutar {#MyAppName}
 [Files]
 ; Extraído explícitamente por la UI; al principio para evitar descomprimir payload solid.
 Source: "{#MyAppIcon}"; Flags: dontcopy
-; La distribucion real de la app (imagen de aplicacion de jpackage).
+; La distribucion real de la app (binario nativo generado desde Cargo).
 Source: "..\..\build\inno-staging\app\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]

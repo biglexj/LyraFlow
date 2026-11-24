@@ -1,4 +1,4 @@
-Set-StrictMode -Version Latest
+﻿Set-StrictMode -Version Latest
 
 # --- Compatibilidad de modulos con Windows PowerShell 5.1 --------------------
 # Si el PSModulePath apunta antes a la copia de PowerShell 7 (instalacion de
@@ -27,20 +27,26 @@ function Invoke-Checked {
     }
 }
 
-function Get-FullJdk {
-    $candidates = @(
-        $env:JAVA_HOME,
-        "C:\Program Files\Microsoft\jdk-17.0.19.10-hotspot",
-        "C:\Program Files\Android\Android Studio\jbr"
-    ) | Where-Object {
-        $_ -and (Test-Path -LiteralPath (Join-Path $_ "bin\jpackage.exe"))
-    }
+function Get-CargoManifestInfo {
+    param([Parameter(Mandatory)] [string]$Root)
 
-    $jdk = $candidates | Select-Object -First 1
-    if (-not $jdk) {
-        throw "Configura JAVA_HOME con un JDK completo que incluya jpackage.exe."
+    $manifestPath = Join-Path $Root 'Cargo.toml'
+    if (-not (Test-Path -LiteralPath $manifestPath)) {
+        throw "No se encontró Cargo.toml en $Root."
     }
-    return $jdk
+    $manifest = Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8
+    $versionMatch = [regex]::Match($manifest, '(?m)^\[package\][\s\S]*?^version\s*=\s*"(\d+\.\d+\.\d+)"')
+    $codeMatch = [regex]::Match($manifest, '(?m)^version_code\s*=\s*(\d+)')
+    if (-not $versionMatch.Success) {
+        throw "No se pudo leer version desde Cargo.toml."
+    }
+    if (-not $codeMatch.Success -or [int]$codeMatch.Groups[1].Value -le 0) {
+        throw "No se pudo leer version_code positivo desde Cargo.toml ([package.metadata.lyraflow])."
+    }
+    return @{
+        Version = $versionMatch.Groups[1].Value
+        VersionCode = [int]$codeMatch.Groups[1].Value
+    }
 }
 
 function Get-WindowsSdkTool {

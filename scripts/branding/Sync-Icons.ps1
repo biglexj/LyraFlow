@@ -1,10 +1,10 @@
 ﻿<#
 .SYNOPSIS
-    Sincronización y generación reproducible de iconos derivados de LyraFlow conforme a Core-Docs.
+    Sincronización y generación reproducible de iconos derivados de LyraFlow conforme a Core.
 .DESCRIPTION
     Lee la fuente canónica 'assets/branding/icons/icon-transparent.png' y genera los recursos
-    derivados para Compose Desktop (app_icon.ico, icon.png) y las superficies del sistema (Image/),
-    garantizando 100% canal alfa sin fondos cuadrados opacos ni artefactos.
+    derivados del branding nativo, de barra de título y del instalador oficial en Windows,
+    conservando el canal alfa transparente en las superficies del sistema.
 #>
 
 [CmdletBinding()]
@@ -22,43 +22,6 @@ if (-not (Test-Path -LiteralPath $masterIcon)) {
 
 Add-Type -AssemblyName System.Drawing
 
-function Resize-ImagePng {
-    param(
-        [System.Drawing.Bitmap]$source,
-        [int]$width,
-        [int]$height,
-        [string]$outputPath
-    )
-    $dest = New-Object System.Drawing.Bitmap($width, $height, [System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
-    $g = [System.Drawing.Graphics]::FromImage($dest)
-    $g.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
-    $g.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::HighQuality
-    $g.PixelOffsetMode = [System.Drawing.Drawing2D.PixelOffsetMode]::HighQuality
-    $g.CompositingQuality = [System.Drawing.Drawing2D.CompositingQuality]::HighQuality
-    $g.Clear([System.Drawing.Color]::Transparent)
-
-    # Calcular proporción para centrar en caso de aspect ratios no cuadrados
-    $srcRatio = $source.Width / $source.Height
-    $destRatio = $width / $height
-    if ($srcRatio -gt $destRatio) {
-        $drawW = $width
-        $drawH = [int]($width / $srcRatio)
-        $drawX = 0
-        $drawY = [int](($height - $drawH) / 2)
-    } else {
-        $drawH = $height
-        $drawW = [int]($height * $srcRatio)
-        $drawX = [int](($width - $drawW) / 2)
-        $drawY = 0
-    }
-
-    $g.DrawImage($source, $drawX, $drawY, $drawW, $drawH)
-    $g.Dispose()
-
-    $dest.Save($outputPath, [System.Drawing.Imaging.ImageFormat]::Png)
-    $dest.Dispose()
-}
-
 Write-Host "═════════════════════════════════════════════════" -ForegroundColor Cyan
 Write-Host "  LyraFlow — Sincronización de Iconos de Branding" -ForegroundColor Cyan
 Write-Host "═════════════════════════════════════════════════" -ForegroundColor Cyan
@@ -68,20 +31,14 @@ $brandingIcon = Join-Path $root "assets\branding\icons\icon.png"
 Copy-Item -LiteralPath $masterIcon -Destination $brandingIcon -Force
 Write-Host "✔ assets\branding\icons\icon.png actualizado (transparente)." -ForegroundColor Green
 
-# 2. composeApp/src/desktopMain/resources/icon.png
-$composePng = Join-Path $root "composeApp\src\desktopMain\resources\icon.png"
-Copy-Item -LiteralPath $masterIcon -Destination $composePng -Force
-Write-Host "✔ composeApp\src\desktopMain\resources\icon.png actualizado." -ForegroundColor Green
-
-# 3. composeApp/src/desktopMain/resources/app_icon.ico
-$composeIco = Join-Path $root "composeApp\src\desktopMain\resources\app_icon.ico"
+# 2. assets/branding/icons/app_icon.ico
+$appIco = Join-Path $root "assets\branding\icons\app_icon.ico"
 $magickCmd = Get-Command magick -ErrorAction SilentlyContinue
 if ($magickCmd) {
-    & magick "$masterIcon" -define icon:auto-resize=256,128,64,48,32,24,16 "$composeIco"
+    & magick "$masterIcon" -define icon:auto-resize=256,128,64,48,32,24,16 "$appIco"
     Write-Host "✔ app_icon.ico generado con ImageMagick (256,128,64,48,32,24,16 - canal alfa puro)." -ForegroundColor Green
 } else {
     Write-Warning "ImageMagick no encontrado en PATH; usando generación nativa .NET..."
-    # Fallback si no hay ImageMagick
     $bmp = [System.Drawing.Bitmap]::FromFile($masterIcon)
     $sizes = @(16, 24, 32, 48, 64, 128, 256)
     $pngStreams = @()
@@ -102,7 +59,7 @@ if ($magickCmd) {
     $bmp.Dispose()
     $headerSize = 6 + ($pngStreams.Count * 16)
     $offset = $headerSize
-    $fs = [System.IO.File]::Open($composeIco, [System.IO.FileMode]::Create)
+    $fs = [System.IO.File]::Open($appIco, [System.IO.FileMode]::Create)
     $bw = New-Object System.IO.BinaryWriter($fs)
     $bw.Write([UInt16]0); $bw.Write([UInt16]1); $bw.Write([UInt16]$pngStreams.Count)
     foreach ($item in $pngStreams) {
@@ -117,36 +74,16 @@ if ($magickCmd) {
     Write-Host "✔ app_icon.ico generado mediante .NET." -ForegroundColor Green
 }
 
-# 4. Iconos derivados de interfaz en composeApp/src/desktopMain/resources
-$desktopResources = Join-Path $root "composeApp\src\desktopMain\resources"
-if (-not (Test-Path -LiteralPath $desktopResources)) {
-    New-Item -ItemType Directory -Path $desktopResources -Force | Out-Null
-}
-
-$sourceBmp = [System.Drawing.Bitmap]::FromFile($masterIcon)
-Resize-ImagePng -source $sourceBmp -width 44 -height 44 -outputPath (Join-Path $desktopResources "Square44x44Logo.png")
-Write-Host "✔ composeApp\src\desktopMain\resources\Square44x44Logo.png generado (44x44 transparente)." -ForegroundColor Green
-
-Resize-ImagePng -source $sourceBmp -width 150 -height 150 -outputPath (Join-Path $desktopResources "Square150x150Logo.png")
-Write-Host "✔ composeApp\src\desktopMain\resources\Square150x150Logo.png generado (150x150 transparente)." -ForegroundColor Green
-
-Resize-ImagePng -source $sourceBmp -width 50 -height 50 -outputPath (Join-Path $desktopResources "StoreLogo.png")
-Write-Host "✔ composeApp\src\desktopMain\resources\StoreLogo.png generado (50x50 transparente)." -ForegroundColor Green
-
-Resize-ImagePng -source $sourceBmp -width 310 -height 150 -outputPath (Join-Path $desktopResources "Wide310x150Logo.png")
-Write-Host "✔ composeApp\src\desktopMain\resources\Wide310x150Logo.png generado (310x150 transparente centrado)." -ForegroundColor Green
-$sourceBmp.Dispose()
-
-# 5. Icono del instalador oficial Inno Setup.
+# 3. Icono del instalador oficial Inno Setup.
 $installerResources = Join-Path $root "packaging\windows"
 New-Item -ItemType Directory -Path $installerResources -Force | Out-Null
-Copy-Item -LiteralPath $composeIco -Destination (Join-Path $installerResources "LyraFlow.ico") -Force
-Write-Host "Iconos de la aplicación y del instalador Inno Setup sincronizados." -ForegroundColor Green
+Copy-Item -LiteralPath $appIco -Destination (Join-Path $installerResources "LyraFlow.ico") -Force
+Write-Host "✔ packaging\windows\LyraFlow.ico sincronizado." -ForegroundColor Green
 
-# 6. Distintivo con fondo blanco redondeado para el icono superior de barra de título en nativo.
-$nativeBrandingDir = Join-Path $root "native\assets\branding"
-New-Item -ItemType Directory -Path $nativeBrandingDir -Force | Out-Null
-$badgeOut = Join-Path $nativeBrandingDir "titlebar-icon-badge.png"
+# 4. Distintivo con fondo blanco redondeado para el icono superior de barra de título.
+$brandingDir = Join-Path $root "assets\branding"
+New-Item -ItemType Directory -Path $brandingDir -Force | Out-Null
+$badgeOut = Join-Path $brandingDir "titlebar-icon-badge.png"
 $badgeSize = 64
 $badgeBmp = New-Object System.Drawing.Bitmap($badgeSize, $badgeSize, [System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
 $bg = [System.Drawing.Graphics]::FromImage($badgeBmp)
@@ -180,4 +117,4 @@ $path.Dispose()
 $bg.Dispose()
 $badgeBmp.Save($badgeOut, [System.Drawing.Imaging.ImageFormat]::Png)
 $badgeBmp.Dispose()
-Write-Host "✔ native\assets\branding\titlebar-icon-badge.png generado." -ForegroundColor Green
+Write-Host "✔ assets\branding\titlebar-icon-badge.png generado." -ForegroundColor Green

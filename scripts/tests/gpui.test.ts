@@ -1,10 +1,10 @@
 import { expect, test } from "bun:test";
 import { main, taskCommand } from "../mise-task";
 
-test("GPUI commands target the isolated Cargo package and lockfile directly", () => {
+test("LyraFlow commands target the root Cargo package and lockfile directly", () => {
     for (const [task, cargo] of [["dev", "run"], ["build", "build"], ["check", "check"], ["test", "test"]]) {
         expect(taskCommand(task, ["--plan"])).toEqual([
-            "cargo", cargo, "--manifest-path", "native/Cargo.toml", "--locked",
+            "cargo", cargo, "--locked",
             ...(task === "build" ? ["--release"] : []),
         ]);
     }
@@ -12,12 +12,13 @@ test("GPUI commands target the isolated Cargo package and lockfile directly", ()
     expect(() => taskCommand("dev", ["gpui"])).toThrow("sin alias de tecnología");
 });
 
-test("GPUI release and publication are rejected before dispatch", async () => {
-    for (const task of ["release", "publish"]) {
-        await expect(main([task, "--plan"])).rejects.toThrow("no tiene instalador ni publicación");
-    }
-});
-
-test("GPUI plan does not invoke Cargo", async () => {
+test("release and publish support planning cleanly without side effects", async () => {
+    expect(taskCommand("release", ["--plan"])).toEqual([
+        "powershell", "-NoProfile", "-ExecutionPolicy", "Bypass",
+        "-File", "./scripts/release/build-release.ps1", "-LocalOnly",
+    ]);
     expect(await main(["dev", "--plan"])).toBe(0);
+    expect(await main(["release", "--plan"])).toBe(0);
+    expect(await main(["publish", "--plan"])).toBe(0);
+    expect(await main(["publish", "github", "--plan"])).toBe(0);
 });

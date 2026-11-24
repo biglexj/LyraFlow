@@ -1,32 +1,32 @@
-# Configuración de tareas de LyraFlow mediante Mise (rama Rust + GPUI)
-# Reutiliza el estándar común: dev, build, check, test (release/publish en main/preview)
+# Configuración de tareas de LyraFlow mediante Mise (Rust + GPUI)
+# Reutiliza el estándar común: dev, build, check, test, release y publish
 
 [tasks.dev]
 raw_args = true
-description = "Ejecutar LyraFlow GPUI en desarrollo desde native/"
+description = "Ejecutar LyraFlow en desarrollo"
 file = "scripts/mise-task.ts"
 
 [tasks.build]
 raw_args = true
-description = "Compilar binario nativo Rust + GPUI en modo release"
+description = "Compilar binario nativo en modo release"
 file = "scripts/mise-task.ts"
 
 [tasks.release]
 raw_args = true
-description = "No disponible en la rama GPUI (instalador oficial en main/preview)"
+description = "Generar instalador oficial Inno Setup en release/ sin publicar"
 file = "scripts/mise-task.ts"
 
 [tasks.check]
 raw_args = true
-description = "Verificar el paquete Rust + GPUI (cargo check --locked)"
+description = "Verificar la compilación del paquete Rust (cargo check --locked)"
 file = "scripts/mise-task.ts"
 
 [tasks.test]
 raw_args = true
-description = "Ejecutar pruebas de Rust + GPUI o 'scripts' para utilidades"
+description = "Ejecutar pruebas de LyraFlow o 'scripts' para utilidades de tareas"
 file = "scripts/mise-task.ts"
 
 [tasks.publish]
 raw_args = true
-description = "No disponible en la rama GPUI (publicación oficial en main/preview)"
+description = "Publicar release en GitHub y sincronizar ficha en Aurora (--plan y --check sin escritura)"
 file = "scripts/mise-task.ts"

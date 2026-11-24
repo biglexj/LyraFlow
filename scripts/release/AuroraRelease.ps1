@@ -1,12 +1,12 @@
-Set-StrictMode -Version Latest
+﻿Set-StrictMode -Version Latest
 . (Join-Path $PSScriptRoot 'ReleaseTools.ps1')
 
 function Get-AuroraReleasePayload {
     param([string]$Root, [string]$Version, [string]$NotesPath, [string]$Installer)
     if (-not $env:LYRAFLOW_AURORA_APP_ID) { throw 'Falta LYRAFLOW_AURORA_APP_ID: usa el identificador real de la ficha de LyraFlow.' }
-    $properties = Get-Content -LiteralPath (Join-Path $Root 'gradle.properties') -Raw
-    $code = [regex]::Match($properties, '(?m)^lyraflow\.versionCode=(\d+)').Groups[1].Value
-    if (-not $code -or [int]$code -le 0) { throw 'Falta versionCode positivo.' }
+    $info = Get-CargoManifestInfo -Root $Root
+    $code = $info.VersionCode
+    if ($code -le 0) { throw 'Falta version_code positivo en Cargo.toml.' }
     return @{
         appId = $env:LYRAFLOW_AURORA_APP_ID
         versionName = $Version

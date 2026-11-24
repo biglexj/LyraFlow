@@ -1,4 +1,4 @@
-param(
+﻿param(
     [string]$Version,
     [string]$ReleaseNotesFile = "RELEASE_MESSAGE.md",
     [switch]$LocalOnly,
@@ -18,23 +18,15 @@ if ($LocalOnly -and $Publish) { throw 'No combines -LocalOnly y -Publish.' }
 $LocalOnly = -not $Publish
 
 $repository = "biglexj/LyraFlow"
-$propertiesPath = Join-Path $root "gradle.properties"
 $releaseNotesPath = Join-Path $root $ReleaseNotesFile
-$properties = Get-Content -LiteralPath $propertiesPath -Raw -Encoding UTF8
-$versionMatch = [regex]::Match($properties, '(?m)^lyraflow\.versionName=(\d+\.\d+\.\d+)')
-$codeMatch = [regex]::Match($properties, '(?m)^lyraflow\.versionCode=(\d+)')
-if (-not $versionMatch.Success -or -not $codeMatch.Success) {
-    throw "No se pudo leer la versión centralizada de LyraFlow."
-}
-
-$currentVersion = $versionMatch.Groups[1].Value
+$manifestInfo = Get-CargoManifestInfo -Root $root
+$currentVersion = $manifestInfo.Version
 if (-not $Version) { $Version = $currentVersion }
 Assert-SemanticVersion $Version
 if ($Version -ne $currentVersion) { throw 'Actualiza y revisa las fuentes de versión antes de empaquetar una versión distinta.' }
 $packageVersion = (Get-Content -LiteralPath (Join-Path $root 'package.json') -Raw | ConvertFrom-Json).version
-$appVersionContent = Get-Content -LiteralPath (Join-Path $root 'composeApp\src\commonMain\kotlin\com\biglexj\lyraflow\core\config\AppVersion.kt') -Raw
-if ($packageVersion -ne $Version -or $appVersionContent -notmatch ('const val CURRENT = "' + [regex]::Escape($Version) + '"')) {
-    throw 'Las versiones de package.json, AppVersion.kt y gradle.properties no coinciden.'
+if ($packageVersion -ne $Version) {
+    throw 'Las versiones de package.json y Cargo.toml no coinciden.'
 }
 if (-not (Test-Path -LiteralPath $releaseNotesPath)) {
     throw "No se encontró el archivo de notas: $releaseNotesPath"
@@ -60,20 +52,31 @@ if (-not $LocalOnly) {
     if ($Channel -eq 'all') { Assert-AuroraReleasePreflight -Root $root -Version $Version }
 }
 
-Write-Host "[1/7] Versión centralizada confirmada: $Version." -ForegroundColor Yellow
+Write-Host "[1/7] Versión centralizada confirmada: $Version (version_code: $($manifestInfo.VersionCode))." -ForegroundColor Yellow
 
-$jdk = Get-FullJdk
 $signTool = if ($SkipSigning) { $null } else { Get-WindowsSdkTool "signtool.exe" }
-$env:JAVA_HOME = $jdk
 
 if (-not $SkipBuild) {
-    Write-Host "[2/7] Compilando y ejecutando verificaciones..." -ForegroundColor Yellow
-    $tasks = @(
-        ":composeApp:createDistributable"
-    )
-    if (-not $SkipTests) { $tasks = @(":composeApp:desktopTest") + $tasks }
-    $gradleArguments = @("-Dorg.gradle.java.home=$jdk", "--no-configuration-cache") + $tasks
-    Invoke-Checked -Executable (Join-Path $root "gradlew.bat") -ArgumentList $gradleArguments
+    Write-Host "[2/7] Compilando y ejecutando verificaciones (Cargo)..." -ForegroundColor Yellow
+    if (-not $SkipTests) {
+        Invoke-Checked -Executable "cargo" -ArgumentList @("test", "--locked")
+    }
+    Invoke-Checked -Executable "cargo" -ArgumentList @("build", "--locked", "--release")
+
+    $releaseExe = Join-Path $root "target\release\LyraFlow.exe"
+    if (-not (Test-Path -LiteralPath $releaseExe)) {
+        throw "No se encontró el binario compilado en $releaseExe."
+    }
+
+    $stagingDir = Join-Path $root "build\inno-staging\app"
+    if (Test-Path -LiteralPath $stagingDir) {
+        $resolvedStage = [IO.Path]::GetFullPath($stagingDir)
+        $expectedStage = [IO.Path]::GetFullPath($stagingDir)
+        if (-not $resolvedStage.StartsWith($root + '\', [StringComparison]::OrdinalIgnoreCase)) { throw 'Staging fuera del proyecto.' }
+        Remove-Item -LiteralPath $resolvedStage -Recurse -Force
+    }
+    New-Item -ItemType Directory -Path $stagingDir -Force | Out-Null
+    Copy-Item -LiteralPath $releaseExe -Destination (Join-Path $stagingDir "LyraFlow.exe") -Force
     Write-AppImageIdentity -Root $root
 } else {
     Write-Host "[2/7] Build omitido; se usarán binarios existentes." -ForegroundColor DarkYellow
@@ -98,9 +101,6 @@ try {
 Get-ChildItem -LiteralPath $output -Directory -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force
 
 $exe = Join-Path $output $artifactNames[0]
-# El artefacto que se publica es el instalador EXE de Inno Setup. La
-# distribucion (imagen de aplicacion) ya la genero Gradle en el paso [2/7],
-# asi que el empaquetado no vuelve a compilar la app.
 $installerBuilder = Join-Path $root "scripts\packaging\Build-Installer.ps1"
 if (-not (Test-Path -LiteralPath $installerBuilder)) {
     throw "No se encontró el generador del instalador: $installerBuilder"
@@ -117,7 +117,7 @@ if (-not $SkipSigning) {
         Join-Path $root '.local\signing\LyraFlow_Dev_Certificate.pfx'
     }
     if (-not (Test-Path -LiteralPath $certificate)) { throw "Falta el certificado de firma local." }
-    
+
     $maxAttempts = 5
     $signed = $false
     for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
@@ -139,10 +139,6 @@ if (-not $SkipSigning) {
 }
 
 $hashPath = Join-Path $output "SHA256SUMS.txt"
-# Solo los binarios publicables entran en el fichero de sumas; el propio
-# SHA256SUMS.txt queda fuera. Se escribe en UTF-8 sin BOM y con finales de
-# linea LF: Set-Content -Encoding UTF8 de Windows PowerShell anade un BOM que
-# hace que "sha256sum -c" (GNU) rechace el fichero como mal formado.
 $hashLines = @(
     Get-ChildItem -LiteralPath $output -File |
         Where-Object Extension -In '.exe' |
@@ -181,7 +177,6 @@ Invoke-Checked gh (@(
     "--notes-file", $releaseNotesPath
 ))
 
-# Verificar el binario remoto antes de sincronizar su ficha.
 Assert-PublishedRelease -Root $root -Repository $repository -Tag $tag -Installer $exe -NotesPath $releaseNotesPath
 if ($Channel -eq 'all') {
     Publish-AuroraRelease -Root $root -Version $Version -NotesPath $releaseNotesPath -Installer $exe

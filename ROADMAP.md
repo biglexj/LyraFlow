@@ -3,25 +3,22 @@
 Plan de trabajo, objetivos y prioridades del proyecto.
 
 ## 🔴 Pendientes activos
-- [ ] Revisar el [componente «Acerca de» del ecosistema](process/active/2026-11-17_acercada-ecosistema/PLAN.md): prototipo con tres presentaciones; faltan la aceptación visual y el portado a la demo GPUI y a la app de Compose.
-- [ ] Revisar la [primera demo Rust + GPUI](process/active/2026-11-13_rust-gpui-demo/PLAN.md) — Aurora y Clásico con la preferencia persistida, y el «Acerca de» ya validados en la demo; falta la aceptación visual de Biglex y continuar la migración de proveedores, Whisper, atajos globales, inserción y persistencia.
-- [ ] Validar la migración real desde el instalador público de 1.1.8, el reinicio y una sola entrada en Aplicaciones.
+- [ ] Revisar visualmente en ventana (`mise dev`) la versión `2.0.0` consolidada en `main` (`1080 × 760`, «Acerca de», ajustes y barra de título).
+- [ ] Validar el instalador local `mise release` (`LyraFlow-Windows-2.0.0.exe`), actualización sobre instalación `1.1.9` y una sola entrada en Aplicaciones.
 - [ ] Revisar con teclado y lector de pantalla los controles de la app y del instalador.
-- [ ] Validar la publicación y sincronización de Aurora con la ficha y credencial reales; aún no se ha publicado.
-- [ ] Validar el desarrollo con `mise dev` y `mise dev isolated` con dos instancias; la entrada de operación es Mise.
-- [ ] Validar manualmente en la interfaz la instalación de Whisper local (resolución del paquete `whisper-bin-x64.zip` de `ggml-org/whisper.cpp`).
-- [ ] Validar manualmente endpoints multimodales de terceros configurados por el usuario en Windows.
-- [ ] Añadir adaptadores nativos únicamente cuando un proveedor no exponga audio mediante OpenAI-compatible.
+- [ ] Validar la publicación y sincronización de Aurora con la ficha y credencial reales antes de publicar `v2.0.0`.
+- [ ] Validar manualmente en la interfaz la descarga e instalación de Whisper local (`whisper-bin-x64.zip` de `ggml-org/whisper.cpp`).
+- [ ] Validar manualmente endpoints de terceros compatibles con audio mediante OpenAI en Windows.
 
 ## 🟡 Intermedio
 - [ ] Integración avanzada con el Centro de Feedback oficial (`https://www.biglexj.com/feedback`) enviando metadatos completos por API JSON (`app`, `version`, `os`, `type`).
-- [ ] Añadir perfiles de proveedor para conservar también modelos y endpoints recientes por servicio.
-- [ ] Incorporar una prueba de integración opcional contra un endpoint configurado por el usuario.
+- [ ] Añadir perfiles de proveedor para conservar modelos y endpoints recientes por servicio.
 
 ## ⚪ Descartado / En Pausa
 *(No hay tareas en esta categoría actualmente)*
 
 ## 🟢 Completado
+- [x] **Migración nativa Rust + GPUI `2.0.0` y separación de ramas** (2026-11-23) — Consolidación de `src/`, `assets/`, `Cargo.toml` y `build.rs` en la raíz de `main`, retirada de Kotlin/Gradle hacia la rama histórica `v-kmp` (`v1.1.9`), adaptación de `mise`, empaquetado Inno Setup directo sobre `LyraFlow.exe` (`version_code = 200`), temas Aurora y Clásico, proveedores Gemini/OpenAI/MiniMax, escaneo dinámico de modelos, Whisper local, atajos globales e inyección de texto en Windows.
 - [x] **Base local 1.1.9** (2026-11-03; sin publicar) — Historial en disco con retención elegida, respaldo de Whisper ante errores de red, actualizador único de Inno Setup, retirada de MSIX/WiX activos, validación de huellas del build y alias de publicación conectados al pipeline oficial.
 - [x] **v1.1.9** (2026-10-28) — Atribución de la cuota agotada al proveedor y al modelo reales (mensajes y banner sin proveedor fijo), aislamiento de la cuota por proveedor y modelo, recuperación del atajo global frente a coordinators huérfanos y estados de transcripción atascados, unificación del HTTP 429 del protocolo OpenAI-compatible con el respaldo local autónomo, y renovación del instalador de Windows: EXE autónomo de Inno Setup en español con la identidad visual de LyraFlow, instalación por usuario sin elevación, actualización en el mismo directorio y ejecución opcional al terminar (sustituye al MSI de jpackage + WiX de la 1.1.8).
 - [x] **v1.1.8** (2026-10-21) — Nuevo proveedor MiniMax (transcriptor `asr-1.0` con refinamiento `MiniMax-M3.1-Flash`), atajo global para cancelar el dictado en curso (`Ctrl + Alt + Espacio`), recuperación del overlay de estado inferior y reorganización de Ajustes en dos pestañas con selector de proveedor en tres columnas.

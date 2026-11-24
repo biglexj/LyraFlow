@@ -1,37 +1,27 @@
-<#
+﻿<#
 .SYNOPSIS
     Genera el instalador EXE de LyraFlow para Windows con Inno Setup.
 
 .DESCRIPTION
-    Sustituye al empaquetado WiX/MSI de jpackage. El flujo es:
-
-      1. Resuelve la version del proyecto (gradle.properties -> lyraflow.versionName).
+    Flujo de empaquetado para LyraFlow (Rust + GPUI):
+      1. Resuelve la version del proyecto desde Cargo.toml.
       2. Reescribe packaging\windows\version.iss con esa version.
-      3. Genera la distribucion de la app (imagen de aplicacion de jpackage)
-         y la copia a build\inno-staging\app, que es la que empaqueta el .iss.
-      4. Compila packaging\windows\setup.iss con ISCC.exe y deja el
-         instalador en la carpeta de release.
-
-    La identidad de actualizacion (AppId) vive en setup.iss y es estable
-    entre versiones: una version nueva actualiza la anterior en el mismo
-    directorio en vez de instalar en paralelo.
+      3. Compila target\release\LyraFlow.exe con Cargo (--locked --release) y
+         lo prepara en build\inno-staging\app (salvo si se indica -SkipBuild).
+      4. Verifica invariantes compartidas y compila packaging\windows\setup.iss
+         con ISCC.exe dejando el instalador en release\.
 
 .PARAMETER Version
-    Version concreta a empaquetar. Por defecto, la de gradle.properties.
+    Version concreta a empaquetar. Por defecto, la de Cargo.toml.
 
 .PARAMETER SkipBuild
-    No ejecuta Gradle: reutiliza la distribucion ya generada.
+    Reutiliza build\inno-staging\app sin ejecutar Cargo.
 
 .PARAMETER OutputDirectory
-    Carpeta donde se deja el instalador. Por defecto, la carpeta release del
-    proyecto.
+    Carpeta donde se deja el instalador. Por defecto, release\.
 
 .PARAMETER IsccPath
-    Ruta a ISCC.exe. Por defecto se busca subiendo desde este script hasta
-    <workspace>\Scripts\tools\InnoSetup\ISCC.exe y, si no, en el PATH.
-
-.EXAMPLE
-    .\scripts\packaging\Build-Installer.ps1
+    Ruta a ISCC.exe. Por defecto se busca en <workspace>\Scripts\tools\InnoSetup\ISCC.exe o PATH.
 #>
 param(
     [string]$Version,
@@ -51,12 +41,9 @@ $packagingDir = Join-Path $root "packaging\windows"
 $setupScript = Join-Path $packagingDir "setup.iss"
 $versionScript = Join-Path $packagingDir "version.iss"
 $stagingDir = Join-Path $root "build\inno-staging\app"
-$appImageDir = Join-Path $root "composeApp\build\compose\binaries\main\app\LyraFlow"
+$releaseExe = Join-Path $root "target\release\LyraFlow.exe"
 if (-not $OutputDirectory) { $OutputDirectory = Join-Path $root "release" }
 
-# --- Localizador de ISCC -----------------------------------------------------
-# Localiza ISCC.exe sin rutas absolutas: primero la copia del workspace,
-# subiendo desde este script; despues el PATH del sistema.
 function Resolve-Iscc {
     $dir = $PSScriptRoot
     for ($i = 0; $i -lt 8; $i++) {
@@ -71,21 +58,12 @@ function Resolve-Iscc {
     return $null
 }
 
-function Write-Step {
-    param([string]$Message)
-    Write-Host "==> $Message" -ForegroundColor Cyan
-}
-
 function Write-Fail {
     param([string]$Message)
     Write-Host "ERROR: $Message" -ForegroundColor Red
     throw $Message
 }
 
-# --- Invariantes de empaquetado (validador compartido) ---------------------
-# La plantilla visual y el arranque post-instalacion son fuente unica del
-# workspace. Si un .iss editado a mano o copiado de otra app los rompe, el
-# instalador sale mal, asi que el validador compartido aborta el build.
 function Resolve-SharedInnoTool {
     param([string]$Relative)
     $dir = $PSScriptRoot
@@ -108,7 +86,6 @@ function Assert-PackagingInvariants {
         return
     }
 
-    # Plantilla visual con fuente unica: el repo guarda lo que se compilo.
     $sharedUi = Join-Path $sharedDir 'BiglexModernUI.iss'
     $localUi = Join-Path $PackagingDir 'BiglexModernUI.iss'
     if ((Test-Path -LiteralPath $sharedUi) -and (Test-Path -LiteralPath $localUi)) {
@@ -139,16 +116,12 @@ function Assert-PackagingInvariants {
 }
 
 # --- 1. Version -------------------------------------------------------------
-$propertiesPath = Join-Path $root "gradle.properties"
-$properties = Get-Content -LiteralPath $propertiesPath -Raw -Encoding UTF8
-$versionMatch = [regex]::Match($properties, '(?m)^lyraflow\.versionName=(\d+\.\d+\.\d+)')
-if (-not $versionMatch.Success) {
-    throw "No se pudo leer lyraflow.versionName de $propertiesPath."
-}
-if (-not $Version) { $Version = $versionMatch.Groups[1].Value }
+$manifestInfo = Get-CargoManifestInfo -Root $root
+$currentVersion = $manifestInfo.Version
+if (-not $Version) { $Version = $currentVersion }
 Assert-SemanticVersion $Version
-if ($Version -ne $versionMatch.Groups[1].Value) {
-    throw 'La versión solicitada no coincide con la imagen del proyecto. Actualiza y compila las fuentes de versión primero.'
+if ($Version -ne $currentVersion) {
+    throw 'La versión solicitada no coincide con Cargo.toml. Actualiza las fuentes de versión primero.'
 }
 
 Write-Host "[1/4] Version del instalador: $Version" -ForegroundColor Yellow
@@ -157,45 +130,37 @@ Write-Host "[1/4] Version del instalador: $Version" -ForegroundColor Yellow
 $versionContent = @(
     "; ---------------------------------------------------------------------------",
     "; version.iss - generada por scripts\packaging\Build-Installer.ps1 con la",
-    "; version real del proyecto (gradle.properties -> lyraflow.versionName).",
+    "; version real del proyecto (Cargo.toml -> version).",
     "; No editar a mano: se reescribe en cada build.",
     "; ---------------------------------------------------------------------------",
     "#define MyAppVersion `"$Version`""
 ) -join "`r`n"
 Set-Content -LiteralPath $versionScript -Value $versionContent -Encoding UTF8
 
-# --- 3. Distribucion de la app ---------------------------------------------
+# --- 3. Compilacion y staging del binario nativo ----------------------------
 if (-not $SkipBuild) {
-    Write-Host "[2/4] Generando la distribucion de la app (Gradle)..." -ForegroundColor Yellow
-    $jdk = Get-FullJdk
-    $gradleArguments = @("-Dorg.gradle.java.home=$jdk", "--no-configuration-cache", ":composeApp:createDistributable")
-    Invoke-Checked -Executable (Join-Path $root "gradlew.bat") -ArgumentList $gradleArguments
+    Write-Host "[2/4] Compilando binario nativo Rust + GPUI (--locked --release)..." -ForegroundColor Yellow
+    Invoke-Checked -Executable "cargo" -ArgumentList @("build", "--locked", "--release")
+    if (-not (Test-Path -LiteralPath $releaseExe)) {
+        throw "No se encontró el binario compilado en $releaseExe."
+    }
+
+    Write-Host "[3/4] Preparando el contenido del instalador..." -ForegroundColor Yellow
+    if (Test-Path -LiteralPath $stagingDir) {
+        $resolvedStage = [IO.Path]::GetFullPath($stagingDir)
+        $expectedStage = [IO.Path]::GetFullPath((Join-Path $root 'build\inno-staging\app'))
+        if ($resolvedStage -ne $expectedStage -or -not $resolvedStage.StartsWith($root + '\', [StringComparison]::OrdinalIgnoreCase)) { throw 'Staging fuera del proyecto.' }
+        Remove-Item -LiteralPath $resolvedStage -Recurse -Force
+    }
+    New-Item -ItemType Directory -Path $stagingDir -Force | Out-Null
+    Copy-Item -LiteralPath $releaseExe -Destination (Join-Path $stagingDir "LyraFlow.exe") -Force
     Write-AppImageIdentity -Root $root
 } else {
-    Write-Host "[2/4] Build omitido: se reutiliza la distribucion existente." -ForegroundColor DarkYellow
+    Write-Host "[2/4] Build omitido: se reutiliza el staging existente." -ForegroundColor DarkYellow
+    Write-Host "[3/4] Verificando staging existente..." -ForegroundColor Yellow
 }
 
 Assert-AppImageIdentity -Root $root
-
-Write-Host "[3/4] Preparando el contenido del instalador..." -ForegroundColor Yellow
-if (Test-Path -LiteralPath $stagingDir) {
-    $resolvedStage = [IO.Path]::GetFullPath($stagingDir)
-    $expectedStage = [IO.Path]::GetFullPath((Join-Path $root 'build\inno-staging\app'))
-    if ($resolvedStage -ne $expectedStage -or -not $resolvedStage.StartsWith($root + '\', [StringComparison]::OrdinalIgnoreCase)) { throw 'Staging fuera del proyecto.' }
-    Remove-Item -LiteralPath $resolvedStage -Recurse -Force
-}
-New-Item -ItemType Directory -Path $stagingDir -Force | Out-Null
-
-# .jpackage.xml es metadato del empaquetador de jpackage: el MSI lo guardaba
-# como .package y la app no lo necesita en tiempo de ejecucion.
-$excluded = @(".jpackage.xml")
-Get-ChildItem -LiteralPath $appImageDir -Recurse -File | ForEach-Object {
-    $relative = $_.FullName.Substring($appImageDir.Length).TrimStart('\')
-    if ($excluded -contains $_.Name) { return }
-    $target = Join-Path $stagingDir $relative
-    New-Item -ItemType Directory -Path (Split-Path $target -Parent) -Force | Out-Null
-    Copy-Item -LiteralPath $_.FullName -Destination $target -Force
-}
 
 $stagedFiles = (Get-ChildItem -LiteralPath $stagingDir -Recurse -File).Count
 Write-Host "      $stagedFiles ficheros preparados en $stagingDir" -ForegroundColor Gray

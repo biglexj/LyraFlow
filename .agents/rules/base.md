@@ -1,7 +1,3 @@
----
-trigger: always_on
----
-
 # Instrucciones del proyecto — LyraFlow
 
 ## Documentación Core — entrada compartida
@@ -19,11 +15,9 @@ En estos criterios comunes, aplicar las bases vigentes enlazadas en lugar de cop
 
 ## 1. Alcance del proyecto
 
-Aplicación de dictado por voz: captura con atajo global, transcribe con un proveedor de IA o con Whisper local e inserta el texto en la aplicación activa. Escritorio Windows y Linux, más base compartida compilable para Android.
+Aplicación de dictado por voz: captura con atajo global, transcribe con un proveedor de IA o con Whisper local e inserta el texto en la aplicación activa.
 
-Stack: Kotlin Multiplatform y Compose Multiplatform. Gradle es el motor de compilación; Mise es la entrada principal de comandos (sección 4).
-
-La aplicación nativa Rust + GPUI vive en `native/` y declara la versión `2.0.0`, confirmada por Biglex como estable el 2026-11-19. Se opera mediante `mise dev|build|check|test gpui`; su alcance y límites de empaquetado están en [`native/README.md`](../../native/README.md). Los identificadores heredados con `gpui-demo` se conservan por compatibilidad de datos y comandos; no deben presentarse como estado del producto. Compose permanece en el repositorio.
+Stack vigente en `main`: **Rust + GPUI (`2.0.0`)** en la raíz (`src/`, `assets/`, `Cargo.toml`, `build.rs`), compilado con Cargo y operado mediante Mise (sección 4). La edición histórica Kotlin Multiplatform / Compose (`v1.1.9`) se conserva congelada únicamente en la rama **`v-kmp`**.
 
 Módulos de Core que aplican a este proyecto. Consultar solo los pertinentes a la tarea:
 
@@ -37,13 +31,14 @@ Módulos de Core que aplican a este proyecto. Consultar solo los pertinentes a l
 
 Estos contratos son exclusivos de LyraFlow; no se replican en Core.
 
-- **Atajos globales**: `Ctrl + Espacio` alterna grabar/detener y `Ctrl + Alt + Espacio` cancela el dictado en curso sin transcribirlo. Ambos se editan en Ajustes, no pueden coincidir entre sí y vuelven al valor por defecto ante colisión. Fuente: [`KeyboardShortcut.kt`](../../composeApp/src/commonMain/kotlin/com/biglexj/lyraflow/core/hotkey/KeyboardShortcut.kt).
-- **Transcripción**: proveedores `Gemini`, `OpenAI / compatible` (endpoint y modelo editables) y `MiniMax` (transcriptor `asr-1.0` con refinamiento posterior), más `Whisper local` por sidecar. Las claves se cifran con DPAPI por proveedor en Windows y se leen de `LYRAFLOW_API_KEY`, `GEMINI_API_KEY`, `OPENAI_API_KEY` o `MINIMAX_API_KEY`.
-- **Canales de instancia única**: `stable` usa el puerto `49281`, `dev` el `49283` y las pruebas el `49285`. Varias instancias simultáneas solo con `lyraflow.allowMultipleInstances=true` (`mise dev isolated`).
-- **Distribución**: un único instalador ejecutable Inno Setup por versión (`LyraFlow-Windows-X.Y.Z.exe`), instalación por usuario sin elevación y actualización en el mismo directorio. No se empaquetan MSI ni MSIX.
-- **Versionado**: fuente única en `gradle.properties` (`lyraflow.versionName` y `lyraflow.versionCode`), propagada a `package.json`, `AppVersion.kt` y al instalador. El pipeline de release aborta si los tres no coinciden.
-- **Identidad visual**: la fuente canónica es [`assets/branding/icons/icon-transparent.png`](../../assets/branding/icons/icon-transparent.png) y los derivados los genera `scripts/branding/Sync-Icons.ps1`. Los iconos en superficies del sistema son transparentes, sin fondo cuadrado opaco.
-- **Apariencia de la demo nativa**: la demo de `native/` ofrece **Aurora** (tokens globales de Core, versión `1.0.0`, copiados en [`native/assets/tokens/biglex-app-base.json`](../../native/assets/tokens/biglex-app-base.json)) y **Clásico** (la paleta propia de LyraFlow), con los modos Automático, Claro y Oscuro y la preferencia persistida en un archivo propio de la demo. La aplicación de Compose mantiene Clásico hasta que la nativa la sustituya. Su «Acerca de» sigue la base de soporte oficial de Core.
+- **Atajos globales**: `Ctrl + Espacio` alterna grabar/detener y `Ctrl + Alt + Espacio` cancela el dictado en curso sin transcribirlo. Ambos se editan en Ajustes, no pueden coincidir entre sí y vuelven al valor por defecto ante colisión. Fuente: [`src/platform_win.rs`](../../src/platform_win.rs).
+- **Transcripción**: proveedores `Gemini`, `OpenAI` (endpoint y modelo editables para endpoints compatibles) y `MiniMax` (transcriptor `asr-1.0` con refinamiento posterior), más `Whisper local` por sidecar. No se mantienen listas de modelos fijadas para Gemini ni OpenAI: se descubren dinámicamente (`src/scanner.rs`). Las claves se cifran con DPAPI por proveedor en Windows y se leen de `LYRAFLOW_API_KEY`, `GEMINI_API_KEY`, `OPENAI_API_KEY` o `MINIMAX_API_KEY`.
+- **Rutas de datos y migración**: la edición `2.0.0` persiste configuración, historial y secretos en `%LOCALAPPDATA%\LyraFlow` (y equivalentes XDG en Linux), con lectura de respaldo desde `LyraFlow-gpui-demo` para conservar datos de pruebas previas.
+- **Canales de instancia única**: `stable` usa el puerto `49281`, `dev` el `49283` y las pruebas el `49285`.
+- **Distribución**: un único instalador ejecutable Inno Setup por versión (`LyraFlow-Windows-X.Y.Z.exe`), instalación por usuario sin elevación y actualización en el mismo directorio (`MyAppExe = LyraFlow.exe`). No se empaquetan MSI ni MSIX.
+- **Versionado**: fuente única en `Cargo.toml` (`[package] version` y `[package.metadata.lyraflow] version_code`), sincronizada con `package.json` y `packaging/windows/version.iss`. El pipeline de release aborta si `Cargo.toml` y `package.json` no coinciden.
+- **Identidad visual**: la fuente canónica es [`assets/branding/icons/icon-transparent.png`](../../assets/branding/icons/icon-transparent.png) y los derivados (`icon.png`, `app_icon.ico`, `titlebar-icon-badge.png`, `packaging/windows/LyraFlow.ico`) los genera `scripts/branding/Sync-Icons.ps1`. Los iconos en superficies del sistema son transparentes; solo el icono pequeño de barra de título (`ICON_SMALL`) añade fondo blanco redondeado para contraste.
+- **Apariencia**: ofrece **Aurora** (tokens globales de Core, versión `1.0.0`, en [`assets/tokens/biglex-app-base.json`](../../assets/tokens/biglex-app-base.json)) y **Clásico** (paleta propia de LyraFlow), con los modos Automático, Claro y Oscuro. Su «Acerca de» sigue la base de soporte oficial de Core.
 - **Empaquetado e instalación**: el detalle operativo vive en [`Docs/packaging.md`](../../Docs/packaging.md) y el flujo vigente en `packaging/windows/`.
 
 ## 3. Procesos del proyecto
@@ -56,15 +51,15 @@ Los commits de resguardo y el límite de tamaño de este archivo se rigen por la
 
 Mise es la entrada principal: `mise dev`, `mise build`, `mise check`, `mise test`, `mise release` y `mise publish`.
 
-- `release` prepara el instalador local y **no publica** nada.
+- `release` prepara el instalador local (`target/release/LyraFlow.exe` → `release/LyraFlow-Windows-X.Y.Z.exe`) y **no publica** nada.
 - `publish` es la única vía de publicación y requiere autorización explícita; el canal `github` omite la sincronización con Aurora.
 - `--plan` muestra el comando o el plan sin ejecutar procesos, sin escribir y sin consultar la red.
 - `--check` (solo en `publish`) verifica requisitos locales y remotos en modo de solo lectura.
 
 El contrato completo está en el [estándar de comandos mediante Mise](../../../Docs/global/architecture/mise-command-standard.md). `mise.toml` y `scripts/mise-task.ts` son su implementación local: el despachador resuelve la raíz desde la ubicación del script y no contiene rutas absolutas al disco local.
 
-`gradlew` y `gradlew.bat` se conservan como wrappers técnicos de Gradle. Los alias de `package.json` y las tareas de Gradle delegan en `scripts/`; no se añaden lanzadores propios en la raíz.
+Los alias de `package.json` delegan en Cargo y `scripts/`; no se añaden lanzadores propios en la raíz.
 
 ## 5. Excepciones
 
-Ninguna. LyraFlow adopta el estilo de comunicación, los enlaces de soporte oficial, la política de ramas y el flujo de versiones definidos en Core; este archivo solo los enlaza y conserva los contratos exclusivos del producto.
+Ninguna. LyraFlow adopta el estilo de comunicación, los enlaces de soporte oficial, la política de ramas (`main` activa `2.0.0`, `v-kmp` histórica `1.1.9`) y el flujo de versiones definidos en Core.

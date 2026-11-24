@@ -1,0 +1,36 @@
+[package]
+name = "lyraflow"
+version = "2.0.0"
+edition = "2024"
+publish = false
+license = "MIT"
+description = "LyraFlow — Dictado por voz fluido e inteligente con Rust y GPUI"
+
+[[bin]]
+name = "LyraFlow"
+path = "src/main.rs"
+
+[package.metadata.lyraflow]
+version_code = 200
+
+[dependencies]
+anyhow = "1"
+base64 = "0.22"
+cpal = "=0.16.0"
+gpui = "=0.2.2"
+hound = "=3.5.1"
+zed-reqwest = { version = "0.12.15-zed", default-features = false, features = ["blocking", "json", "multipart", "rustls-tls"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+semver = "1"
+image = { version = "=0.25.10", default-features = false, features = ["png"] }
+raw-window-handle = "0.6"
+
+[target.'cfg(target_os = "windows")'.dependencies]
+windows = { version = "0.61", features = ["Win32_Foundation", "Win32_Graphics_Gdi", "Win32_Storage_Xps", "Win32_Security_Cryptography", "Win32_System_DataExchange", "Win32_System_Memory", "Win32_System_Registry", "Win32_System_Threading", "Win32_UI_Input_KeyboardAndMouse", "Win32_UI_WindowsAndMessaging"] }
+
+[profile.dev]
+debug = 0
+
+[profile.release]
+strip = true
